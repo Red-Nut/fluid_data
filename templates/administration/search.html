@@ -1,0 +1,389 @@
+{% extends 'data/base.html' %}
+
+{% block main %}
+<!-- Search -->
+<div id="search" class="container-fluid">
+    <h1>Search</h1>
+    <!-- Search String -->
+    <div class="input-group mb-3">
+        <input id="searchStr" type="text" class="form-control" placeholder="Search here..." aria-label="Recipient's username" aria-describedby="searchButton" autofocus>
+        <div class="input-group-append">
+            <span class="btn btn-primary" id="searchButton" onclick="Search();">Search</span>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Method -->
+        <div class="col" style="display:none;">
+            <p style="margin:0;">Method:</p>
+            <div class="form-check" style="padding-left:36px;">
+                <input class="form-check-input" type="radio" name="flexRadioDefault" id="methodAPI" checked>
+                <label class="form-check-label" for="methodAPI">
+                    API
+                </label>
+            </div>
+            <div class="form-check" style="padding-left:36px;">
+                <input class="form-check-input" type="radio" name="flexRadioDefault" id="methodWeb">
+                <label class="form-check-label" for="methodWeb">
+                    Web Scrapping
+                </label>
+            </div>
+        </div>
+
+        <div class="col">
+            <!-- Attachments -->
+            <div class="form-check form-switch" id="noAttachments">
+                <input class="form-check-input" type="checkbox" id="flexSwitchCheckChecked" checked>
+                <label class="form-check-label" for="flexSwitchCheckChecked">Include results without attachments</label>
+            </div>
+
+            <!-- WCRs Only -->
+            <div class="form-check form-switch" id="noWCR">
+                <input class="form-check-input" type="checkbox" id="flexSwitchCheckChecked">
+                <label class="form-check-label" for="flexSwitchCheckChecked">Well Completion Reports only</label>
+            </div>
+        </div>
+
+        
+
+    </div>
+</div>
+<!-- Loading -->
+<div id="loading" class="container-fluid" style="display: none;">
+    <br><br><h1>Loading results, please wait.</h1>
+</div>
+<!-- Results -->
+<div id="results" class="container-fluid" style="display: none;">
+    <button type="button" class="btn btn-primary" onclick="returnToSearch()">Search again</button>
+    <div style="display:flex; justify-content:space-between; padding-top: 12px; padding-bottom: 12px;">
+        <h1>Results</h1>
+        <button type="button" class="btn btn-primary" onclick="addAll()">Add all to database</button>
+    </div>
+    <div id=resultsList></div>
+</div>
+
+
+<script>
+
+var input = document.getElementById("searchStr");
+
+// Execute a function when the user releases a key on the keyboard
+input.addEventListener("keyup", function(event) {
+  // Number 13 is the "Enter" key on the keyboard
+  if (event.keyCode === 13) {
+    // Cancel the default action, if needed
+    event.preventDefault();
+    // Trigger the button element with a click
+    document.getElementById("searchButton").click();
+  }
+});
+
+attachmentsOnly = "N";
+$('#noAttachments').on('change.bootstrapSwitch', function(e) {
+    if(e.target.checked){
+        attachmentsOnly = "N";
+    } else {
+        attachmentsOnly = "Y";
+    }
+});
+WCRonly = "N";
+$('#noWCR').on('change.bootstrapSwitch', function(e) {
+    if(e.target.checked){
+        WCRonly = "Y";
+    } else {
+        WCRonly = "N";
+    }
+});
+includeExisting = "N"
+
+resultsList = [];
+
+function Search(){
+    // Find divs.
+    searchDiv = document.getElementById("search");
+    loadingDiv = document.getElementById("loading");
+    resultsDiv = document.getElementById("results");
+
+    // Add alert.
+    //alertDiv = document.getElementById("alerts");
+    
+    //alertHtml = "";
+    //alertHtml += '<div class="alert alert-warning" role="alert">';
+    //alertHtml += 'Please wait while search results are loaded.';
+    //alertHtml += '</div>';
+
+    //alertDiv.innerHTML = alertHtml;
+    ClearAllAlerts();
+    AddAlert("warning", "Please wait while search results are loaded", false);
+
+    // Update dipslay.
+    searchDiv.style.display = 'none';
+    loadingDiv.style.display = 'block';
+    resultsDiv.style.display = 'none';
+
+    searchStr = document.getElementById("searchStr").value;
+    method="error - no method selected";
+    if(document.getElementById("methodAPI").checked){
+        method = "API";
+    }
+    if(document.getElementById("methodWeb").checked){
+        method = "Web";
+    }
+
+    //fetch('/asyncSearch?searchStr='+ searchStr +'&method='+ method +'&attachmentsOnly='+ attachmentsOnly +'&WCRonly='+ WCRonly)
+    //    .then(function (response) {
+    //        return response.json();
+    //    }).then(function (text) {
+    //        console.log('searchName: ' + text.searchName); 
+    //        results = JSON.parse(text.results);
+    //        console.log(results);
+    //        resultsReturned(results);
+    //});
+
+    data = {
+        searchStr: searchStr,
+        method: method,
+        attachmentsOnly: attachmentsOnly+WCRonly,
+        WCRonly: WCRonly,
+        includeExisting: includeExisting
+    };
+
+    csrftoken = getCookie('csrftoken');
+
+    json = JSON.stringify(data);
+
+    $.ajax({
+        type: "POST",
+        credentials: 'same-origin',
+        url: "{% url 'API_SearchGov' %}",
+        data: json,
+        headers: { 'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        "X-CSRFToken": csrftoken },
+        // on success
+        success: function (response) {
+            // Parse JSON.
+            results = JSON.parse(response.results);
+
+            // Log results.
+            console.log('searchName: ' + response.searchName); 
+            console.log(results);
+
+            // Remove alert.
+            ClearAllAlerts();
+
+            // Process results
+            if(results.success == true){
+                resultsReturned(results.results);
+            } else {
+                results.errors.forEach(error => {
+                    console.log("Error " + error.code + ": " + error.consolLog);
+                    AddAlert("danger", "Error " + error.code + ": " + error.description, true);
+                });
+            }
+            
+        },
+        // on error
+        error: function (response) {
+            // alert the error if any error occured
+            console.log(response.responseJSON.errors)
+            AddAlert("danger", "JSON Error: Check console.", true);
+        }
+    });
+
+}
+
+function resultsReturned(results){
+    resultsList = results;
+
+    // Find divs.
+    searchDiv = document.getElementById("search");
+    loadingDiv = document.getElementById("loading");
+    resultsDiv = document.getElementById("results");
+    myDiv = document.getElementById("resultsList");
+
+    // Create the results display.
+    myDivInnerHTML = "";
+    for (i=0; i<results.length; i++){
+        myDivInnerHTML += '<div class="card">';
+            myDivInnerHTML += '<div class="card-header" id="heading'+i+'">';
+                myDivInnerHTML += '<div class="row">';
+                    myDivInnerHTML += '<div class="col-sm-8">';
+                        myDivInnerHTML += '<h5 class="mb-0">';
+                            myDivInnerHTML += '<button class="btn" style="width:100%; text-align:left;" data-toggle="collapse" data-target="#collapse'+i+'" aria-expanded="false" aria-controls="collapse'+i+'">';
+                                myDivInnerHTML += '<i class="fa fa-caret-right"></i>  ';
+                                myDivInnerHTML += '<i id="collapse'+i+'" class="fa fa-sort-down collapse" data-parent="#resultsList" style="margin-left:-22px;padding-left:10px;background-color: rgb(247, 247, 247);"></i>  ';
+                                myDivInnerHTML += results[i].wellName;
+                            myDivInnerHTML += '</button>';
+                        myDivInnerHTML += '</h5>';
+                    myDivInnerHTML += '</div>';
+                    myDivInnerHTML += '<div class="col-sm-4" style="text-align:right;">';
+                        myDivInnerHTML += '<button class="btn btn-secondary" onclick="AddToDatabase('+ "'" + results[i].name + "','QLD'" +')" style=>Add to database</button>';
+                    myDivInnerHTML += '</div>';
+                myDivInnerHTML += '</div>';
+            myDivInnerHTML += '</div>';
+
+            myDivInnerHTML += '<div id="collapse'+i+'" class="collapse collapse" aria-labelledby="heading'+i+'" data-parent="#resultsList">';
+                myDivInnerHTML += '<div class="card-body">';
+                    myDivInnerHTML += '<div class="row">';
+                    myDivInnerHTML += '<div class="col-lg">';
+                        myDivInnerHTML += '<p><b>Title</b>: ' + results[i].title + '</p>';
+                        myDivInnerHTML += '<p><b>Type</b>: ' + results[i].type + '</p>';
+                        myDivInnerHTML += '<p><b>Owner</b>: ' + results[i].owner + '</p>';
+                        myDivInnerHTML += '<p><b>Permit</b>: ' + results[i].permit + '</p>';
+                    myDivInnerHTML += '</div>';
+                    myDivInnerHTML += '<div class="col-lg">';
+                        myDivInnerHTML += '<h5><u>Attachments</u></h5>';
+                        myDivInnerHTML += '<table class="attachment-table">';
+                            myDivInnerHTML += '<tr>';
+                            myDivInnerHTML += '<th>Name</th>';
+                            myDivInnerHTML += '<th>Format</th>';
+                            myDivInnerHTML += '<th>Size</th>';
+                        myDivInnerHTML += '</tr>';
+                        for (j=0; j<results[i].resources.length; j++){
+                            myDivInnerHTML += '<tr>';
+                            myDivInnerHTML +=  '<td>' + results[i].resources[j].name + '</td>';
+                            myDivInnerHTML +=  '<td>' + results[i].resources[j].format + '</td>';
+                            myDivInnerHTML +=  '<td>' + results[i].resources[j]['resource:size'] + '</td>';
+                            myDivInnerHTML += '</tr>';
+                        }
+                        myDivInnerHTML += '</table>';
+                    myDivInnerHTML += '</div>';
+                    myDivInnerHTML += '</div>';
+                myDivInnerHTML += '</div>';
+            myDivInnerHTML += '</div>';
+        myDivInnerHTML += '</div>';
+
+    }
+
+    myDiv.innerHTML = myDivInnerHTML;
+    resultsDiv.style.display = "block";
+
+    // Update Display
+    searchDiv.style.display = 'none';
+    loadingDiv.style.display = 'none';
+    resultsDiv.style.display = 'block';
+
+    // Display Alert.
+    AddAlert("success", "Search completed successfully.", true);
+}
+
+function returnToSearch(){
+    // Find divs.
+    searchDiv = document.getElementById("search");
+    loadingDiv = document.getElementById("loading");
+    resultsDiv = document.getElementById("results");
+
+    // Update dipslay.
+    searchDiv.style.display = 'block';
+    loadingDiv.style.display = 'none';
+    resultsDiv.style.display = 'none';
+}
+
+function AddToDatabase(id, state){
+    //fetch('/asyncAddDatabase?id='+ id)
+    //    .then(function (response) {
+    //        return response.json();
+    //    }).then(function (text) {
+    //        console.log(text);
+    //        errors = JSON.parse(text.errors);
+    //});
+
+    data = {
+        id: id,
+        state: state
+    };
+
+    csrftoken = getCookie('csrftoken');
+
+    json = JSON.stringify(data);
+
+    $.ajax({
+        type: "POST",
+        credentials: 'same-origin',
+        url: "{% url 'API_SearchAdd' %}",
+        data: json,
+        headers: { 'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        "X-CSRFToken": csrftoken },
+        //type: "GET",
+        //url: "{% url 'API_SearchAdd' %}",
+        //data: ({
+        //    data: json
+        //}),
+        // on success
+        success: function (response) {
+            // Result
+            if(response.success == true){
+                // Display Alert.
+                AddAlert("success", "Success: " + response.wellName + " was added to the database.", true);
+            }
+
+            //Errors
+            errors = JSON.parse(response.errors);
+
+            errors.forEach(error => {
+                console.log("Error " + error.code + ": " + error.consolLog);
+                AddAlert("danger", "Error " + error.code + ": " + error.description, true);
+            });
+
+        },
+        // on error
+        error: function (response) {
+            // alert the error if any error occured
+            console.log(response.responseJSON.errors)
+            AddAlert("danger", "JSON Error: Check console.", true)
+        }
+    });
+}
+
+function addAll(){
+    data = {
+        wellList: resultsList
+    };
+
+    csrftoken = getCookie('csrftoken');
+
+    json = JSON.stringify(data);
+
+    $.ajax({
+        type: "POST",
+        credentials: 'same-origin',
+        url: "{% url 'API_SearchAddMany' %}",
+        data: json,
+        headers: { 'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/json',
+        "X-CSRFToken": csrftoken },
+        // on success
+        success: function (response) {
+            results = JSON.parse(response.results);
+            console.log(results);
+            AddAlert("info", "Adding results to database complete.", true);
+
+            //Results
+            results.forEach(result =>{
+                //Errors
+                result.errors.forEach(error =>{
+                    console.log("Error (" + result.wellName + ") " + error.code + ": " + error.consolLog);
+                    AddAlert("danger", "Error (" + result.wellName + ") " + error.code + ": " + error.description, true);
+                });
+            });
+        },
+        // on error
+        error: function (response) {
+            // alert the error if any error occured
+            console.log(response.responseJSON.errors)
+            AddAlert("danger", "JSON Error: Check console.", true)
+        }
+    });
+}
+
+
+</script>
+
+{% endblock %}
+
+

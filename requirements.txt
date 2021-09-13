@@ -1,0 +1,6 @@
+django
+gunicorn
+wheel
+request
+mysqlclient
+django-mysql
