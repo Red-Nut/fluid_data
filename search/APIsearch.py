@@ -67,7 +67,7 @@ class RetriveQLD:
             result = json_response['result']
             resources = result['resources']
 
-            #print(result)
+            print(result)
 
             # Get the type.
             type = result.get('type', None)
@@ -122,11 +122,13 @@ class RetriveQLD:
                 if (permit is None):
                     try:
                         permit = Permit.objects.create(permit_number = permitStr)
-                    except:
+                    except Exception as e:
                         # Handle Error
                         self.success = False
                         error = myExceptions.searchList[21]
+                        error.consolLog = error.consolLog + " Permit: " + permitStr
                         print(f"Error {error.code}: {error.consolLog}")
+                        #raise e
                         self.errors.append(error)
                         return
             else:
@@ -234,26 +236,30 @@ class RetriveQLD:
             GeoJSONextent = result.get('GeoJSONextent', None)
 
             # Latitude and Longitude.
-            GeoData = json.loads(GeoJSONextent)
-            if(GeoData['type'] == "Point"):
-                lat = GeoData['coordinates'][1]
-                long = GeoData['coordinates'][0]
-            elif(GeoData['type'] == "Polygon"):
-                myCoords = GeoData['coordinates'][0]
-                x = 0
-                lat = 0.0
-                long = 0.0
-                for point in myCoords:
-                    x = x + 1
-                    lat = lat + float(point[1])
-                    long = long + float(point[0])
-                if(x>0):
-                    lat = lat/x
-                    long = long/x
-                else: 
+            try:
+                GeoData = json.loads(GeoJSONextent)
+                if(GeoData['type'] == "Point"):
+                    lat = GeoData['coordinates'][1]
+                    long = GeoData['coordinates'][0]
+                elif(GeoData['type'] == "Polygon"):
+                    myCoords = GeoData['coordinates'][0]
+                    x = 0
+                    lat = 0.0
+                    long = 0.0
+                    for point in myCoords:
+                        x = x + 1
+                        lat = lat + float(point[1])
+                        long = long + float(point[0])
+                    if(x>0):
+                        lat = lat/x
+                        long = long/x
+                    else: 
+                        lat = None
+                        long = None
+                else:
                     lat = None
                     long = None
-            else:
+            except:
                 lat = None
                 long = None
 

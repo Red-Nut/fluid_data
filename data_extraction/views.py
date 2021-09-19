@@ -160,8 +160,10 @@ def DownloadMissingFiles(request):
 
 		if url is None :
 			document.status = 3
-		elif "Report Geometry" in document.document_name or "OCR extract of report" in document.document_name:
+			document.save()
+		elif "report geometry" in document.document_name.lower() or "ocr extract of report" in document.document_name.lower():
 			document.status = 3
+			document.save()
 		else: 
 			#print("DOWNLOADING FILE - Well: " + document.well.well_name + " File: " + document.document_name)
 			result = downloader.downloadFile(document)
