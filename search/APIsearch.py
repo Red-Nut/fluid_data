@@ -113,8 +113,10 @@ class RetriveQLD:
             gov_id = result.get('name', None)
 
             # Permit.
-            permitStr = result.get('resource_authority_permit', None).upper()
+            permitStr = RemoveLink(result.get('resource_authority_permit', None),'qld-resource-permit/').upper()
             permitStr = permitStr.replace(" ", "")
+            permitStr = permitStr.replace("PETROLEUMLEASE", "PL")
+            permitStr = permitStr.replace("AUTHORITYTOPROSPECT", "ATP")
 
             # Create the permit object.
             if(permitStr is not None):
@@ -573,7 +575,7 @@ class APISearchQLD(SearchQLD):
                         myResult.title = result.get('title', 'None')
                         myResult.type = georesource_report_type.replace('-'," ").title()
                         myResult.owner = result.get('owner', 'None').title()
-                        myResult.permit = result.get('resource_authority_permit', 'None')
+                        myResult.permit = RemoveLink(result.get('resource_authority_permit', 'None'),'qld-resource-permit/')
                         myResult.GeoJSONextent = result.get('GeoJSONextent', 'None')
                         myResult.wellName = GetWellName(myResult.title,myResult.permit)
                         myResult.state = "QLD"
@@ -588,6 +590,9 @@ class APISearchQLD(SearchQLD):
 
                         # Does the well exists in the database
                         myResult.existsInDatabase = wellExists(myResult.wellName)
+
+                        if(not myResult.existsInDatabase):
+                            print(result)
 
                         # Get the resourc list
                         resources = result.get('resources', 'None')
@@ -635,7 +640,6 @@ def RemoveLink(mstr, subFolder):
             mstr = mstr[x+30 + len(subFolder):]
     
     return mstr
-    
 
 def GetWellName(title, permit):
         wellName = title
