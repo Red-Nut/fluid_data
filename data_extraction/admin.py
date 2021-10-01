@@ -20,7 +20,7 @@ admin.site.register(Document, DocumentAdmin)
 # Report. 
 class ReportAdmin(admin.ModelAdmin):
     list_display = ("id", "well", "report_type", "report_name", "gov_report_name", "gov_id", "url")
-    list_filter = ("well", "report_type", "report_name")
+    list_filter = ("well", "report_type")
 admin.site.register(Report, ReportAdmin)
 
 # Report Type.

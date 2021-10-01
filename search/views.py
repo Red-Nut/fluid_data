@@ -2,7 +2,7 @@ from django.http import JsonResponse
 from django.shortcuts import render
 import json
 
-from .APIsearch import APISearchQLD, WebScrapeSearchQLD, RetriveQLD, ResultEncoder
+from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, RetreiveAllQLD, ResultEncoder
 
 
 # Create your views here.
@@ -73,11 +73,12 @@ def AddMany(request):
 
     return JsonResponse(response)
     
+def AddAllQLD(request):
+    response = RetreiveAllQLD(False)
 
-def Add(wellId,state):
-    if state == "QLD":
-        myRetrive = RetriveQLD(wellId)
-        myRetrive.retrive()
+    return JsonResponse(response)
 
-    response = {'success':myRetrive.success,'wellName':myRetrive.wellName,'errors':ResultEncoder().encode(myRetrive.errors)}
-    return response
+def UpdateAllQLD(request):
+    response = RetreiveAllQLD(True)
+
+    return JsonResponse(response)

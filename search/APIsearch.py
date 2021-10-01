@@ -1,5 +1,6 @@
 from . import config_search
 from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
+from data_extraction.myExceptions import Error, searchList as errorList
 
 import requests
 #from bs4 import BeautifulSoup #pip install beautifulsoup4
@@ -16,6 +17,68 @@ def wellExists(wellName):
         return False
     else:
         return True
+
+def Add(wellId,state):
+    if state == "QLD":
+        myRetrive = RetriveQLD(wellId)
+        myRetrive.retrive()
+
+    response = {'success':myRetrive.success,'wellName':myRetrive.wellName,'errors':ResultEncoder().encode(myRetrive.errors)}
+    return response
+
+def RetreiveAllQLD(existing):
+    state = State.objects.filter(name_short="QLD").first()
+    if(state is None):
+        state = State.objects.create(name_long = "Queensland", name_short="QLD")
+
+    query = config_search.api + 'package_list'
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+    APIresponse = requests.get(query, headers=headers)
+
+    try:
+        #json_response = APIresponse.json()
+        json_response = json.loads(APIresponse.content.decode("utf-8"))
+    except Exception as e:
+        if hasattr(e, 'message'):
+            print(e.message)
+        else:
+            print(e)
+        # Handle Error
+        error = myExceptions.searchList[0]
+        print(f"Error {error.code}: {error.consolLog}")
+        return
+
+    success = json_response["success"]
+
+    if(success != True):
+        # Handle Error
+        error = myExceptions.searchList[1]
+        print(f"Error {error.code}: {error.consolLog}")
+        return
+    else:
+        result = json_response['result']
+
+        responseList = []
+        #i = 0
+        for well in result:
+            #if(i < 1000):
+            if(existing):
+                response = Add(well,"QLD")
+                if response.success == False:
+                    responseList.append(response)
+            else:
+                myWell = Well.objects.filter(gov_id=well).first()
+                if (myWell is None):
+                    response = Add(well,"QLD")
+                    responseList.append(response)
+
+                #i = i + 1
+
+
+        response = {'results':ResultEncoder().encode(responseList)}
+
+        return response
+
 
 class RetriveQLD:
     def __init__(self, id):
@@ -49,7 +112,8 @@ class RetriveQLD:
                 print(e)
             # Handle Error
             self.success = False
-            error = myExceptions.searchList[0]
+            myError = errorList[0]
+            error = Error(myError.code,myError.description,myError.consolLog)
             print(f"Error {error.code}: {error.consolLog}")
             self.errors.append(error)
             return
@@ -59,7 +123,8 @@ class RetriveQLD:
         if(success != True):
             # Handle Error
             self.success = False
-            error = myExceptions.searchList[1]
+            myError = errorList[1]
+            error = Error(myError.code,myError.description,myError.consolLog)
             print(f"Error {error.code}: {error.consolLog}")
             self.errors.append(error)
             return
@@ -67,16 +132,93 @@ class RetriveQLD:
             result = json_response['result']
             resources = result['resources']
 
-            print(result)
+            #print(result)
+
+            # Title
+            title = result.get('title', None)
+            print(title)
+            self.wellName = title
 
             # Get the type.
             type = result.get('type', None)
 
             # Report type. 
             reportTypeStr = RemoveLink(result.get('georesource_report_type', None),'georesource-report/')
-            
 
-            # Create the well class object.
+            if(type == 'magnetic' or 
+                type == 'radiometric' or
+                type == 'seismic' or 
+                type == 'map-collection' or 
+                type == 'spectral' or 
+                type == 'electromagnetic' or 
+                type == 'gravity' or 
+                type == 'gravity-gradiometry' or  
+                type == 'magnetotelluric' or 
+                type == 'geochemistry'):
+                # Handle Error
+                self.success = False
+                myError = errorList[5]
+                error = Error(myError.code,myError.description,myError.consolLog)
+                #print(f"Error {error.code}: {error.consolLog}")
+                self.errors.append(error)
+                return
+
+            if(reportTypeStr is not None):
+                reportTypeStr = reportTypeStr.replace("-"," ").title()
+
+                if(reportTypeStr == "Permit Report Six Month" or 
+                reportTypeStr == "Permit Report Annual" or 
+                reportTypeStr == "Permit Report Final" or 
+                reportTypeStr == "Permit Report Partial Relinquishment" or 
+                reportTypeStr == "Seismic Survey Report Final" or 
+                reportTypeStr == "Petroleum Report Other" or 
+                reportTypeStr == "Petroleum Report Resource And Reserves Information" or 
+                reportTypeStr == "Petroleum Report Relinquishment" or 
+                reportTypeStr == "Collaborative Exploration Initiative Final" or 
+                reportTypeStr == "Geothermal Report Annual Reserves" or 
+                reportTypeStr == "Mine Plan Lodgement" or 
+                reportTypeStr == "Petroleum Report Cumulative Water Production" or 
+                reportTypeStr == "Industry Consultative Report" or 
+                reportTypeStr == "Commissioned Industry Study Or Report" or 
+                reportTypeStr == "Permit Report Surrender" or 
+                reportTypeStr== "Petroleum Report Infrastructure" or 
+                reportTypeStr == "Petroleum End Tenure" or 
+                reportTypeStr == "Technical Report" or 
+                reportTypeStr == "Petroleum End Authority" or 
+                reportTypeStr == "Petroleum Report Production Information" or 
+                reportTypeStr == "Greenhouse Gas Report Storage Capacity" or 
+                reportTypeStr == "Industry Network Initiative Final" or 
+                reportTypeStr == "Geological Survey Of Queensland Publication" or 
+                reportTypeStr == "Collaborative Drilling Initiative Final" or 
+                reportTypeStr == "Queensland Government Mining Journal" or 
+                reportTypeStr == "Soil And Land Resources" or 
+                reportTypeStr == "Geological Survey Of Queensland Record" or 
+                reportTypeStr == "Reserves Petroleum" or 
+                reportTypeStr == "Production Petroleum" or 
+                reportTypeStr == "Petroleum Report Annual" or 
+                reportTypeStr == "Permit Report Final Higher Tenure" or 
+                reportTypeStr == "Permit Report Annual Ml" or 
+                reportTypeStr == "Permit Report Other" or 
+                reportTypeStr == "Geophysical Survey Report Final" or 
+                reportTypeStr == "Scientific Or Technical Survey Report" or 
+                reportTypeStr == "Permit Report Final Relinquishment" or 
+                reportTypeStr == "Seismic Survey Report Reprocessing" or 
+                reportTypeStr == "Well Proposal" or 
+                reportTypeStr == "Well Report Other" or 
+                reportTypeStr == "Any Other Report" or 
+                reportTypeStr == "Seismic Survey Report Other" or 
+                reportTypeStr == "Permit Report Final" or 
+                reportTypeStr == "Petroleum Report Field Information" or 
+                reportTypeStr == "Any Other Report"):
+                    # Handle Error
+                    self.success = False
+                    myError = errorList[5]
+                    error = Error(myError.code,myError.description,myError.consolLog)
+                    #print(f"Error {error.code}: {error.consolLog}")
+                    self.errors.append(error)
+                    return
+
+            # Create the Report Type object.
             if(reportTypeStr is not None):
                 reportTypeStr = reportTypeStr.replace("-"," ").title()
                 reportType = ReportType.objects.filter(type_name=reportTypeStr).first()
@@ -86,40 +228,46 @@ class RetriveQLD:
                     except:
                         # Handle Error
                         self.success = False
-                        error = myExceptions.searchList[19]
+                        myError = errorList[19]
+                        error = Error(myError.code,myError.description,myError.consolLog)
                         print(f"Error {error.code}: {error.consolLog}")
                         self.errors.append(error)
                         return
             else: 
                 reportType = None
-
-            if(reportType is not None):
-                if(type == 'magnetic' or 
-                type == 'radiometric' or 
-                reportType.type_name == "Permit Report Six Month" or 
-                reportType.type_name == "Permit Report Annual" or 
-                reportType.type_name == "Permit Report Final" or 
-                reportType.type_name == "Permit Report Partial Relinquishment" or 
-                reportType.type_name == "Seismic Survey Report Final" or 
-                reportType.type_name == "Any Other Report"):
-                    # Handle Error
-                    self.success = False
-                    error = myExceptions.searchList[5]
-                    print(f"Error {error.code}: {error.consolLog}")
-                    self.errors.append(error)
-                    return
-
+            
             # Gov ID.
             gov_id = result.get('name', None)
+            if(gov_id is None):
+                # Handle Error
+                self.success = False
+                myError = errorList[3]
+                error = Error(myError.code,myError.description,myError.consolLog)
+                print(f"Error {error.code}: {error.consolLog}")
+                self.errors.append(error)
+                return
 
             # Permit.
-            permitStr = RemoveLink(result.get('resource_authority_permit', None),'qld-resource-permit/').upper()
-            permitStr = permitStr.replace(" ", "")
-            permitStr = permitStr.replace("PETROLEUMLEASE", "PL")
-            permitStr = permitStr.replace("AUTHORITYTOPROSPECT", "ATP")
+            permitStr = RemoveLink(result.get('resource_authority_permit', None),'qld-resource-permit/')
+
 
             # Create the permit object.
             if(permitStr is not None):
+                permitStr = permitStr.upper()
+                permitStr = permitStr.replace(" ", "")
+                permitStr = permitStr.replace("PETROLEUMLEASE", "PL")
+                permitStr = permitStr.replace("AUTHORITYTOPROSPECT", "ATP")
+                permitStr = permitStr.replace("EXPLORATIONPERMITMINERAL", "EPM")
+
+                x = permitStr.find(",")
+                if(x > -1):
+                    self.success = False
+                    myError = errorList[6]
+                    error = Error(myError.code,myError.description,myError.consolLog)
+                    #print(f"Error {error.code}: {error.consolLog}")
+                    self.errors.append(error)
+                    return
+
                 permit = Permit.objects.filter(permit_number=permitStr).first()
                 if (permit is None):
                     try:
@@ -127,7 +275,8 @@ class RetriveQLD:
                     except Exception as e:
                         # Handle Error
                         self.success = False
-                        error = myExceptions.searchList[21]
+                        myError = errorList[21]
+                        error = Error(myError.code,myError.description,myError.consolLog)
                         error.consolLog = error.consolLog + " Permit: " + permitStr
                         print(f"Error {error.code}: {error.consolLog}")
                         #raise e
@@ -137,12 +286,39 @@ class RetriveQLD:
                 permit = None
 
             # Well name.
-            title = result.get('title', None)
             permitStr = result.get('resource_authority_permit', None)
             if(title is not None) and permitStr is not None:
                 wellName = GetWellName(title,str(permitStr))
             else: 
-                wellName = None
+                if(title is not None and type=='borehole'):
+                    wellName = title.title()
+                    permit = Permit.objects.filter(permit_number="No Permit").first()
+                    if(permit is None):
+                        permit = Permit.objects.create(permit_number="No Permit")
+                else:
+                    wellName = None
+                    print("error getting wellName, Title: " + str(title) + ", Permit: " + str(permitStr))
+                    return
+
+            # Well name Alias
+            if is_number(wellName):
+                alias = result.get('alias', None)
+                if(alias is not None):
+                    wellName = alias
+
+            # Remove brackets from well name
+            wellName = wellName.replace("(","")
+            wellName = wellName.replace(")","")
+
+            # Check for question marks
+            x = wellName.find("?")
+            if(x > -1):
+                self.success = False
+                myError = errorList[7]
+                error = Error(myError.code,myError.description,myError.consolLog)
+                #print(f"Error {error.code}: {error.consolLog}")
+                self.errors.append(error)
+                return
 
             self.wellName = wellName
 
@@ -168,7 +344,8 @@ class RetriveQLD:
                     except:
                         # Handle Error
                         self.success = False
-                        error = myExceptions.searchList[10]
+                        myError = errorList[10]
+                        error = Error(myError.code,myError.description,myError.consolLog)
                         print(f"Error {error.code}: {error.consolLog}")
                         self.errors.append(error)
                         return
@@ -187,7 +364,8 @@ class RetriveQLD:
                     except:
                         # Handle Error
                         self.success = False
-                        error = myExceptions.searchList[18]
+                        myError = errorList[18]
+                        error = Error(myError.code,myError.description,myError.consolLog)
                         print(f"Error {error.code}: {error.consolLog}")
                         self.errors.append(error)
                         return
@@ -207,7 +385,8 @@ class RetriveQLD:
                     except:
                         # Handle Error
                         self.success = False
-                        error = myExceptions.searchList[16]
+                        myError = errorList[16]
+                        error = Error(myError.code,myError.description,myError.consolLog)
                         print(f"Error {error.code}: {error.consolLog}")
                         self.errors.append(error)
                         return
@@ -227,7 +406,8 @@ class RetriveQLD:
                     except:
                         # Handle Error
                         self.success = False
-                        error = myExceptions.searchList[17]
+                        myError = errorList[17]
+                        error = Error(myError.code,myError.description,myError.consolLog)
                         print(f"Error {error.code}: {error.consolLog}")
                         self.errors.append(error)
                         return
@@ -278,7 +458,8 @@ class RetriveQLD:
             if (wellExists(wellName)):
                 # Handle Error
                 #self.success = False
-                #error = myExceptions.searchList[12]
+                #myError = errorList[12]
+                #error = Error(myError.code,myError.description,myError.consolLog)
                 #print(f"Well '{wellName}' already exists in database.")
                 #self.errors.append(error)
 
@@ -339,7 +520,8 @@ class RetriveQLD:
                         print(e)
                     # Handle Error
                     self.success = False
-                    error = myExceptions.searchList[20]
+                    myError = errorList[20]
+                    error = Error(myError.code,myError.description,myError.consolLog)
                     print(f"Error {error.code}: {error.consolLog}")
                     self.errors.append(error)
                     return
@@ -366,7 +548,8 @@ class RetriveQLD:
                         print(e)
                     # Handle Error
                     self.success = False
-                    error = myExceptions.searchList[11]
+                    myError = errorList[11]
+                    error = Error(myError.code,myError.description,myError.consolLog)
                     print(f"Error {error.code}: {error.consolLog}")
                     self.errors.append(error)
                     return
@@ -397,17 +580,20 @@ class RetriveQLD:
                             except:
                                 # Handle Error.
                                 self.success = False
-                                error = myExceptions.searchList[14]
+                                myError = errorList[14]
+                                error = Error(myError.code,myError.description,myError.consolLog)
                                 error.consolLog = error.consolLog + " Well: " + well.well_name + " Document: " + documentName
                                 print(f"Error {error.code}: {error.consolLog}")
                                 self.errors.append(error)
                         else:
                             # Handle Error.
                             self.success = False
-                            error = myExceptions.searchList[15]
+                            myError = errorList[15]
+                            error = Error(myError.code,myError.description,myError.consolLog)
                             error.consolLog = error.consolLog + " Well: " + well.well_name + " Document: " + documentName
                             print(f"Error {error.code}: {error.consolLog}")
                             self.errors.append(error)
+                            
 
             elif (type == "report"):
                 # Create the report object.
@@ -476,16 +662,17 @@ class RetriveQLD:
                             except:
                                 # Handle Error.
                                 self.success = False
-                                error = myExceptions.searchList[14]
+                                myError = errorList[14]
+                                error = Error(myError.code,myError.description,myError.consolLog)
                                 print(f"Error {error.code}: {error.consolLog}")
                                 self.errors.append(error)
                         else:
                             # Handle Error.
                             self.success = False
-                            error = myExceptions.searchList[15]
+                            myError = errorList[15]
+                            error = Error(myError.code,myError.description,myError.consolLog)
+                            error.consolLog = error.consolLog + " Well: " + well.well_name + " Document: " + documentName
                             print(f"Error {error.code}: {error.consolLog}")
-                            print("Well: " + str(well))
-                            print("Document: " + documentName)
                             self.errors.append(error)
             else:
                 pass
@@ -496,10 +683,6 @@ class RetriveQLD:
                     self.success = True
                 else: 
                     self.success = False
-
-                
-
-                
 
 
             
@@ -591,8 +774,8 @@ class APISearchQLD(SearchQLD):
                         # Does the well exists in the database
                         myResult.existsInDatabase = wellExists(myResult.wellName)
 
-                        if(not myResult.existsInDatabase):
-                            print(result)
+                        #if(not myResult.existsInDatabase):
+                            #print(result)
 
                         # Get the resourc list
                         resources = result.get('resources', 'None')
@@ -635,6 +818,7 @@ class ResultEncoder(JSONEncoder):
 
 def RemoveLink(mstr, subFolder):
     if(mstr is not None):
+        mstr = mstr.lower()
         x = mstr.find("http://linked.data.gov.au/def/" + subFolder)
         if(x > -1):
             mstr = mstr[x+30 + len(subFolder):]
@@ -696,4 +880,26 @@ def GetWellName(title, permit):
                 y = y.title()
             wellName += y + " "
 
+        # Remove brackets
+        wellName = wellName.replace("(","")
+        wellName = wellName.replace(")","")
+
         return wellName.strip()
+
+
+
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        pass
+ 
+    try:
+        import unicodedata
+        unicodedata.numeric(s)
+        return True
+    except (TypeError, ValueError):
+        pass
+ 
+    return False
