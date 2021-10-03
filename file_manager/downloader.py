@@ -20,7 +20,13 @@ def downloadFile(document):
         try:
             os.mkdir(MEDIA_ROOT + destinationWell)
         except Exception as e:
-            return "Failed to create folder: " + destinationWell
+            error = myExceptions.downloadList[1]
+            error.description = error.description
+            error.consolLog = error.consolLog
+            print(f"Error {error.code}: {error.consolLog}")
+
+            return error
+            #return "Failed to create folder: " + destinationWell
 
     if report is None:
         destination = destinationWell
