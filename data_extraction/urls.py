@@ -30,7 +30,8 @@ urlpatterns = [
     #path('administration/', views.administration, name='administration'),
     path('administration/search/', views.search, name='search'),
     path('administration/update-companies', views.UpdateCompanies),
-    path('administration/download-files', views.DownloadMissingFiles),
+    path('administration/download-all', views.DownloadAllMissing),
+    path('administration/download-wcr', views.DownloadAllWCRs),
     path('administration/convert', views.ConvertAllMissingToJPEG),
 
     # Search
