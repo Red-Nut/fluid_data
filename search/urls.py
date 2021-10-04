@@ -7,5 +7,5 @@ urlpatterns = [
     path('add', views.AddDatabase, name='API_SearchAdd'),
     path('addMany', views.AddMany, name='API_SearchAddMany'),
     path('addAllQld/', views.AddAllQLD),
-    path('updateAllQld/', views.AddAllQLD),
+    path('updateAllQld/', views.UpdateAllQLD),
 ]

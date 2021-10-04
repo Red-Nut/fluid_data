@@ -74,7 +74,7 @@ def AddMany(request):
     return JsonResponse(response)
     
 def AddAllQLD(request):
-    response = RetreiveAllQLD(False)
+    response = RetreiveAllQLD(True)
 
     return JsonResponse(response)
 
