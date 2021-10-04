@@ -64,8 +64,8 @@ def RetreiveAllQLD(existing):
             #if(i < 1000):
             if(existing):
                 response = Add(well,"QLD")
-                if response.success == False:
-                    responseList.append(response)
+                #if response.success == False:
+                responseList.append(response)
             else:
                 myWell = Well.objects.filter(gov_id=well).first()
                 if (myWell is None):
