@@ -198,6 +198,7 @@ class Document(CreatedModifiedModel):
         choices=STATUS,
         default=1,
     )
+    converted = models.BooleanField(default=False)
 
     def __str__(self):
 	    return f"{self.document_name}"

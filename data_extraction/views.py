@@ -3,10 +3,11 @@ from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.generic.edit import CreateView
 from django.urls import reverse_lazy
+from django.db.models import Q
 
 from search import config_search
 from api import internalAPI
-from file_manager import downloader
+from file_manager import downloader, convertToJPEG
 
 from .models import Company, Data, Document, File, Page, Report, State, WellStatus, Well
 from .forms import WellFilter
@@ -190,5 +191,29 @@ def DownloadMissingFiles(request):
 			time.sleep(0.2)
 		
 	
+	json_resonse = json.dumps(results)
+	return HttpResponse(json_resonse)
+
+def ConvertAllMissingToJPEG(request):
+	documents = Document.objects.filter(converted=False).all()
+	documents = documents.filter(Q(file__file_ext='.pdf') | Q(file__file_ext='.tiff') | Q(file__file_ext='.tif'))
+
+	results=[]
+
+	for document in documents:
+		path = document.file.file_location + document.file.file_name + document.file.file_ext
+		print(path)
+		result = convertToJPEG.convertFile(path)
+		if result.code == "55000":
+			result.success = True
+
+			#update converted flag for document
+			document.converted = True
+			document.save()
+		else:
+			result.success = False
+
+		results.append(result.description)
+
 	json_resonse = json.dumps(results)
 	return HttpResponse(json_resonse)

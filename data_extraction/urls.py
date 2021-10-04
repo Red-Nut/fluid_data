@@ -31,7 +31,8 @@ urlpatterns = [
     path('administration/search/', views.search, name='search'),
     path('administration/update-companies', views.UpdateCompanies),
     path('administration/download-files', views.DownloadMissingFiles),
-    
+    path('administration/convert', views.ConvertAllMissingToJPEG),
+
     # Search
     path('searchGov/', include('search.urls')),
 

@@ -48,3 +48,22 @@ downloadList = [
     Error(errorbase + "003", "Failed to create file object", "Failed to create file object"),
     Error(errorbase + "004", "Failed to download file", "Failed to download file"),
 ]
+
+errorbase = "55"
+convertList = [
+    Error(errorbase + "000", "Success", "Success"),
+    Error(errorbase + "001", "Can't convert, Not JPEG or TIFF file", "Can't convert, Not JPEG or TIFF file"),
+    Error(errorbase + "002", "Already converted", "Already converted"),
+    Error(errorbase + "003", "Unable to create directory: ", "Unable to create directory."),
+    Error(errorbase + "004", "", ""),
+    Error(errorbase + "005", "", ""),
+    Error(errorbase + "006", "", ""),
+    Error(errorbase + "007", "", ""),
+    Error(errorbase + "008", "", ""),
+    Error(errorbase + "009", "", ""),
+    Error(errorbase + "010", "TIFF error: ", "TIFF error: "),
+    Error(errorbase + "011", "JPEG error: ", "JPEG error: "),
+    Error(errorbase + "012", "TIFF - not enough frames in img: ", "TIFF - not enough frames in img"),
+    Error(errorbase + "013", "TIFF - reached 1000 pages in file: ", "TIFF - reached 1000 pages in file"),
+    Error(errorbase + "014", "PDF - file too large: ", "PDF - file too large"),
+]
