@@ -152,11 +152,27 @@ def UpdateCompanies(request):
 
 	return HttpResponse("Update Complete")
 
-def DownloadMissingFiles(request):
+def DownloadAllMissing(request):
 	documents = Document.objects.filter(status=1).all()
 
+	results=DownloadMissingFiles(documents)
+
+	json_resonse = json.dumps(results)
+	return HttpResponse(json_resonse)
+
+def DownloadAllWCRs(request):
+	documents = Document.objects.filter(status=1).all()
+	documents = documents.filter(report__report_type__type_name="Well Completion Report").all()
+	
+	results=DownloadMissingFiles(documents)
+
+	json_resonse = json.dumps(results)
+	return HttpResponse(json_resonse)
+
+def DownloadMissingFiles(documents):
 	results=[]
 	for document in documents:
+		print(document.report_name)
 		url = document.url
 
 		if url is None :
@@ -190,9 +206,7 @@ def DownloadMissingFiles(request):
 			results.append(result.description)
 			time.sleep(0.2)
 		
-	
-	json_resonse = json.dumps(results)
-	return HttpResponse(json_resonse)
+	return results
 
 def ConvertAllMissingToJPEG(request):
 	documents = Document.objects.filter(converted=False).all()
