@@ -14,7 +14,7 @@ admin.site.register(Data, DataAdmin)
 # Document. 
 class DocumentAdmin(admin.ModelAdmin):
     list_display = ("id", "well", "document_name", "report", "status", "url")
-    list_filter = ("well", "document_name", "status")
+    list_filter = ("report__report_type", "well", "document_name", "status")
 admin.site.register(Document, DocumentAdmin)
 
 # Report. 

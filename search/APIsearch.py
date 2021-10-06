@@ -591,7 +591,7 @@ class RetriveQLD:
                             myError = errorList[15]
                             error = Error(myError.code,myError.description,myError.consolLog)
                             error.consolLog = error.consolLog + " Well: " + well.well_name + " Document: " + documentName
-                            print(f"Error {error.code}: {error.consolLog}")
+                            #print(f"Error {error.code}: {error.consolLog}")
                             self.errors.append(error)
                             
 
@@ -667,12 +667,20 @@ class RetriveQLD:
                                 print(f"Error {error.code}: {error.consolLog}")
                                 self.errors.append(error)
                         else:
+                            # Add to report (if duplicate already added without)
+                            if(report is not None):
+                                try:
+                                    document.report = report
+                                    document.save()
+                                    print("successfully updated report")
+                                except:
+                                    print("failed to change report")
                             # Handle Error.
                             self.success = False
                             myError = errorList[15]
                             error = Error(myError.code,myError.description,myError.consolLog)
                             error.consolLog = error.consolLog + " Well: " + well.well_name + " Document: " + documentName
-                            print(f"Error {error.code}: {error.consolLog}")
+                            #print(f"Error {error.code}: {error.consolLog}")
                             self.errors.append(error)
             else:
                 pass

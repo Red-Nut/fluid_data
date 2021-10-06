@@ -158,7 +158,7 @@ def WellJson(well):
         for file in documentObjects:
             reportFileCount += 1
             if(file.file is None):
-                fileName = None
+                link = None
             else:
                 link = MEDIA_URL + file.file.file_location + file.file.file_name + '.' + file.file.file_ext.replace(".","")
             
