@@ -162,7 +162,11 @@ def DownloadAllMissing(request):
 
 def DownloadAllWCRs(request):
 	documents = Document.objects.filter(status=1).all()
+	#print(documents.count())
 	documents = documents.filter(report__report_type__type_name="Well Completion Report").all()
+	#print(documents.count())
+	documents = documents.filter(Q(url__icontains=".pdf")| Q(url__icontains='.tiff') | Q(url__icontains='.tif') | Q(url__icontains='.las')).all()
+	print(documents.count())
 	
 	results=DownloadMissingFiles(documents)
 
@@ -172,7 +176,7 @@ def DownloadAllWCRs(request):
 def DownloadMissingFiles(documents):
 	results=[]
 	for document in documents:
-		print(document.report_name)
+		print(document.report.report_name)
 		url = document.url
 
 		if url is None :
@@ -210,7 +214,8 @@ def DownloadMissingFiles(documents):
 
 def ConvertAllMissingToJPEG(request):
 	documents = Document.objects.filter(converted=False).all()
-	documents = documents.filter(Q(file__file_ext='.pdf') | Q(file__file_ext='.tiff') | Q(file__file_ext='.tif'))
+	documents = documents.filter(status=2).all()
+	documents = documents.filter(Q(file__file_ext='.pdf') | Q(file__file_ext='.tiff') | Q(file__file_ext='.tif')).all()
 
 	results=[]
 

@@ -79,7 +79,7 @@ def downloadFile(document):
         error.description = error.description + ". Well: " + document.well.well_name + ". Document: " + document.document_name
         error.consolLog = error.consolLog + ". Well: " + document.well.well_name + ". Document: " + document.document_name
         print(f"Error {error.code}: {error.consolLog}")
-        raise e
+        print(e)
 
         return error
 
