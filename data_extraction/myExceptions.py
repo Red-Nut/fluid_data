@@ -55,7 +55,7 @@ convertList = [
     Error(errorbase + "001", "Can't convert, Not JPEG or TIFF file", "Can't convert, Not JPEG or TIFF file"),
     Error(errorbase + "002", "Already converted", "Already converted"),
     Error(errorbase + "003", "Unable to create directory: ", "Unable to create directory."),
-    Error(errorbase + "004", "", ""),
+    Error(errorbase + "004", "Unable to save pages.", "Unable to save pages."),
     Error(errorbase + "005", "", ""),
     Error(errorbase + "006", "", ""),
     Error(errorbase + "007", "", ""),
@@ -63,7 +63,7 @@ convertList = [
     Error(errorbase + "009", "", ""),
     Error(errorbase + "010", "TIFF error: ", "TIFF error: "),
     Error(errorbase + "011", "JPEG error: ", "JPEG error: "),
-    Error(errorbase + "012", "TIFF - not enough frames in img: ", "TIFF - not enough frames in img"),
+    Error(errorbase + "012", "", ""),
     Error(errorbase + "013", "TIFF - reached 1000 pages in file: ", "TIFF - reached 1000 pages in file"),
     Error(errorbase + "014", "PDF - file too large: ", "PDF - file too large"),
 ]

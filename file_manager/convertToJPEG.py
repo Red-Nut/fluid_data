@@ -81,7 +81,7 @@ def convertTIFF(path,folder,name,ext):
             try:
                 #load page
                 im.seek(i)
-                outfile = folder + "\\page" + str(i+1) + ".jpg"
+                outfile = folder + '/' + "page" + str(i+1) + ".jpg"
                 try:
                     im.thumbnail(im.size)
                     im.save(outfile, "JPEG", quality=100)
@@ -89,19 +89,13 @@ def convertTIFF(path,folder,name,ext):
                     # Handle Error
                     myResult = errorList[10]
                     result = Error(myResult.code,myResult.description,myResult.consolLog)
-                    result.description = result.description + str(e)
+                    #result.description = result.description + str(e)
                     print(f"Error {result.code}: {result.consolLog}")
                     print(e)
                     return result
-            except EOFError:
-                # Not enough frames in img
-                # Handle Error
-                myResult = errorList[12]
-                result = Error(myResult.code,myResult.description,myResult.consolLog)
-                result.description = result.description + str(EOFError)
-                print(f"Error {result.code}: {result.consolLog}")
-                print(EOFError)
-                return result
+            except:
+                # End of file
+                break
 
     except Exception as e:
         # Handle Error
@@ -145,10 +139,18 @@ def convertPDF(path,folder,name,ext):
                 return result
 
         #save pages
-        print("here")
-        for i, page in enumerate(pages):
-            filename = folder + '/' + "page" + str(i) + ".jpg"
-            page.save(filename, 'JPEG')
+        try:
+            for i, page in enumerate(pages):
+                filename = folder + '/' + "page" + str(i) + ".jpg"
+                page.save(filename, 'JPEG')
+        except Exception as e:
+            # Handle Error
+            myResult = errorList[4]
+            result = Error(myResult.code,myResult.description,myResult.consolLog)
+            result.description = result.description + str(e)
+            print(f"Error {result.code}: {result.consolLog}")
+            print(e)
+            return result
 
     # Return Success
     myResult = errorList[0]

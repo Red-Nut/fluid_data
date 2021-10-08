@@ -217,11 +217,14 @@ def ConvertAllMissingToJPEG(request):
 	documents = documents.filter(status=2).all()
 	documents = documents.filter(Q(file__file_ext='.pdf') | Q(file__file_ext='.tiff') | Q(file__file_ext='.tif')).all()
 
+	print("Documents:" + str(documents.count()))
+
 	results=[]
 
 	for document in documents:
 		path = document.file.file_location + document.file.file_name + document.file.file_ext
 		print(path)
+		
 		result = convertToJPEG.convertFile(path)
 		if result.code == "55000":
 			result.success = True
@@ -236,3 +239,19 @@ def ConvertAllMissingToJPEG(request):
 
 	json_resonse = json.dumps(results)
 	return HttpResponse(json_resonse)
+
+def RemoveDuplicateDocuments(request):
+	allDocs = Document.objects.all()
+
+	count = 0
+
+	for doc in allDocs:
+		duplicates = Document.objects.filter(document_name=doc.document_name,well=doc.well,report=doc.report).exclude(id=doc.id).all()
+		for dup in duplicates:
+			print("Duplicate found. Well: " + str(dup.well) + " Document: " + dup.document_name)
+			dup.delete()
+			count = count + 1
+
+	response = count
+
+	return HttpResponse(str(response))

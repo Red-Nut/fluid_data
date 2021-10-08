@@ -33,6 +33,7 @@ urlpatterns = [
     path('administration/download-all', views.DownloadAllMissing),
     path('administration/download-wcr', views.DownloadAllWCRs),
     path('administration/convert', views.ConvertAllMissingToJPEG),
+    path('administration/dup', views.RemoveDuplicateDocuments),
 
     # Search
     path('searchGov/', include('search.urls')),
