@@ -222,10 +222,7 @@ def ConvertAllMissingToJPEG(request):
 	results=[]
 
 	for document in documents:
-		path = document.file.file_location + document.file.file_name + document.file.file_ext
-		print(path)
-		
-		result = convertToJPEG.convertFile(path)
+		result = convertToJPEG.convertFile(document)
 		if result.code == "55000":
 			result.success = True
 
