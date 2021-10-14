@@ -1,6 +1,9 @@
 django
 gunicorn
 wheel
-request
+requests
 mysqlclient
 django-mysql
+python-dateutil
+Pillow
+pdf2image

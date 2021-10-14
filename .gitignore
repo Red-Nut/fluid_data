@@ -1,0 +1,7 @@
+venv/
+data_extraction.sock
+QLD API Structure (1).docx
+QLD API Structure.docx
+__pycache__/
+migrations/
+static/admin/
