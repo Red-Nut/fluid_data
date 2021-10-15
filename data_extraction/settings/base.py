@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'search',
     'api',
     'file_manager',
+    'interpretation',
 ]
 
 MIDDLEWARE = [
@@ -136,7 +137,7 @@ STATICFILES_DIRS = (
 )
 
 #MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-MEDIA_ROOT = '/mnt/alpha/Well_Data/'
+#MEDIA_ROOT = '/mnt/alpha/Well_Data/'
 MEDIA_URL = '/media/'
 
 
@@ -144,3 +145,6 @@ MEDIA_URL = '/media/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "interpretation/Data Extraction-42569ca311b6.json"

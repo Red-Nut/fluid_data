@@ -18,7 +18,7 @@ class File(CreatedModifiedModel):
     file_size = models.IntegerField()
     
     def __str__(self):
-	    return f"{self.file_name}"
+	    return f"{self.file_name}.{self.file_ext}"
 
     def __repr__(self):
         str = "Id: {}, file name: {}, location: {}\n" 
@@ -208,6 +208,8 @@ class Document(CreatedModifiedModel):
         str =str.format( self.id, self.well.id, self.company_name, self.file.id)
         return str
 
+# ***************************** Page Text  ***************************** 
+
 class Page(CreatedModifiedModel):
     document = models.ForeignKey(
         Document,
@@ -220,6 +222,7 @@ class Page(CreatedModifiedModel):
         blank=True,
         on_delete=models.SET_NULL
     )
+    extracted = models.BooleanField()
 
     class Meta:
         unique_together=('document_id', 'page_no')
@@ -232,8 +235,30 @@ class Page(CreatedModifiedModel):
         str =str.format( self.id, self.document.id, self.page_no, self.file.id)
         return str
 
+class Text(models.Model):
+    page = models.ForeignKey(
+        Page,
+        on_delete=models.CASCADE,
+        related_name="texts"
+    )
+    text = models.CharField(max_length=255)
 
- # ***************************** Date  ***************************** 
+    def __str__(self):
+	    return f"Page {self.page.page_no}: {self.text}"
+
+class BoundingPoly(models.Model):
+    text = models.ForeignKey(
+        Text,
+        on_delete=models.CASCADE,
+        related_name="BoundingPolys"
+    )
+    x = models.IntegerField()
+    y = models.IntegerField()
+
+    def __str__(self):
+	    return f"({self.x},{self.y}) {self.text.text}"
+
+ # ***************************** Data  ***************************** 
 
 class Data(CreatedModifiedModel):
     page = models.ForeignKey(

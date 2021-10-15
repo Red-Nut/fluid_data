@@ -7,3 +7,6 @@ django-mysql
 python-dateutil
 Pillow
 pdf2image
+google-cloud
+google-cloud-vision
+jsonpickle

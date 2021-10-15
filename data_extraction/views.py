@@ -8,12 +8,15 @@ from django.db.models import Q
 from search import config_search
 from api import internalAPI
 from file_manager import downloader, convertToJPEG
+from interpretation import googleText
 
-from .models import Company, Data, Document, File, Page, Report, State, WellStatus, Well
+from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
 from .forms import WellFilter
 from . import myExceptions
 
 import json
+from json import JSONEncoder
+import jsonpickle
 import time
 
 def index(request):
@@ -252,3 +255,25 @@ def RemoveDuplicateDocuments(request):
 	response = count
 
 	return HttpResponse(str(response))
+
+def GoogleText(request):
+	documents = Document.objects.filter(converted=True).all()
+
+	for document in documents:
+		result = googleText.getDocumentText(document)
+
+#	texts = Text.objects.filter(
+#			page__document = document, 
+#			page__page_no = 0
+#		).order_by(
+#			"BoundingPolys__y"
+#		).all()
+
+#	for text in texts:
+#		print(text.text)
+
+	return HttpResponse(result)
+
+class MyEncoder(JSONEncoder):
+        def default(self, o):
+            return o.__dict__

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, WellStatus, Well,  WellClass, WellPurpose
+from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
 
 # Company.
 class CompanyAdmin(admin.ModelAdmin):
@@ -35,6 +35,12 @@ admin.site.register(File, FileAdmin)
 class PageAdmin(admin.ModelAdmin):
     list_display = ("id", "document", "page_no", "file")
 admin.site.register(Page, PageAdmin)
+
+# Text
+admin.site.register(Text)
+
+# BoundingPoly
+admin.site.register(BoundingPoly)
 
 # Permit.
 admin.site.register(Permit)

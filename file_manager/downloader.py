@@ -1,5 +1,5 @@
 from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
-from data_extraction.settings.base import MEDIA_ROOT
+from django.conf import settings
 
 # Error codes.
 from data_extraction import myExceptions
@@ -16,9 +16,9 @@ def downloadFile(document):
 
     destinationWell = wellFolder + '/'
 
-    if (not os.path.isdir(MEDIA_ROOT + destinationWell)):
+    if (not os.path.isdir(settings.MEDIA_ROOT + destinationWell)):
         try:
-            os.mkdir(MEDIA_ROOT + destinationWell)
+            os.mkdir(settings.MEDIA_ROOT + destinationWell)
         except Exception as e:
             error = myExceptions.downloadList[1]
             error.description = error.description
@@ -32,9 +32,9 @@ def downloadFile(document):
         destination = destinationWell
     else:
         destination = destinationWell + report.report_type.type_name + '/'
-        if (not os.path.isdir(MEDIA_ROOT + destination)):
+        if (not os.path.isdir(settings.MEDIA_ROOT + destination)):
             try:
-                os.mkdir(MEDIA_ROOT + destination)
+                os.mkdir(settings.MEDIA_ROOT + destination)
             except Exception as e:
                 error = myExceptions.downloadList[1]
                 error.description = error.description + ": " + destination
@@ -72,7 +72,7 @@ def downloadFile(document):
     filePath = destination + name + fileType
 
     try:
-        with urllib.request.urlopen(url) as response, open(MEDIA_ROOT + filePath, 'wb') as out_file:
+        with urllib.request.urlopen(url) as response, open(settings.MEDIA_ROOT + filePath, 'wb') as out_file:
             shutil.copyfileobj(response, out_file)
     except Exception as e:
         error = myExceptions.downloadList[4]
@@ -83,7 +83,7 @@ def downloadFile(document):
 
         return error
 
-    fileSize = os.path.getsize(MEDIA_ROOT + filePath)
+    fileSize = os.path.getsize(settings.MEDIA_ROOT + filePath)
 
     error = myExceptions.downloadList[0]
     error.description = error.description + ". Well: " + document.well.well_name + ". Document: " + document.document_name

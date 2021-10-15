@@ -12,3 +12,5 @@ DATABASES = {
         'PORT': '3306',
     }
 }
+
+MEDIA_ROOT = 'W:/Well_Data/'

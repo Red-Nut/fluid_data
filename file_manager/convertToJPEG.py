@@ -3,7 +3,7 @@ from PIL import Image #pip install Pillow
 from pdf2image import convert_from_path #pip install pdf2image and install poppler and add to PATH (https://pypi.org/project/pdf2image/)
 import tempfile
 
-from data_extraction.settings.base import MEDIA_ROOT
+from django.conf import settings
 from data_extraction.myExceptions import Error, convertList as errorList
 
 from data_extraction.models import Company, Data, Document, File, Page, Report, State, WellStatus, Well
@@ -12,7 +12,7 @@ def convertFile(document):
     path = document.file.file_location + document.file.file_name + document.file.file_ext
     print(path)
 
-    path = MEDIA_ROOT + path
+    path = settings.MEDIA_ROOT + path
     folder, ext = os.path.splitext(path)
     ext = ext.lower()
     name = os.path.basename(path)
@@ -225,7 +225,7 @@ def convertPDF(path,folder,document):
                 print(f"Error {result.code}: {result.consolLog}")
                 print(e)
                 return result
-    except:
+    except Exception as e:
         # Handle Error
         myResult = errorList[11]
         result = Error(myResult.code,myResult.description,myResult.consolLog)

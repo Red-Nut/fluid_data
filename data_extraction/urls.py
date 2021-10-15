@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 
 from django.conf.urls.static import static
-from .settings import base
+from django.conf import settings
 
 from .import views
 
@@ -34,6 +34,7 @@ urlpatterns = [
     path('administration/download-wcr', views.DownloadAllWCRs),
     path('administration/convert', views.ConvertAllMissingToJPEG),
     path('administration/dup', views.RemoveDuplicateDocuments),
+    path('administration/text', views.GoogleText),
 
     # Search
     path('searchGov/', include('search.urls')),
@@ -42,6 +43,6 @@ urlpatterns = [
     path('api/', include('api.urls')),
 ]
 
-urlpatterns += static(base.STATIC_URL, document_root = base.STATIC_ROOT)
-urlpatterns += static(base.MEDIA_URL, document_root=base.MEDIA_ROOT)
+urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
