@@ -147,4 +147,4 @@ MEDIA_URL = '/media/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "interpretation/Data Extraction-42569ca311b6.json"
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "interpretation/data-extraction-276505-639e33986ebe.json"
