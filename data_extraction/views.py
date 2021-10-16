@@ -262,18 +262,23 @@ def GoogleText(request):
 	for document in documents:
 		result = googleText.getDocumentText(document)
 
-#	texts = Text.objects.filter(
-#			page__document = document, 
-#			page__page_no = 0
-#		).order_by(
-#			"BoundingPolys__y"
-#		).all()
+	return HttpResponse("done")
 
-#	for text in texts:
-#		print(text.text)
+def getDocumentText(document):
+	pageObjects = Page.objects.filter(document=document).order_by("page_no")
 
-	return HttpResponse(result)
+	pages = []
+	for pageObject in pageObjects:
+		texts = Text.objects.filter(
+				page = pageObject
+			).order_by(
+				"BoundingPolys__y", "BoundingPolys__x"
+			).all()
 
-class MyEncoder(JSONEncoder):
-        def default(self, o):
-            return o.__dict__
+		page = {page:pageObject,texts:texts}
+
+		pages.append(page)
+
+	return pages
+
+	
