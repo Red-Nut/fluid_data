@@ -159,7 +159,8 @@ class Report(CreatedModifiedModel):
     )
     well = models.ForeignKey(
         Well,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="reports"
     )
     url = models.TextField(max_length=1000,null=True)
 
@@ -179,13 +180,15 @@ class Document(CreatedModifiedModel):
     document_name = models.CharField(max_length=255)
     well = models.ForeignKey(
         Well,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="documents"
     )
     report = models.ForeignKey(
         Report,
         null=True,
         blank=True,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="documents"
     )
     file = models.ForeignKey(
         File,
@@ -213,7 +216,8 @@ class Document(CreatedModifiedModel):
 class Page(CreatedModifiedModel):
     document = models.ForeignKey(
         Document,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="pages"
     )
     page_no = models.PositiveIntegerField() 
     file = models.ForeignKey(
@@ -264,7 +268,8 @@ class Data(CreatedModifiedModel):
     page = models.ForeignKey(
         Page,
         null=False,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="datas"
     ) 
     extraction_method = models.IntegerField()
 

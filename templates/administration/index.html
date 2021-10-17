@@ -1,0 +1,34 @@
+
+{% extends 'data/base.html' %}
+{% block title %}
+Data Extraction - Home
+{% endblock %}
+
+{% block head %}
+<div style="border-bottom: 1px solid black;" class="p-3"></div>
+{% endblock %}
+
+{% block main %}
+<div class="container-fluid">
+    <!-- Table Header -->
+    <table width=100% class="table table-striped">
+        <thead>
+            <tr class="table-dark">
+                <th id="well_nameClick" class="link" onclick="OrderBy('well_name', true)">
+                    Well Completion Reports
+                </th>
+        </thead>
+
+        <!-- Table Body -->
+        <tbody id="tbody">
+            {% for WCR in WCRs%}
+            <tr>
+                <td>{{WCR.report_name}}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% endblock %}
+

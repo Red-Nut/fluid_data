@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_mysql',
     'data_extraction',
+    'administration',
     'search',
     'api',
     'file_manager',

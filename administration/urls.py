@@ -17,25 +17,18 @@ from django.contrib import admin
 from django.urls import path, include
 
 from django.conf.urls.static import static
-from django.conf import settings
 
 from .import views
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', views.index, name='index'),
-    path('well/<int:id>/', views.details, name='details'),
-
-    # admin
-    path('administration/', include('administration.urls')),
-
-    # Search
-    path('searchGov/', include('search.urls')),
-
-    # API
-    path('api/', include('api.urls')),
+    path('', views.index, name='administration'),
+    path('search/', views.search, name='admin-search'),
+    path('update-companies', views.UpdateCompanies, name='admin-updateCompanies'),
+    path('download-all', views.DownloadAllMissing, name='admin-DownloadAll'),
+    path('download-wcr', views.DownloadAllWCRs, name='admin-DownloadWCRs'),
+    path('convert', views.ConvertAllMissingToJPEG, name='admin-convertAll'),
+    path('dup', views.RemoveDuplicateDocuments, name='admin-removeDuplicate'),
+    path('text', views.GoogleText),
 ]
 
-urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
