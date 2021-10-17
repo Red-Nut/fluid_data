@@ -23,6 +23,10 @@ def index(request):
     WCRs_d_no = []
     WCRs_blank = []
 
+    WCRs_c = []
+    WCRs_c_no = []
+
+
     for WCR in WCRs:
         documents = Document.objects.filter(report=WCR).all()
         myWCR = {
@@ -32,20 +36,34 @@ def index(request):
         if(documents.count() == 0):
             WCRs_blank.append(myWCR)
         else:
-            d = True
+            downloaded = True
+            converted = False
+
             for document in documents:
                 if document.status == 1: # missing
-                    d = False
+                    downloaded = False
+                if document.converted == True:
+                    converted = True
             
-            if d:
+            if downloaded:
                 WCRs_d.append(myWCR)
             else:
                 WCRs_d_no.append(myWCR)
 
+            if converted:
+                WCRs_c.append(myWCR)
+            else:
+                WCRs_c_no.append(myWCR)
 
+
+    # Array counts
+    # Downloaded
     count_WCRs_d = len(WCRs_d)
     count_WCRs_d_no = len(WCRs_d_no)
     count_WCRs_blank = len(WCRs_blank)
+    # Converted
+    count_WCRs_c = len(WCRs_c)
+    count_WCRs_c_no = len(WCRs_c_no)
 
     context = {
         'WCRs_d' : WCRs_d,
@@ -54,6 +72,10 @@ def index(request):
         'count_WCRs_d_no' : count_WCRs_d_no,
         'WCRs_blank' : WCRs_blank,
         'count_WCRs_blank' : count_WCRs_blank,
+        'WCRs_c' : WCRs_c,
+        'count_WCRs_c' : count_WCRs_c,
+        'WCRs_c_no' : WCRs_c_no,
+        'count_WCRs_c_no' : count_WCRs_c_no,
     }
 
     return render(request, "administration/index.html", context)
