@@ -19,7 +19,42 @@ import time
 def index(request):
     WCRs = Report.objects.filter(report_type__type_name="Well Completion Report").all()
 
-    context = {'WCRs' : WCRs}
+    WCRs_d = []
+    WCRs_d_no = []
+    WCRs_blank = []
+
+    for WCR in WCRs:
+        documents = Document.objects.filter(report=WCR).all()
+        myWCR = {
+            'id' : WCR.well.id,
+            'report_name' : WCR.report_name
+        }
+        if(documents.count() == 0):
+            WCRs_blank.append(myWCR)
+        else:
+            d = True
+            for document in documents:
+                if document.status == 1: # missing
+                    d = False
+            
+            if d:
+                WCRs_d.append(myWCR)
+            else:
+                WCRs_d_no.append(myWCR)
+
+
+    count_WCRs_d = len(WCRs_d)
+    count_WCRs_d_no = len(WCRs_d_no)
+    count_WCRs_blank = len(WCRs_blank)
+
+    context = {
+        'WCRs_d' : WCRs_d,
+        'count_WCRs_d' : count_WCRs_d,
+        'WCRs_d_no' : WCRs_d_no,
+        'count_WCRs_d_no' : count_WCRs_d_no,
+        'WCRs_blank' : WCRs_blank,
+        'count_WCRs_blank' : count_WCRs_blank,
+    }
 
     return render(request, "administration/index.html", context)
 

@@ -14,21 +14,51 @@ Data Extraction - Home
     <table width=100% class="table table-striped">
         <thead>
             <tr class="table-dark">
-                <th id="well_nameClick" class="link" onclick="OrderBy('well_name', true)">
-                    Well Completion Reports
-                </th>
+                <th>Downloaded ({{count_WCRs_d}})</th>
+                <th>Missing ({{count_WCRs_d_no}})</th>
+                <th>Incomplete ({{count_WCRs_blank}})</th>
+            </tr>
         </thead>
 
         <!-- Table Body -->
-        <tbody id="tbody">
-            {% for WCR in WCRs%}
+        <tbody>
             <tr>
-                <td>{{WCR.report_name}}</td>
+                <td>
+                    <table><tbody>
+                        {% for WCR in WCRs_d%}
+                        <tr>
+                            <td class=link onClick="document.location.href='{% url 'details' WCR.id %}';" >{{WCR.report_name}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody></table>
+                </td>
+                <td>
+                    <table><tbody>
+                        {% for WCR in WCRs_d_no%}
+                        <tr>
+                            <td class=link onClick="document.location.href='{% url 'details' WCR.id %}';" >{{WCR.report_name}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody></table>
+                </td>
+                <td>
+                    <table><tbody>
+                        {% for WCR in WCRs_blank%}
+                        <tr>
+                            <td class=link onClick="document.location.href='{% url 'details' WCR.id %}';" >{{WCR.report_name}}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody></table>
+                </td>
             </tr>
-            {% endfor %}
         </tbody>
     </table>
 </div>
 
+<script>
+
+</script>
 {% endblock %}
+
+
 
