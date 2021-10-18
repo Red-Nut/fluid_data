@@ -134,56 +134,73 @@ def DownloadAllMissing(request):
 	return HttpResponse(json_resonse)
 
 def DownloadAllWCRs(request):
-	documents = Document.objects.filter(status=1).all()
-	#print(documents.count())
-	documents = documents.filter(report__report_type__type_name="Well Completion Report").all()
-	#print(documents.count())
-	documents = documents.filter(Q(url__icontains=".pdf")| Q(url__icontains='.tiff') | Q(url__icontains='.tif') | Q(url__icontains='.las')).all()
-	print(documents.count())
+    documents = Document.objects.filter(status=1).all()
+    documents = documents.filter(report__report_type__type_name="Well Completion Report").all()
+    documents = documents.filter(Q(url__icontains=".pdf")| Q(url__icontains='.tiff') | Q(url__icontains='.tif') | Q(url__icontains='.las')).all()
+    print(documents.count())
 	
-	results=DownloadMissingFiles(documents)
+    results=DownloadMissingFiles(documents)
 
-	json_resonse = json.dumps(results)
-	return HttpResponse(json_resonse)
+    json_resonse = json.dumps(results)
+    return HttpResponse(json_resonse)
 
 def DownloadMissingFiles(documents):
-	results=[]
-	for document in documents:
-		print(document.report.report_name)
-		url = document.url
+    results=[]
+    for document in documents:
+        url = document.url
 
-		if url is None :
-			document.status = 3
-			document.save()
-		elif "report geometry" in document.document_name.lower() or "ocr extract of report" in document.document_name.lower():
-			document.status = 3
-			document.save()
-		else: 
-			#print("DOWNLOADING FILE - Well: " + document.well.well_name + " File: " + document.document_name)
-			result = downloader.downloadFile(document)
-			if result.code == "50000":
-				try:
-					file = File.objects.create(
-						file_name = result.file_name,
-						file_ext = result.file_ext,
-						file_location = result.file_location,
-						file_size = result.file_size
-					)
-					document.file = file
-					document.status = 2
-					document.save()
+        if url is None :
+            document.status = 3
+            document.save()
 
-				except Exception as e:
-					result = myExceptions.downloadList[3]
-					result.description = result.description + ". Well: " + document.well.well_name + ". Document: " + document.document_name
-					result.consolLog = result.consolLog + ". Well: " + document.well.well_name + ". Document: " + document.document_name
-					print(result.consolLog)
-					#raise e
+            results.append("Ignored: " + document.document_name)
 
-			results.append(result.description)
-			time.sleep(0.2)
-		
-	return results
+        elif ("report geometry" in document.document_name.lower() 
+            or "ocr extract of report" in document.document_name.lower()
+            or ".json" in document.document_name.lower()):
+            document.status = 3
+            document.save()
+
+            results.append("Ignored: " + document.document_name)
+        else: 
+            #print("DOWNLOADING FILE - Well: " + document.well.well_name + " File: " + document.document_name)
+            result = downloader.downloadWellFile(document)
+            if result.code == "50000":
+                try:
+                    file = File.objects.filter(
+                        file_name = result.file_name,
+                        file_ext = result.file_ext,
+                        file_location = result.file_location
+                    ).first()
+                    if(file is None):
+                        file = File.objects.create(
+                            file_name = result.file_name,
+                            file_ext = result.file_ext,
+                            file_location = result.file_location,
+                            file_size = result.file_size
+                        )
+                    else:
+                        result = myExceptions.downloadList[5]
+                        result.description = result.description
+                        result.consolLog = result.consolLog
+                        print(result.consolLog)
+
+                    document.file = file
+                    document.status = 2
+                    document.save()
+
+                except Exception as e:
+                    result = myExceptions.downloadList[3]
+                    result.description = result.description
+                    result.consolLog = result.consolLog
+                    print(result.consolLog)
+
+            time.sleep(0.2)
+
+            results.append(result.description)
+        
+
+    return results
 
 def ConvertAllMissingToJPEG(request):
 	documents = Document.objects.filter(converted=False).all()

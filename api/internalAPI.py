@@ -133,7 +133,7 @@ def WellJson(well):
         if(file.file is None):
             link = None
         else:
-            link = MEDIA_URL + file.file.file_location + file.file.file_name + '.' + file.file.file_ext.replace(".","")
+            link = MEDIA_URL + 'well_data/' + file.file.file_location + file.file.file_name + '.' + file.file.file_ext.replace(".","")
             
         myFile = {
             'document_name' : file.document_name,
@@ -159,11 +159,16 @@ def WellJson(well):
             reportFileCount += 1
             if(file.file is None):
                 link = None
+
+                x = len(file.url) - file.url.rfind('.')
+                ext = file.url[-x:]
             else:
-                link = MEDIA_URL + file.file.file_location + file.file.file_name + '.' + file.file.file_ext.replace(".","")
+                link = MEDIA_URL + 'well_data/' + file.file.file_location + file.file.file_name + '.' + file.file.file_ext.replace(".","")
+                ext = file.file.file_ext
             
             myFile = {
                 'document_name' : file.document_name,
+                'ext' : ext,
                 'status' : file.status,
                 'link' : link,
                 'gov_url' : file.url,

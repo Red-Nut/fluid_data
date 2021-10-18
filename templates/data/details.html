@@ -37,7 +37,7 @@
                 </tr>
                 {% for file in well.files %}
                     <tr>
-                        <td>{{file.document_name}}</td>
+                        <td>{{file.document_name}}{{file.ext}}</td>
                         {% if file.status == 1 %}
                             <td>Local file missing.</td>
                         {% elif file.status == 2 %}
@@ -80,7 +80,7 @@
                                 </tr>
                                 {% for file in report.files %}
                                     <tr>
-                                        <td>{{file.document_name}}</td>
+                                        <td>{{file.document_name}}{{file.ext}}</td>
                                         {% if file.status == 1 %}
                                             <td>Local file missing.</td>
                                         {% elif file.status == 2 %}

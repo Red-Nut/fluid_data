@@ -13,4 +13,5 @@ DATABASES = {
     }
 }
 
-MEDIA_ROOT = 'W:/Well_Data/'
+MEDIA_ROOT = 'W:/fluid_data/'
+#MEDIA_ROOT = '/mnt/alpha/Well_Data/'

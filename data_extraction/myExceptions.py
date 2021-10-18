@@ -47,6 +47,7 @@ downloadList = [
     Error(errorbase + "002", "Connection Failed.", "Connection Failed."),
     Error(errorbase + "003", "Failed to create file object", "Failed to create file object"),
     Error(errorbase + "004", "Failed to download file", "Failed to download file"),
+    Error(errorbase + "005", "File already exists in database", "File already exists in database"),
 ]
 
 errorbase = "55"
