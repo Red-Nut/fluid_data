@@ -32,7 +32,9 @@ def downloadWellFile(document):
     if report is None:
         destination = destinationWell
     else:
-        destination = destinationWell + report.report_type.type_name + '/'
+        reportName = report.report_type.type_name
+        reportName = reportName.replace("\r\n"," ")
+        destination = destinationWell + reportName + '/'
         if (not os.path.isdir(root_folder + destination)):
             try:
                 os.mkdir(root_folder + destination)
@@ -87,7 +89,7 @@ def downloadWellFile(document):
             print(f"Error {error.code}: {error.consolLog}")
             print(e)
 
-        return error
+            return error
 
     fileSize = os.path.getsize(root_folder + filePath)
 

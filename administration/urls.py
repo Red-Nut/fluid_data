@@ -28,6 +28,7 @@ urlpatterns = [
     path('download-wcr', views.DownloadAllWCRs, name='admin-DownloadWCRs'),
     path('convert', views.ConvertAllMissingToJPEG, name='admin-convertAll'),
     path('dup', views.RemoveDuplicateDocuments, name='admin-removeDuplicate'),
+    path('changeWell', views.changeWell, name='admin-changeWell'),
     path('text', views.GoogleText),
 ]
 

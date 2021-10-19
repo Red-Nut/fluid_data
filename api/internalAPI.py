@@ -123,8 +123,6 @@ def search(name, owner, state, permit, status, wellClass, purpose,
 def WellJson(well):
     # Documents (not in report).
     documentObjects = Document.objects.filter(well=well, report__isnull=True).all()
-    documentObjects = documentObjects.exclude(document_name__icontains="Report Geometry")
-    documentObjects = documentObjects.exclude(document_name__icontains="OCR extract of report")
 
     files = []
     fileCount = 0

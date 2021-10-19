@@ -44,7 +44,7 @@ def index(request):
                     downloaded = False
                 if document.converted == True:
                     converted = True
-            
+
             if downloaded:
                 WCRs_d.append(myWCR)
             else:
@@ -136,8 +136,9 @@ def DownloadAllMissing(request):
 def DownloadAllWCRs(request):
     documents = Document.objects.filter(status=1).all()
     documents = documents.filter(report__report_type__type_name="Well Completion Report").all()
-    documents = documents.filter(Q(url__icontains=".pdf")| Q(url__icontains='.tiff') | Q(url__icontains='.tif') | Q(url__icontains='.las')).all()
-    print(documents.count())
+    documents = documents.filter(Q(url__icontains=".pdf")| Q(url__icontains='.tiff') | Q(url__icontains='.tif') | Q(url__icontains='.las') | Q(url__icontains='.json')).all()
+    #print(documents.count())
+    documents = documents.order_by("well__well_name")
 	
     results=DownloadMissingFiles(documents)
 
@@ -146,7 +147,13 @@ def DownloadAllWCRs(request):
 
 def DownloadMissingFiles(documents):
     results=[]
+    wellName = ""
     for document in documents:
+        if(wellName != document.well.well_name):
+            wellName = document.well.well_name
+            print(" ")
+            print(wellName.upper())
+        print("    " + document.document_name)
         url = document.url
 
         if url is None :
@@ -242,6 +249,26 @@ def RemoveDuplicateDocuments(request):
 	response = count
 
 	return HttpResponse(str(response))
+
+def changeWell(request):
+    dWell = Well.objects.filter(well_name="259").first()
+    nWell = Well.objects.filter(well_name="Bycoe 1").first()
+
+    reports = Report.objects.filter(well=dWell).all()
+    documents = Document.objects.filter(well=dWell).all()
+
+    for report in reports:
+        print("Report:" + report.report_name)
+        report.well = nWell
+        report.save()
+
+    for document in documents:
+        print("Document:" + document.document_name)
+        document.well = nWell
+        document.save()
+
+
+    return HttpResponse("Done")
 
 def GoogleText(request):
 	documents = Document.objects.filter(converted=True).all()
