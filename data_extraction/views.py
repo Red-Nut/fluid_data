@@ -104,7 +104,7 @@ def search(request):
 	}
 
 	
-	return render(request, "data/index.html", context)
+	return render(request, "data/search.html", context)
 
 @login_required
 def api(request):

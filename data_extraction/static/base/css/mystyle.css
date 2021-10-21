@@ -1,10 +1,12 @@
 /* Colors */
 :root {
-    --base-color:#0d8c13;
-    --light-color:#44EE4D;
+    --base-color:#db944d;
+    --light-color:#dbb04d;
+    --comp-color:#4d94db;
+
     --warning-color:#FEA520;
     --error-color:#C51B29;
-    --grey-color:#4B543B;
+    --grey-color:#54473b;
     --lightGrey-color:#a3a3a2;
 }
 .c-base {
@@ -12,6 +14,9 @@
 }
 .c-light {
     color: var(--light-color);
+}
+.c-comp {
+    color: var(--comp-color);
 }
 .c-warning {
     color: var(--warning-color);
@@ -86,7 +91,7 @@ a:hover{
     border-color:var(--light-color);
 }
 .btn-primary:hover{
-    background-color: var(--light-color);
+    background-color: var(--comp-color);
     border-color:var(--base-color);
 }
 
@@ -108,7 +113,7 @@ a:hover{
 }
 /* Set the color of the borders */
 .border-color{
-    border-color: #ff9532 !important;
+    border-color: var(--base-color) !important;
 }
 .table-centre{
     text-align:center !important;
