@@ -19,7 +19,12 @@ from json import JSONEncoder
 import jsonpickle
 import time
 
+@login_required
 def index(request):
+	return render(request, "data/index.html")
+
+@login_required
+def search(request):
 	if request.method == "POST":
 		form = WellFilter(request.POST)
 
@@ -101,7 +106,17 @@ def index(request):
 	
 	return render(request, "data/index.html", context)
 
+@login_required
+def api(request):
+	return render(request, "data/api.html")
 
+@login_required
+def profile(request):
+	return render(request, "data/profile.html")
+
+@login_required
+def company(request):
+	return render(request, "data/company.html")
 
 def details(request, id):
 	wellData = internalAPI.retrieveId(id)

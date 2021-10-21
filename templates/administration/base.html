@@ -5,7 +5,7 @@
 <head>
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <title>{% block title %}{% endblock %}</title>
+    <title>{% block title %}Fluid Data - Administration{% endblock %}</title>
     <meta name="description" content="Data Extraction">
 
     <!-- Stylesheets -->
@@ -54,8 +54,9 @@
             <!-- Navbar -->
             <div class="collapse navbar-collapse" id="navbarToggler">
                 <div class="navbar-nav ms-auto">
-                    <a class="nav-item text-light nav-link" href="{% url 'admin-index' %}">Home</a>
-                    <a class="nav-item text-light nav-link" href="{% url 'admin-search' %}">Search Online</a>
+                    <a class="nav-item text-light nav-link" href="{% url 'admin-index' %}">Admin Home</a>
+                    <a class="nav-item text-light nav-link" href="{% url 'admin-status' %}">Status</a>
+                    <a class="nav-item text-light nav-link" href="{% url 'admin-search' %}">Search Government</a>
                     <a class="nav-item text-light nav-link" href="{% url 'admin-operations' %}">Operations</a>
                 </div>
             </div>

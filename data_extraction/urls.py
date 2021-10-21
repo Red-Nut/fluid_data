@@ -19,11 +19,25 @@ from django.urls import path, include
 from django.conf.urls.static import static
 from django.conf import settings
 
-from .import views
+from . import views
+from . import viewsPublic
 
 urlpatterns = [
+    # Built-in Admin Tool.
     path('admin/', admin.site.urls),
-    path('', views.index, name='index'),
+
+    # Pages When Not Logged In.
+    path('', viewsPublic.index, name='index'),
+    path('about', viewsPublic.about, name='about'),
+    path('pricing', viewsPublic.pricing, name='pricing'),
+    path('contact', viewsPublic.contact, name='contact'),
+
+    # Pages When Logged In.
+    path('home', views.index, name='home'),
+    path('search', views.search, name='search'),
+    path('api', views.api, name='api'),
+    path('profile', views.profile, name='profile'),
+    path('company', views.company, name='company'),
     path('well/<int:id>/', views.details, name='details'),
 
     # admin

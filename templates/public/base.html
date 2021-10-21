@@ -54,16 +54,11 @@
             <!-- Navbar -->
             <div class="collapse navbar-collapse" id="navbarToggler">
                 <div class="navbar-nav ms-auto">
-                    <a class="nav-item text-light nav-link" href="{% url 'home' %}">Home</a>
-                    <a class="nav-item text-light nav-link" href="{% url 'search' %}">Search</a>
-                    <a class="nav-item text-light nav-link" href="{% url 'api' %}">API</a>
-                    <a class="nav-item text-light nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Profile
-                      </a>
-                      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
-                        <li><a class="dropdown-item" href="{% url 'profile' %}">User</a></li>
-                        <li><a class="dropdown-item" href="{% url 'company' %}">Company</a></li>
-                      </ul>
+                    <a class="nav-item text-light nav-link" href="{% url 'index' %}">Home</a>
+                    <a class="nav-item text-light nav-link" href="{% url 'about' %}">About</a>
+                    <a class="nav-item text-light nav-link" href="{% url 'pricing' %}">Pricing</a>
+                    <a class="nav-item text-light nav-link" href="{% url 'contact' %}">Contact</a>
+                    <a class="nav-item text-light nav-link" href="{% url 'home' %}">Login</a>
                 </div>
             </div>
         </nav>

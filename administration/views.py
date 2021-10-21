@@ -15,8 +15,13 @@ import json
 import time
 
 # Create your views here.
-
 def index(request):
+    return render(request, "administration/index.html")
+
+def operations(request):
+    return render(request, "administration/operations.html")
+
+def status(request):
     WCRs = Report.objects.filter(report_type__type_name="Well Completion Report").all()
 
     WCRs_d = []

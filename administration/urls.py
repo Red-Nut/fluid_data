@@ -21,8 +21,12 @@ from django.conf.urls.static import static
 from .import views
 
 urlpatterns = [
-    path('', views.index, name='administration'),
+    path('', views.index, name='admin-index'),
+    path('status/', views.status, name='admin-status'),
     path('search/', views.search, name='admin-search'),
+    path('operations/', views.operations, name='admin-operations'),
+
+
     path('update-companies', views.UpdateCompanies, name='admin-updateCompanies'),
     path('download-all', views.DownloadAllMissing, name='admin-DownloadAll'),
     path('download-wcr', views.DownloadAllWCRs, name='admin-DownloadWCRs'),
