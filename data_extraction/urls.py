@@ -21,10 +21,13 @@ from django.conf import settings
 
 from . import views
 from . import viewsPublic
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    # Built-in Admin Tool.
+    # Built-in.
     path('admin/', admin.site.urls),
+    path('accounts/', include('django.contrib.auth.urls')),
+    #path('accounts/login/', auth_views.LoginView.as_view()),
 
     # Pages When Not Logged In.
     path('', viewsPublic.index, name='index'),
@@ -35,10 +38,11 @@ urlpatterns = [
     # Pages When Logged In.
     path('home', views.index, name='home'),
     path('search', views.search, name='search'),
-    path('api', views.api, name='api'),
+    path('api_page', views.api, name='api'),
     path('profile', views.profile, name='profile'),
     path('company', views.company, name='company'),
     path('well/<int:id>/', views.details, name='details'),
+    path('logout', views.logout_view, name='logout'),
 
     # admin
     path('administration/', include('administration.urls')),

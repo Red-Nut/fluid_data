@@ -78,21 +78,6 @@ TEMPLATES = [
 WSGI_APPLICATION = 'data_extraction.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/3.2/ref/settings/#databases
-
-#DATABASES = {
-#    'default': {
-#        'ENGINE': 'django.db.backends.mysql', 
-#        'NAME': 'well_data',
-#        'USER': 'admin',
-#        'PASSWORD': 'Rn4100rn',
-#        'HOST': '192.168.0.64',
-#        'PORT': '3306',
-#    }
-#}
-
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators
@@ -147,5 +132,6 @@ MEDIA_URL = '/media/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+LOGIN_REDIRECT_URL = '/home/'
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "interpretation/data-extraction-276505-639e33986ebe.json"

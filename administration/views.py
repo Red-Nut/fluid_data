@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.contrib.auth.models import User
 
 from data_extraction.models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
 from data_extraction import myExceptions
@@ -282,3 +283,14 @@ def GoogleText(request):
 		result = googleText.getDocumentText(document)
 
 	return HttpResponse("done")
+
+def myCreateUser(request):
+    
+
+    return HttpResponse("done")
+
+def createUser(email, password, fname, lname):
+    user = User.objects.create_user(email, email, password)
+    user.first_name = fname
+    user.last_name = lname
+    user.save()

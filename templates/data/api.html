@@ -13,7 +13,58 @@ Fluid Data - Search
     <div class="row">
         <div class="col-lg">
             <h1>Application Programming Interface</h1>
-            <p>lorel ipsum</p>
+            <p>The Fluid Data Application Programming Interface (API) is still under active development. The method for accessing the data is subject to change, but the format of the response should stay relatively the same.</p>
+            
+            <h3>List all wells in the database</h3>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vA/wellList/">fluiddata.com.au/api/vA/wellList/</a>
+            <p>This will produce an alphabetical list of every well currently in the database (my database, not the government database).</p>
+            <br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vA/wellListID/">fluiddata.com.au/api/vA/wellListID/</a>
+            <p>This will produce a list of every well currently in the database, and the id of each well. </p>
+
+            <h3>Get well details by Name</h3>
+            <i>fluiddata.com.au/api/vA/well/[name]</i>
+            <p>This will obtain the details of a single well given the EXACT name. </p>
+            <br>
+            <p>Example:</p>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vA/well/Combabula North 68">fluiddata.com.au/api/vA/well/Combabula North 68</a>
+
+            <h3>Get well details by ID</h3>
+            <i>fluiddata.com.au/api/vA/well/[id]</i>
+            <p>This will obtain the details of a single well given the id number in the database. You can get the id numbers using the wellListID method above or by doing a search detailed below. </p>
+            <br>
+            <p>Example:</p>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vA/well/38044">fluiddata.com.au/api/vA/well/38044</a>
+
+            <h3>Get well details by ID</h3>
+            <i>fluiddata.com.au/api/vA/wellSearch?[parameters]</i>
+            <br>
+            <p>A search can be executed with the following parameters:</p>
+            <ul>
+                <li>name</li>
+                <li>operator</li>
+                <li>state (only "Queensland" currently in the database)</li>
+                <li>permit</li>
+                <li>class ("Appraisal", "Closed", "Development", "Exploration", "Project Abandoned", "Rehabilitation")</li>
+                <li>lat_min (minimum latitude)</li>
+                <li>lat_max (maximum latitude)</li>
+                <li>long_min (minimum longitude)</li>
+                <li>long_max (maximum longitude)</li>
+                <li>rig_release_start (earliest rig release date)</li>
+                <li>rig_release_end (oldest rig release date)</li>
+            </ul>
+            <br>
+            <p>If no parameters are supplied then the entire database will be converted to JSON and returned to you, if it doesn't timeout first.<br>
+            Search terms are case insensitive and search for partial terms is possible. For example, searching for the class "dev" will bring up wells in the "Development" class.<br>
+            <b>Examples:</b></br>
+            <u>Combabula Wells Operated by Origin</u><br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vA/wellSearch/?name=combabula&operator=origin">fluiddata.com.au/api/vA/wellSearch/?name=combabula&operator=origin</a><br>
+            <u>Wells with rig release date in June 2021</u><br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vA/wellSearch/?rig_release_start=1-6-2021&rig_release_end=30-6-2021">fluiddata.com.au/api/vA/wellSearch/?rig_release_start=1-6-2021&rig_release_end=30-6-2021</a><br>
+            <u>Origin development wells</u><br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vA/wellSearch/?operator=origin&class=dev">fluiddata.com.au/api/vA/wellSearch/?operator=origin&class=dev</a>
+            </p>
+
         </div>
 
     </div>

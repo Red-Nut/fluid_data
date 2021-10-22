@@ -1,6 +1,7 @@
 
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import views as auth_views
 from django.views.generic.edit import CreateView
 from django.urls import reverse_lazy
 from django.db.models import Q
@@ -18,6 +19,12 @@ import json
 from json import JSONEncoder
 import jsonpickle
 import time
+
+from django.contrib.auth import logout
+
+def logout_view(request):
+	logout(request)
+	return render(request, "public/logout.html")
 
 @login_required
 def index(request):
