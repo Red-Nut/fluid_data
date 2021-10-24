@@ -39,15 +39,18 @@
                     <tr>
                         <td>{{file.document_name}}{{file.ext}}</td>
                         {% if file.status == 1 %}
-                            <td>Local file missing.</td>
+                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                            <td></td>
                         {% elif file.status == 2 %}
-                            <td><a class="btn btn-primary" href="{{file.link}}">Download</a></td>
+                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                            <td><a class="btn btn-primary" href="{{file.link}}">Mirror</a></td>
                         {% elif file.status == 3 %}
-                            <td>File not kept in local database.</td>
+                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                            <td></td>
                         {% else %}
-                            <td>ERROR - File Status: {{file.status}}</td>
+                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Downloade</a></td>
+                            <td></td>
                         {% endif %}
-                        <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download from Goverment Database</a></td>
                     </tr>
                 {% endfor %}
             </table>
@@ -82,15 +85,18 @@
                                     <tr>
                                         <td>{{file.document_name}}{{file.ext}}</td>
                                         {% if file.status == 1 %}
-                                            <td>Local file missing.</td>
+                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                                            <td></td>
                                         {% elif file.status == 2 %}
-                                            <td><a class="btn btn-primary" href="{{file.link}}">Download</a></td>
+                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                                            <td><a class="btn btn-primary" href="{{file.link}}">Mirror</a></td>
                                         {% elif file.status == 3 %}
-                                            <td>File not kept in local database.</td>
+                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                                            <td></td>
                                         {% else %}
-                                            <td>ERROR - File Status: {{file.status}}</td>
+                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Downloade</a></td>
+                                            <td></td>
                                         {% endif %}
-                                        <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download from Goverment Database</a></td>
                                     </tr>
                                 {% endfor %}
                             </table>
