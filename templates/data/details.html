@@ -33,22 +33,23 @@
             <table class="table table-striped table-bordered"> 
                 <tr>
                     <th>File Name</th>
-                    <th colspan="2">Download</th>
+                    <th style="text-align:center; border-right:none;">Download</th>
+                    <th style="border-left:none;"></th>
                 </tr>
                 {% for file in well.files %}
                     <tr>
                         <td>{{file.document_name}}{{file.ext}}</td>
                         {% if file.status == 1 %}
-                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
                             <td></td>
                         {% elif file.status == 2 %}
-                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
-                            <td><a class="btn btn-primary" href="{{file.link}}">Mirror</a></td>
+                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                            <td style="text-align:center;"><a class="btn btn-primary" href="{{file.link}}">Mirror</a></td>
                         {% elif file.status == 3 %}
-                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
                             <td></td>
                         {% else %}
-                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Downloade</a></td>
+                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Downloade</a></td>
                             <td></td>
                         {% endif %}
                     </tr>
@@ -79,22 +80,23 @@
                             <table class="table table-striped table-bordered"> 
                                 <tr>
                                     <th>File Name</th>
-                                    <th colspan="2">Download</th>
+                                    <th style="text-align:center; border-right:none;">Download</th>
+                                    <th style="border-left:none;"></th>
                                 </tr>
                                 {% for file in report.files %}
                                     <tr>
                                         <td>{{file.document_name}}{{file.ext}}</td>
                                         {% if file.status == 1 %}
-                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
                                             <td></td>
                                         {% elif file.status == 2 %}
-                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
-                                            <td><a class="btn btn-primary" href="{{file.link}}">Mirror</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                                            <td style="text-align:center;"><a class="btn btn-primary" href="{{file.link}}">Mirror</a></td>
                                         {% elif file.status == 3 %}
-                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Download</a></td>
                                             <td></td>
                                         {% else %}
-                                            <td><a  class="btn btn-primary" href="{{file.gov_url}}">Downloade</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary" href="{{file.gov_url}}">Downloade</a></td>
                                             <td></td>
                                         {% endif %}
                                     </tr>
