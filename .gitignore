@@ -1,3 +1,4 @@
+.env
 venv/
 data_extraction.sock
 QLD API Structure (1).docx

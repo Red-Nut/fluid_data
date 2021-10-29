@@ -184,14 +184,8 @@ def WellJson(well):
     documentCount = 0
     for document in documentObjects:
         documentCount += 1
-        if(document.file is None):
-            link = None
-
-            x = len(document.url) - document.url.rfind('.')
-            ext = document.url.lower()[-x:]
-        else:
-            link = MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + file.file.file_ext.replace(".","")
-            ext = document.file.file_ext
+        ext = GetDocumentExt(document)
+        link = GetDocumentLink(document)
 
         myDocument = {
             'id' : document.id,
@@ -217,14 +211,8 @@ def WellJson(well):
         reportDocumentsCount = 0
         for document in documentObjects:
             reportDocumentsCount += 1
-            if(document.file is None):
-                link = None
-
-                x = len(document.url) - document.url.rfind('.')
-                ext = document.url.lower()[-x:]
-            else:
-                link = MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + document.file.file_ext.replace(".","")
-                ext = document.file.file_ext
+            ext = GetDocumentExt(document)
+            link = GetDocumentLink(document)
             
             myDocument = {
                 'id' : document.id,
@@ -270,3 +258,20 @@ def WellJson(well):
     }
 
     return wellJson
+
+def GetDocumentExt(document):
+    if(document.file is None):
+        x = len(document.url) - document.url.rfind('.')
+        ext = document.url.lower()[-x:]
+    else:
+        ext = document.file.file_ext
+
+    return ext
+
+def GetDocumentLink(document):
+    if(document.file is None):
+        link = None
+    else:
+        link = MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + document.file.file_ext.replace(".","")
+
+    return link

@@ -5,12 +5,25 @@ Fluid Data - Company
 
 {% block head %}
 <div style="border-bottom: 1px solid black;" class="p-3"></div>
+<div class="container-fluid" id="savedView" style="display:none;">
+    <br><a class="linkFormat" href="{% url 'profile' %}">Go to profile page</a>
+</div>
 {% endblock %}
 
 {% block main %}
-<div class="container-fluid">
+<div class="container-fluid" id="mainView">
     <h1>File Bucket</h1>
     <h3>{{name}}</h3>
+    {% if saved == false %}
+    <table>
+        <tr><th class="p-2">Status: </th><td>{{status}}</td></tr>
+        {% if status == "Preparing files" %}
+        <tr><th class="p-2">Progress: </th><td>{{progress}}</td></tr>
+        {% endif %}
+        <tr><th class="p-2">Total Size: </th><td>{{totalSize}}</td></tr>
+    </table>
+    {% endif %}
+    <br>
     <table width=100% class="table">
         <tr class="table-dark">
             <th>Well</th><th>File</th><th>Size</th>
@@ -18,17 +31,22 @@ Fluid Data - Company
         {% for document in documents%}
         <tr>
             <td>{{document.well}}</td>
-            <td>{{document.name}}</td>
+            <td>{{document.name}}{{document.ext}}</td>
             <td>{{document.size}}</td>
         </tr>
         {% endfor %}
     </table>
+    {% if saved %}
+    <a class="btn btn-primary" href="{% url 'deleteBucket' id %}">Delete</a>
+    {% else %}
     <button class="btn btn-primary" onclick=SaveBucket()>Save</button>
+    {% endif %}
 </div>
+
 
 <script>
 
-    function EmptyBucket(){
+    function SaveBucket(){
         csrftoken = getCookie('csrftoken');
 
         $.ajax({
@@ -41,20 +59,18 @@ Fluid Data - Company
             "X-CSRFToken": csrftoken },
             // on success
             success: function (response) {
-                count = response.count;
-                console.log("Count: " + count);
-                if(count == -1){
-                    AddAlert("warning", "Failed to empty bucket.", true);
-                } else if(count == 0) {
-                    AddAlert("info", "File bucket emptied.", true);
-
-                    elBucket = document.getElementById("bucketCount");
-                    elBucket.innerHTML = "View Bucket (" + count + ")";
+                success = response.success;
+                console.log("Success: " + success);
+                if(success == false){
+                    AddAlert("danger", "Failed to save bucket.", true);
+                } else if(success == true) {
+                    AddAlert("info", "File bucket saved. View the preparation progress on your profile page. A notification will be sent to you when the package is ready to download.", true);                    
+                    mainView = document.getElementById("mainView");
+                    savedView = document.getElementById("savedView");
+                    mainView.style.display = "none";
+                    savedView.style.display = "block";
                 } else {
-                    AddAlert("warning", "File bucket did not empty correctly.", true);
-
-                    elBucket = document.getElementById("bucketCount");
-                    elBucket.innerHTML = "View Bucket (" + count + ")";
+                    AddAlert("warning", "Something went wrong.", true);
                 }
             },
             // on error

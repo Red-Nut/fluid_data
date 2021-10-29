@@ -291,8 +291,24 @@ class Data(CreatedModifiedModel):
 # ***************************** USER Extensions  ***************************** 
 
 class UserFileBucket(CreatedModifiedModel):
+    REQUESTED = 1
+    PREPARING = 2
+    READY = 3
+    ARCHIVED = 4
+    STATUS = (
+        (REQUESTED, _('Requested')),
+        (PREPARING, _('Preparing files')),
+        (READY, _('Ready to download')),
+        (ARCHIVED, _('Archived')),
+    )
+
     user=models.ForeignKey(User, on_delete=models.CASCADE)
+    name=models.CharField(max_length=255)
+    status = models.PositiveSmallIntegerField(
+        choices=STATUS,
+        default=1,
+    )
 
 class FileBucketFiles(models.Model):
-    bucket = models.ForeignKey(UserFileBucket, on_delete=models.CASCADE)
+    bucket = models.ForeignKey(UserFileBucket, on_delete=models.CASCADE, related_name="documents")
     document = models.ForeignKey(Document,on_delete=models.CASCADE)

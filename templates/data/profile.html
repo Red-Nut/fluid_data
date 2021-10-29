@@ -10,11 +10,61 @@ Fluid Data - Profile
 {% block main %}
 <div class="container-fluid">
     <div class="row">
-        <div class="col-lg">
+        <div class="col-xxl-3">
             <h1>User Profile</h1>
-            <p>lorel ipsum</p>
+            <table class="m-2">
+                <tr>
+                    <th class="p-2">Username:</th>
+                    <td class="p-2">{{user.username}}</td>
+                </tr>
+                <tr>
+                    <th class="p-2">First Name:</th>
+                    <td class="p-2">{{user.first_name}}</td>
+                </tr>
+                <tr>
+                    <th class="p-2">Last Name:</th>
+                    <td class="p-2">{{user.last_name}}</td>
+                </tr>
+                <tr>
+                    <th class="p-2">Email:</th>
+                    <td class="p-2">{{user.email}}</td>
+                </tr>
+            </table>
+            <button class="btn btn-primary" onclick=EditProfile()>Edit Profile (unfinished)</button>
+            <button class="btn btn-primary" onclick=ChangePassword()>Change Password (unfinished)</button>
         </div>
-
+        <div class="col-xxl-9">
+            <h1>Saved File Buckets</h1>
+            <table width=100% class="table table-striped">
+                <tr class="table-dark">
+                    <th>ID</th>
+                    <th>Date Created</th>
+                    <th>Status</th>
+                    <th>Files</th>
+                    <th>Size</th>
+                    <th>Actions</th>
+                </tr>
+                {% for bucket in fileBuckets %}
+                <tr>
+                    <td><a class="linkFormat" href="{% url 'fileBucketID' bucket.id %}">{{bucket.name}}</a></td>
+                    <td>{{bucket.created}}</td>
+                    <td>{{bucket.status}}</td>
+                    <td>
+                        {% for document in bucket.documents %}
+                        <a class="linkFormat" href="{% url 'details' document.well.id %}">{{document.well.well_name}}</a>: {{document.name}}{{document.ext}}<br>
+                        {% endfor %}
+                    </td>
+                    <td>{{bucket.totalSize}}</td>
+                    <td>
+                        {% if bucket.status == "Ready to download" %}
+                        <a class="btn btn-primary" href="#">Download</a>
+                        {% endif %}
+                        <a class="btn btn-primary" href="{% url 'deleteBucket' bucket.id %}">Delete</a>
+                    </td>
+                </tr>    
+                {% endfor %}
+            </table>
+        </div>
     </div>
 
     
