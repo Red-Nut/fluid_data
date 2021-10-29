@@ -1,0 +1,71 @@
+{% extends 'data/base.html' %}
+{% block title %}
+Fluid Data - Company
+{% endblock %}
+
+{% block head %}
+<div style="border-bottom: 1px solid black;" class="p-3"></div>
+{% endblock %}
+
+{% block main %}
+<div class="container-fluid">
+    <h1>File Bucket</h1>
+    <h3>{{name}}</h3>
+    <table width=100% class="table">
+        <tr class="table-dark">
+            <th>Well</th><th>File</th><th>Size</th>
+        </tr>
+        {% for document in documents%}
+        <tr>
+            <td>{{document.well}}</td>
+            <td>{{document.name}}</td>
+            <td>{{document.size}}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    <button class="btn btn-primary" onclick=SaveBucket()>Save</button>
+</div>
+
+<script>
+
+    function EmptyBucket(){
+        csrftoken = getCookie('csrftoken');
+
+        $.ajax({
+            type: "POST",
+            credentials: 'same-origin',
+            url: "{% url 'saveBucket' %}",
+            headers: { 'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            "X-CSRFToken": csrftoken },
+            // on success
+            success: function (response) {
+                count = response.count;
+                console.log("Count: " + count);
+                if(count == -1){
+                    AddAlert("warning", "Failed to empty bucket.", true);
+                } else if(count == 0) {
+                    AddAlert("info", "File bucket emptied.", true);
+
+                    elBucket = document.getElementById("bucketCount");
+                    elBucket.innerHTML = "View Bucket (" + count + ")";
+                } else {
+                    AddAlert("warning", "File bucket did not empty correctly.", true);
+
+                    elBucket = document.getElementById("bucketCount");
+                    elBucket.innerHTML = "View Bucket (" + count + ")";
+                }
+            },
+            // on error
+            error: function (response) {
+                // alert the error if any error occured
+                console.log(response.responseJSON.errors)
+                AddAlert("danger", "JSON Error: Check console.", true)
+            }
+        });
+    }
+
+</script>
+{% endblock %}
+

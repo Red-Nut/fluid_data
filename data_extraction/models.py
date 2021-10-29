@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 from django.db.models.deletion import CASCADE
 from django.utils.translation import ugettext_lazy  as _
 
@@ -287,3 +288,11 @@ class Data(CreatedModifiedModel):
 
 
 
+# ***************************** USER Extensions  ***************************** 
+
+class UserFileBucket(CreatedModifiedModel):
+    user=models.ForeignKey(User, on_delete=models.CASCADE)
+
+class FileBucketFiles(models.Model):
+    bucket = models.ForeignKey(UserFileBucket, on_delete=models.CASCADE)
+    document = models.ForeignKey(Document,on_delete=models.CASCADE)

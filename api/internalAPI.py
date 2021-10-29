@@ -36,9 +36,9 @@ def wellListID(orderBy):
     json_resonse = json.dumps(wellList)
     return json_resonse
 
-def search(name, owner, state, permit, status, wellClass, purpose, 
+def Search(name, owner, state, permit, status, wellClass, purpose, 
         lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
-        orderBy, start, end):
+        orderBy):
     wellsQuery = Well.objects.all().order_by('well_name')
 
     # Filter: Name.
@@ -101,10 +101,19 @@ def search(name, owner, state, permit, status, wellClass, purpose,
     else:
         wellsQuery = wellsQuery.order_by(orderBy)
 
+    return wellsQuery
+
+def WellSearch(name, owner, state, permit, status, wellClass, purpose, 
+        lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
+        orderBy, start, end):
+
+    wellsQuery = Search(name, owner, state, permit, status, wellClass, purpose, 
+        lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
+        orderBy)
+
     # Limit results.
     if(start != None and start != '' and end != None and end != ''):
         wellsQuery = wellsQuery[start:end]
-
 
     # Get well data.
     wells = []
@@ -119,27 +128,80 @@ def search(name, owner, state, permit, status, wellClass, purpose,
 
     return response
 
+def LASsearch(name, owner, state, permit, status, wellClass, purpose, 
+        lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
+        orderBy, start, end):
+
+
+    wellsQuery = Search(name, owner, state, permit, status, wellClass, purpose, 
+        lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
+        orderBy)
+
+ 
+    # Get well data.
+    wells = []
+    i = 1
+    for well in wellsQuery:
+        # Limit results.
+        if end is not None:
+            if i > end:
+                break
+
+        wellObject = WellJson(well)
+
+        # Get LAS Files
+        LASFiles = []
+        lasCount = 0
+        for document in wellObject['documents']:
+            if document['ext'] == ".las":
+                LASFiles.append(document)
+                lasCount += 1
+
+        wellObject['LASFiles'] = LASFiles
+        wellObject['lasCount'] = lasCount
+
+        
+        # Filter LAS Files
+        if lasCount > 0:
+            i = i + 1
+            # Limit results.
+            if start is None or i >= start:
+                wells.append(wellObject)
+
+
+    # Response
+    response = {
+        'wells' : wells
+    }
+
+    return response
 
 def WellJson(well):
     # Documents (not in report).
     documentObjects = Document.objects.filter(well=well, report__isnull=True).all()
 
-    files = []
-    fileCount = 0
-    for file in documentObjects:
-        fileCount += 1
-        if(file.file is None):
+    documents = []
+    documentCount = 0
+    for document in documentObjects:
+        documentCount += 1
+        if(document.file is None):
             link = None
+
+            x = len(document.url) - document.url.rfind('.')
+            ext = document.url.lower()[-x:]
         else:
-            link = MEDIA_URL + 'well_data/' + file.file.file_location + file.file.file_name + '.' + file.file.file_ext.replace(".","")
-            
-        myFile = {
-            'document_name' : file.document_name,
-            'status' : file.status,
+            link = MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + file.file.file_ext.replace(".","")
+            ext = document.file.file_ext
+
+        myDocument = {
+            'id' : document.id,
+            'document_name' : document.document_name,
+            'ext' : ext,
+            'status' : document.status,
             'link' : link,
-            'gov_url' : file.url,
+            'gov_url' : document.url,
         }
-        files.append(myFile)
+        documents.append(myDocument)
 
     # Reports.
     reportObjects = Report.objects.filter(well=well).all()
@@ -151,35 +213,36 @@ def WellJson(well):
         documentObjects = documentObjects.exclude(document_name__icontains="Report Geometry")
         documentObjects = documentObjects.exclude(document_name__icontains="OCR extract of report")
 
-        reportFiles = []
-        reportFileCount = 0
-        for file in documentObjects:
-            reportFileCount += 1
-            if(file.file is None):
+        reportDocuments = []
+        reportDocumentsCount = 0
+        for document in documentObjects:
+            reportDocumentsCount += 1
+            if(document.file is None):
                 link = None
 
-                x = len(file.url) - file.url.rfind('.')
-                ext = file.url[-x:]
+                x = len(document.url) - document.url.rfind('.')
+                ext = document.url.lower()[-x:]
             else:
-                link = MEDIA_URL + 'well_data/' + file.file.file_location + file.file.file_name + '.' + file.file.file_ext.replace(".","")
-                ext = file.file.file_ext
+                link = MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + document.file.file_ext.replace(".","")
+                ext = document.file.file_ext
             
-            myFile = {
-                'document_name' : file.document_name,
+            myDocument = {
+                'id' : document.id,
+                'document_name' : document.document_name,
                 'ext' : ext,
-                'status' : file.status,
+                'status' : document.status,
                 'link' : link,
-                'gov_url' : file.url,
+                'gov_url' : document.url,
             }
-            reportFiles.append(myFile)
+            reportDocuments.append(myDocument)
 
         myReport = {
             'report_type' : str(report.report_type),
             'report_name' : report.report_name,
             'gov_name' : report.gov_report_name,
             'url' : report.url,
-            'files' : reportFiles,
-            'file_count' : reportFileCount
+            'documents' : reportDocuments,
+            'document_count' : reportDocumentsCount
         }
         reports.append(myReport)
 
@@ -200,8 +263,8 @@ def WellJson(well):
         'date_modified' : str(well.date_modified),
         'date_created' : str(well.date_created),
         'url' : "https://geoscience.data.qld.gov.au/borehole/" + well.gov_id,
-        'files' : files,
-        'file_count' : fileCount,
+        'documents' : documents,
+        'document_count' : documentCount,
         'reports' : reports,
         'report_count' : reportCount
     }

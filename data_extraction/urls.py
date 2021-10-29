@@ -27,23 +27,39 @@ urlpatterns = [
     # Built-in.
     path('admin/', admin.site.urls),
     path('accounts/', include('django.contrib.auth.urls')),
-    #path('accounts/login/', auth_views.LoginView.as_view()),
 
-    # Pages When Not Logged In.
+    # PAGES WHEN LOGGED OUT.
     path('', viewsPublic.index, name='index'),
     path('about', viewsPublic.about, name='about'),
     path('pricing', viewsPublic.pricing, name='pricing'),
     path('contact', viewsPublic.contact, name='contact'),
 
-    # Pages When Logged In.
+    # PAGES WHEN LOGGED IN.
     path('home', views.index, name='home'),
+
+        # Searching
     path('search', views.search, name='search'),
+    path('las_files', views.lasFiles, name='las'),
+    path('file_bucket', views.fileBucketNone, name='fileBucket'),
+    path('file_bucket/<int:id>/', views.fileBucketID, name='fileBucketID'),
+    path('saveToFileBucket',views.saveToFileBucket, name='saveToFileBucket'),
+    path('emptyBucket',views.emptyFileBucketRequest, name='emptyBucket'),
+    path('saveBucket',views.saveFileBucket, name='saveBucket'),
+
+        # API Page.
     path('api_page', views.api, name='api'),
+
+        # Profile Pages.
     path('profile', views.profile, name='profile'),
     path('company', views.company, name='company'),
+
+        # Well Details Page
     path('well/<int:id>/', views.details, name='details'),
+
+        # Logout
     path('logout', views.logout_view, name='logout'),
 
+    # INCLUDES
     # admin
     path('administration/', include('administration.urls')),
 

@@ -1,0 +1,530 @@
+
+{% extends 'data/base.html' %}
+{% block title %}
+Data Extraction - Home
+{% endblock %}
+
+{% block head %}
+<div style="border-bottom: 1px solid black;" class="p-3">
+    <button class="btn btn-primary" onclick=AddChecked()>Add Selected to Bucket</button>
+    <a id="bucketCount" class="btn btn-primary" href="{% url 'fileBucket' %}" >View Bucket ({{fileBucketFiles}})</a>
+    <button class="btn btn-primary" onclick=EmptyBucket()>Empty Bucket</button>
+</div>
+{% endblock %}
+
+{% block main %}
+<div class="container-fluid">
+    <br><br><br>
+    <!-- Filter -->
+    <h2>Filter</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="row align-items-start">
+            <div class="col" >
+                <table class="filterTable">
+                    <tr>
+                        <!-- Name -->
+                        <td><label for="id_well_name">Well:</label></td>
+                        <td>
+                            <div class="fieldWrapper">
+                                {{ form.well_name.errors }}
+                                {{ form.well_name }}
+                            </div>
+                        </td>
+                        <td width=100px></td>
+                        
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                    <tr>
+                        <!-- Operator -->
+                        <td><label for="id_owner">Operator:</label></td>
+                        <td>
+                            <div>
+                                {{ form.owner.errors }}
+                                {{ form.owner }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                    <tr>
+                        <!-- State -->
+                        <td><label for="id_state">State:</label></td>
+                        <td>
+                            <div class="fieldWrapper">
+                                {{ form.state.errors }}                    
+                                {{ form.state }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                    <tr>
+                        <!-- Permit -->
+                        <td><label>Permit:</label></td>
+                        <td>
+                            <div>
+                                {{ form.permit.errors }}
+                                {{ form.permit }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                    <tr>
+                        <!-- Status -->
+                        <td><label>Status:</label></td>
+                        <td>
+                            <div class="fieldWrapper">
+                                {{ form.status.errors }}
+                                {{ form.status }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                    <tr>
+                        <!-- Class -->
+                        <td><label>Class:</label></td>
+                        <td>
+                            <div class="fieldWrapper">
+                                {{ form.wellClass.errors }}
+                                {{ form.wellClass }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                    <tr>
+                        <!-- Purpose -->
+                        <td><label>Purpose:</label></td>
+                        <td>
+                            <div class="fieldWrapper">
+                                {{ form.purpose.errors }}
+                                {{ form.purpose }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                </table>
+            </div>
+            <div class="col" >
+                <table>
+                    <tr>
+                        <!-- Latitude Headings -->
+                        <td style="min-width: 150px;"></td>
+                        <td>
+                            <label>Minimum:</label>
+                        </td>
+                        <td>
+                            <label>Maximum:</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <!-- Latitude -->
+                        <td style="padding-right: 8px;"><label>Latitude Range</label></td>
+                        <td>
+                            <div>
+                                {{ form.lat_min.errors }}
+                                {{ form.lat_min }}
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                {{ form.lat_max.errors }}
+                                {{ form.lat_max }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr><td style="line-height: 12px;"><br></td></tr>
+                    <tr>
+                        <!-- Longitude Headings -->
+                        <td></td>
+                        <td>
+                            <label>Minimum:</label>
+                        </td>
+                        <td>
+                            <label>Maximum:</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <!-- Longitude -->
+                        <td style="padding-right: 8px;"><label>Longitude Range</label></td>
+                        <td>
+                            <div>
+                                {{ form.long_min.errors }}
+                                {{ form.long_min }}
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                {{ form.long_max.errors }}
+                                {{ form.long_max }}
+                            </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <!-- Rig Release Headings -->
+                        <td></td>
+                        <td>
+                            <label>Start:</label>
+                        </td>
+                        <td>
+                            <label>End:</label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <!-- Longitude -->
+                        <td style="padding-right: 8px;"><label>Rig Release Date</label></td>
+                        <td>
+                            <div>
+                                {{ form.rig_release_start.errors }}
+                                {{ form.rig_release_start }}
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                {{ form.rig_release_end.errors }}
+                                {{ form.rig_release_end }}
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <!-- Filter Buttons -->
+        <table style="min-width: 400px;">
+            <tr>
+                <td style="text-align: right;"><botton id="clearFilter" class="btn btn-primary" onclick="ClearFilter()">Clear Filter</botton></td>
+                <td style="text-align: right;"><input id="btnFilter" type="submit" value="Apply Filter" class="btn btn-primary" ></td>
+            </tr>
+        </table>
+        <div style=display:none;>
+            {{ form.orderBy }}
+            {{ form.page }}
+            {{ form.show_qty }}
+        </div>
+    </form>
+
+    <!-- Page Selection (above) -->
+    <!-- Page Heading-->
+    <div style="display:flex; justify-content: flex-end;"><p style="margin:0"><strong>Page</strong></p></div>
+    <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom: 8px;">
+        <!-- Page Qty-->
+        <div style="display:flex;">
+            <p class="filterPageNoBtn">Results per page: </p>
+            <select id="show_qty" onchange="ShowQtyChange()">
+                <option value=20>20</option>
+                <option value=50>50</option>
+                <option value=100>100</option>
+              </select>
+        </div>
+        
+        <!-- Page Numbers-->
+        <div class="c-grey" style="display:flex; justify-content: flex-end; align-items:center; padding-bottom: 8px;">
+            {% if page == 0 %}
+                <p class="filterPageNoBtn c-light-grey">Previous</p>
+            {% else %}
+                <button class="notBtn filterPageNoBtn" onclick='PageChange({{page|add:"-1"}})'>Previous</button>
+                <button class="notBtn filterPageNoBtn" onclick='PageChange({{page|add:"-1"}})'>{{ page }}</button>
+            {% endif %}
+            <p  class="filterPageNoBtn" style="font-size: larger"><strong>{{ page|add:"1" }}</strong></p>
+            <button class="notBtn filterPageNoBtn" onclick='PageChange({{page|add:"1"}})'>{{ page|add:"2" }}</button>
+            <button class="notBtn filterPageNoBtn" onclick='PageChange({{page|add:"2"}})'>{{ page|add:"3" }}</button>
+            <p style="padding-right: 4px; margin:0">...</p>
+            <button class="notBtn filterPageNoBtn" onclick='PageChange({{page|add:"4"}})'>{{ page|add:"5" }}</button>
+            <p class="filterPageNoBtn">...</p>
+            <button class="notBtn filterPageNoBtn" onclick='PageChange({{page|add:"9"}})'>{{ page|add:"10" }}</button>
+            <button class="notBtn filterPageNoBtn" onclick='PageChange({{page|add:"1"}})'>Next</button>
+        </div>
+    </div>
+
+    <!-- Table Header -->
+    <table width=100% class="table">
+        <thead>
+            <tr class="table-dark">
+                <th></th>
+                <th id="well_nameClick" class="link" onclick="OrderBy('well_name', true)">
+                    Well
+                    <svg id="well_nameD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                    <svg id="well_nameU" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                    </svg>
+                </th>
+                <th id="owner__company_nameClick" class="table-centre link" onclick="OrderBy('owner__company_name', true)">
+                    Operator
+                    <svg id="owner__company_nameD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                    <svg id="owner__company_nameU" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                    </svg>
+                </th>
+                <th id="state__name_longClick" class="table-centre link" onclick="OrderBy('state__name_long', true)">
+                    State
+                    <svg id="state__name_longD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                    <svg id="state__name_longU" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                    </svg>
+                </th>
+                <th id="permit__permit_numberClick" class="table-centre link" onclick="OrderBy('permit__permit_number', true)">
+                    Permit
+                    <svg id="permit__permit_numberD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                    <svg id="permit__permit_numberU" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                    </svg>
+                </th>
+                <th id="well_class__class_nameClick" class="table-centre link" onclick="OrderBy('well_class__class_name', true)">
+                    Class
+                    <svg id="well_class__class_nameD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                    <svg id="well_class__class_nameU" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                    </svg>
+                </th>
+                <th id="purpose__purpose_nameClick" class="table-centre link" onclick="OrderBy('purpose__purpose_name', true)">
+                    Purpose
+                    <svg id="purpose__purpose_nameD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                    <svg id="purpose__purpose_nameU" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                    </svg>
+                </th>
+                <th id="rig_releaseClick" class="table-centre link" onclick="OrderBy('rig_release', true)">
+                    Rig Release Date
+                    <svg id="rig_releaseD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"/>
+                    </svg>
+                    <svg id="rig_releaseU" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
+                        <path d="m7.247 4.86-4.796 5.481c-.566.647-.106 1.659.753 1.659h9.592a1 1 0 0 0 .753-1.659l-4.796-5.48a1 1 0 0 0-1.506 0z"/>
+                    </svg>
+                </th>
+                <th class="table-centre">
+                    View Details
+                </th>
+            </tr>
+        </thead>
+
+        <!-- Table Body -->
+        <tbody id="tbody">
+            {% for well in wellData.wells%}
+            <tr>
+                <td><input type="checkbox" id="{{well.id}}" name="{{well.id}}" value="{% for document in well.LASFiles %}{% if forloop.counter == 1 %}{{document.id}}{% else %},{{document.id}}{% endif %}{% endfor %}"></td>
+                <td >{{well.well_name}}</td>
+                <td class="table-centre">{{well.operator}}</td>
+                <td class="table-centre">{{well.state}}</td>
+                <td class="table-centre">{{well.permit}}</td>
+                <td class="table-centre">{{well.class}}</td>
+                <td class="table-centre">{{well.purpose}}</td>
+                <td class="table-centre">{{well.rig_release_date|date:"d/m/Y"}}</td>
+                <td class="table-centre">
+                    <a class="btn btn-primary" style="display:block;" href="{% url 'details' well.id %}" >View</a>
+                </td>
+            </tr>
+                {% for document in well.LASFiles %}
+            <tr style="background-color:rgb(238, 238, 238)">
+                    {% if forloop.counter == 1 %}
+                <td rowspan="{{well.lasCount}}"></td>
+                <td rowspan="{{well.lasCount}}" colspan="5" style="text-align:right;">Files:</td>
+                <td colspan="3">{{document.document_name}}{{document.file.ext}}</td>
+                    {% else %}
+                <td colspan="3">{{document.document_name}}{{document.file.ext}}</td>
+                    {% endif %}
+            </tr>
+                    {% endfor %}
+            {% endfor %}
+        </tbody>
+        <tbody id="resultsLoading" style="display: none;">
+            <tr>
+                <td colspan="5">Loading...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<!-- Script for filtering and ordering table contents. -->
+<script>
+    show_qty = {{ show_qty }};
+    page = {{ page }};
+
+    window.onload = function() {
+        document.getElementById("id_show_qty").value = show_qty;
+        document.getElementById("show_qty").value = show_qty;
+
+        if(page == 0){
+            document.getElementById("id_page").value = page;
+        }
+
+        OrderBy("{{orderBy}}", false);
+    };
+
+    // Update this list for the sortable columns in the table.
+    sortList = [
+        "well_name",
+        "owner__company_name",
+        "state__name_long",
+        "permit__permit_number",
+        "well_class__class_name",
+        "purpose__purpose_name",
+        "rig_release",
+    ]
+
+    //Update this list for fields that the users types in/selects.
+    function ClearFilter(){
+        document.getElementById("id_well_name").value = ""
+        document.getElementById("id_permit").value = ""
+        document.getElementById("id_owner").value = 0
+        document.getElementById("id_state").value = 0
+    }
+
+    function OrderBy(orderBy, refresh){
+        if(orderBy.indexOf("-") == 0){
+            orderBy = orderBy.substring(1,orderBy.length);
+            down = true;
+        } else {
+            down = false;
+        }
+
+        for (i=0; i < sortList.length; i++){
+            if(orderBy != sortList[i]){
+                document.getElementById(sortList[i] + "D").style.display = "none";
+                document.getElementById(sortList[i] + "U").style.display = "none";
+            } else {
+                if(down){
+                    document.getElementById(sortList[i] + "D").style.display = "inline";
+                    document.getElementById(sortList[i] + "U").style.display = "none";
+                    document.getElementById("id_orderBy").value = "-" + orderBy;
+                } else {
+                    document.getElementById(sortList[i] + "D").style.display = "none";
+                    document.getElementById(sortList[i] + "U").style.display = "inline";
+                    document.getElementById("id_orderBy").value = orderBy;
+                    document.getElementById(sortList[i] + "Click").onclick = function() {OrderBy("-" + orderBy,true);}
+                }
+            }
+        }
+
+        if(refresh){
+            document.getElementById("tbody").style.display = "none";
+            document.getElementById("resultsLoading").style.display = "table-cell";
+            btnFilter = document.getElementById('btnFilter');
+            btnFilter.click();
+        } else {
+            
+        }
+    }
+
+    function PageChange(i){
+        //currentPage = document.getElementById("id_page").value;
+        document.getElementById("id_page").value = parseInt(i);
+
+        btnFilter = document.getElementById('btnFilter');
+        btnFilter.click();
+    }
+
+    function ShowQtyChange(){
+        show_qty = document.getElementById("show_qty").value;
+        document.getElementById("id_show_qty").value = show_qty;
+
+        btnFilter = document.getElementById('btnFilter');
+        btnFilter.click();
+    }
+
+    
+    
+</script>
+
+<script>
+    function AddChecked(){
+        data = []
+        $("input[type='checkbox']").each(function(){
+            value = $(this).attr('value'); // grab value of original
+            isChecked = $(this).is(":checked"); //check if checked
+
+            if(isChecked){
+                values = value.split(",")
+                for (let i in values) {
+                    data.push(values[i])
+                }
+            }
+        });
+
+        csrftoken = getCookie('csrftoken');
+
+        json = JSON.stringify(data);
+        console.log(data)
+        $.ajax({
+            type: "POST",
+            credentials: 'same-origin',
+            url: "{% url 'saveToFileBucket' %}",
+            data: json,
+            headers: { 'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            "X-CSRFToken": csrftoken },
+            // on success
+            success: function (response) {
+                count = response.count;
+                console.log("Count: " + count);
+                if(count == -1){
+                    AddAlert("warning", "Failed to add files to bucket.", true);
+                } else {
+                    AddAlert("info", "Files added to bucket.", true);
+
+                    elBucket = document.getElementById("bucketCount");
+                    elBucket.innerHTML = "View Bucket (" + count + ")";
+                }
+            },
+            // on error
+            error: function (response) {
+                // alert the error if any error occured
+                console.log(response.responseJSON.errors)
+                AddAlert("danger", "JSON Error: Check console.", true)
+            }
+        });
+    }   
+
+    function EmptyBucket(){
+        csrftoken = getCookie('csrftoken');
+
+        $.ajax({
+            type: "POST",
+            credentials: 'same-origin',
+            url: "{% url 'emptyBucket' %}",
+            headers: { 'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            "X-CSRFToken": csrftoken },
+            // on success
+            success: function (response) {
+                count = response.count;
+                console.log("Count: " + count);
+                if(count == -1){
+                    AddAlert("warning", "Failed to empty bucket.", true);
+                } else if(count == 0) {
+                    AddAlert("info", "File bucket emptied.", true);
+
+                    elBucket = document.getElementById("bucketCount");
+                    elBucket.innerHTML = "View Bucket (" + count + ")";
+                } else {
+                    AddAlert("warning", "File bucket did not empty correctly.", true);
+
+                    elBucket = document.getElementById("bucketCount");
+                    elBucket.innerHTML = "View Bucket (" + count + ")";
+                }
+            },
+            // on error
+            error: function (response) {
+                // alert the error if any error occured
+                console.log(response.responseJSON.errors)
+                AddAlert("danger", "JSON Error: Check console.", true)
+            }
+        });
+    }
+    
+
+</script>
+{% endblock %}
+

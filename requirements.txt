@@ -10,3 +10,4 @@ pdf2image
 google-cloud
 google-cloud-vision
 jsonpickle
+django-background-tasks
