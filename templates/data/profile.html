@@ -57,7 +57,7 @@ Fluid Data - Profile
                     <td>{{bucket.totalSize}}</td>
                     <td>
                         {% if bucket.status == "Ready to download" %}
-                        <a class="btn btn-primary" href="#">Download</a>
+                        <a class="btn btn-primary" href="{{bucket.link}}">Download</a>
                         {% endif %}
                         <a class="btn btn-primary" href="{% url 'deleteBucket' bucket.id %}">Delete</a>
                     </td>

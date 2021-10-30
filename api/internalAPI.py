@@ -1,10 +1,11 @@
 from django.shortcuts import render, HttpResponse
+from django.conf import settings
 
 import json
 from dateutil.parser import *
 
 from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
-from data_extraction.settings.base import MEDIA_URL
+
 
 # Create your views here.
 def retrieveId(id):
@@ -272,6 +273,6 @@ def GetDocumentLink(document):
     if(document.file is None):
         link = None
     else:
-        link = MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + document.file.file_ext.replace(".","")
+        link = settings.MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + document.file.file_ext.replace(".","")
 
     return link

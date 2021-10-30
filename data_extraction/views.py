@@ -2,15 +2,16 @@ from django.http import JsonResponse
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import views as auth_views
-from background_task import background
 from django.contrib.auth.models import User
 from django.views.generic.edit import CreateView
 from django.urls import reverse_lazy
 from django.db.models import Q
+from django.conf import settings
+
 
 from search import config_search
 from api import internalAPI
-from file_manager import downloader, convertToJPEG
+from file_manager import downloader, convertToJPEG, fileBucket
 from interpretation import googleText
 
 from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
@@ -208,54 +209,74 @@ def lasFiles(request):
 	
 	return render(request, "data/searchLasFiles.html", context)
 
+# File Bucket
 @login_required
 def fileBucketNone(request):
 	fileBucket = UserFileBucket.objects.filter(user=request.user).first()
 
 	context = FileBucket(fileBucket)
 	context["name"] = "Unsaved File Bucket"
+	context["saved"] = False
 
 	return render(request, "data/fileBucket.html", context)
-
 @login_required
 def fileBucketID(request, id):
 	fileBucket = UserFileBucket.objects.filter(id=id).first()
 
 	context = FileBucket(fileBucket)
-	context["name"] = str(request.user) + str(id)
+	context["name"] = fileBucket.name
+	context["saved"] = True
 
 	return render(request, "data/fileBucket.html", context)
-
+@login_required
 def FileBucket(fileBucket):
 	fileBucketFiles = FileBucketFiles.objects.filter(bucket=fileBucket).all()
 
 	documents = []
+	sizeKnown = True
+	totalSize = 0
+	fileCount = 0
+	totalFiles = 0
 	for fileBucketFile in fileBucketFiles:
 		documentObject = fileBucketFile.document
+		totalFiles = totalFiles + 1
 
 		if documentObject.file is not None:
+			fileCount = fileCount + 1
 			size = documentObject.file.file_size
+			if sizeKnown:
+				totalSize = totalSize + size
 		else:
 			size = "unknown"
+			sizeKnown = False
+			totalSize = "unknown"
 
 		document = {
 			"well":documentObject.well.well_name,
 			"name":documentObject.document_name,
 			"size":size,
+			"ext" : internalAPI.GetDocumentExt(documentObject),
 		}
 
 		documents.append(document)
 
+	if(totalFiles != 0):
+		progress = str(round(fileCount/totalFiles*100,0)) + "%"
+	else:
+		progress = None
+
 	context = {
+		"id" : fileBucket.id,
 		"documents" : documents,
+		"totalSize" : totalSize,
+		"status" :  dict(fileBucket.STATUS).get(fileBucket.status),
+		"progress" : progress,
 	}
 
 	return context
-
+@login_required
 def saveToFileBucket(request):
 	data = json.loads(request.body.decode("utf-8"))
-
-	#fileList = data['file_list']
 
 	fileBucket = UserFileBucket.objects.filter(user=request.user).first()
 	if(fileBucket is None):
@@ -274,7 +295,7 @@ def saveToFileBucket(request):
 	response = {'count':fileBucketFiles.count()}
 
 	return JsonResponse(response)
-
+@login_required
 def emptyFileBucketRequest(request):
 	success = emptyFileBucket(request.user)
 
@@ -290,7 +311,6 @@ def emptyFileBucketRequest(request):
 	else:
 		response = {'count':-1}
 		return JsonResponse(response)		
-
 def emptyFileBucket(user):
 	fileBucket = UserFileBucket.objects.filter(user=user).first()
 
@@ -300,20 +320,35 @@ def emptyFileBucket(user):
 			file.delete()
 
 	return True
-
+@login_required
 def saveFileBucket(request):
+	user = request.user
 	unsaved = UserFileBucket.objects.filter(user=request.user).first()
 
 	userFileBucket = UserFileBucket.objects.create(user=request.user)
+	name = user.first_name + user.last_name + str(userFileBucket.id)
+	userFileBucket.name = name
+	userFileBucket.save()
 
-	files = FileBucketFiles.objects.filter(bucket=unsaved).all()
-	for file in files:
-		FileBucketFiles.objects.create(bucket=userFileBucket, document=file)
+	documents = FileBucketFiles.objects.filter(bucket=unsaved).all()
+	for document in documents:
+		FileBucketFiles.objects.create(bucket=userFileBucket, document=document.document)
 
-	emptyFileBucket(request.user)
+	emptyFileBucket(user)
+
+	fileBucket.prepareFileBucket(userFileBucket.id, user.id)
+	print("next")
 
 	response = {'success':True}
 	return JsonResponse(response)	
+@login_required
+def deleteFileBucket(request, id):
+	fileBucket = UserFileBucket.objects.filter(id=id).first()
+
+	fileBucket.delete()
+
+	return redirect(profile)
+
 
 @login_required
 def api(request):
@@ -321,11 +356,58 @@ def api(request):
 
 @login_required
 def profile(request):
+	fileBuckets = UserFileBucket.objects.filter(user=request.user).order_by("-id")
+
+	bucketCount = fileBuckets.count() - 1
+
+	fileBuckets = fileBuckets[:bucketCount]
+
+	buckets = []
+	
+	for bucketObject in fileBuckets:
+		documents = []
+		sizeKnown = True
+		totalSize = 0
+
+		buckerFilesObjects = FileBucketFiles.objects.filter(bucket=bucketObject).all()
+
+		for buckerFilesObject in buckerFilesObjects:
+			documentObject = buckerFilesObject.document
+			if documentObject.file is not None:
+				if sizeKnown:
+					totalSize = totalSize + documentObject.file.file_size
+			else:
+				sizeKnown = False
+				totalSize = "unknown"
+
+
+			document = {
+				"name" : documentObject.document_name,
+				"well" : documentObject.well,
+				"ext" : internalAPI.GetDocumentExt(documentObject),
+			}
+			documents.append(document)
+
+		bucket = {
+			"id" : bucketObject.id,
+			"name" : bucketObject.name,
+			"status" : dict(bucketObject.STATUS).get(bucketObject.status),
+			"documents" : documents,
+			"totalSize" : totalSize,
+			"link" : settings.MEDIA_URL + "file_buckets/" + bucketObject.name + ".zip",
+			"created": bucketObject.date_created.strftime("%d/%m/%Y"),
+			"modified": bucketObject.date_modified.strftime("%d/%m/%Y"),
+		}
+		buckets.append(bucket)
+
+	
+
 	context={
-		"user" : request.user
+		"fileBuckets" : buckets,
+		"bucketCount" : bucketCount,
 	}
 
-	return render(request, "data/profile.html")
+	return render(request, "data/profile.html", context)
 
 @login_required
 def company(request):
