@@ -12,3 +12,5 @@ google-cloud-vision
 jsonpickle
 django-background-tasks
 django-environ
+django-storages
+boto3

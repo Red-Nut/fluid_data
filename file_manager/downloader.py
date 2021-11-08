@@ -4,30 +4,24 @@ from django.conf import settings
 # Error codes.
 from data_extraction import myExceptions
 from data_extraction.myExceptions import Error, downloadList as errorList
+from django.conf import settings
 
 import os
 import requests
 import urllib.request
 import shutil
+import boto3
+import botocore
 
 def downloadWellFile(document):
     # Set Destination Folder.
     wellFolder = document.well.well_name
     report = document.report
 
-    destinationWell = wellFolder + '/'
-    root_folder = settings.MEDIA_ROOT + 'well_data/'
+    makeDirectory('well_data/',False)
 
-    if (not os.path.isdir(root_folder + destinationWell)):
-        try:
-            os.mkdir(root_folder + destinationWell)
-        except Exception as e:
-            myError = errorList[1]
-            error = Error(myError.code,myError.description,myError.consolLog)
-            print(f"Error {error.code}: {error.consolLog}")
-
-            return error
-            #return "Failed to create folder: " + destinationWell
+    destinationWell = 'well_data/' + wellFolder + '/'
+    makeDirectory(destinationWell, settings.USE_S3)
 
     if report is None:
         destination = destinationWell
@@ -35,17 +29,7 @@ def downloadWellFile(document):
         reportName = report.report_type.type_name
         reportName = reportName.replace("\r\n"," ")
         destination = destinationWell + reportName + '/'
-        if (not os.path.isdir(root_folder + destination)):
-            try:
-                os.mkdir(root_folder + destination)
-            except Exception as e:
-                myError = errorList[1]
-                error = Error(myError.code,myError.description,myError.consolLog)
-                error.description = error.description + ": " + destination
-                error.consolLog = error.consolLog + ": " + destination
-                print(f"Error {error.code}: {error.consolLog}")
-
-                return error
+        makeDirectory(destination, settings.USE_S3)
 
     # Download File.
     url = document.url.replace(" ", "%20")
@@ -65,6 +49,35 @@ def downloadWellFile(document):
 
     name = document.document_name
 
+    name = cleanName(name)
+
+    fileName = name + fileType
+
+    downloadFile(url, destination, fileName)
+    filePath = destination + fileName
+    fileSize = getFileSize(filePath)
+
+    result = SaveFileToDatabase(document, name, fileType, destination, fileSize)
+
+    if result == 2:
+        myError = errorList[5]
+        error = Error(myError.code,myError.description,myError.consolLog)
+        print(error.consolLog)
+        return error
+    elif result == 3: 
+        myError = errorList[3]
+        error = Error(myError.code,myError.description,myError.consolLog)
+        print(error.consolLog)
+        return error
+    else:
+        myError = errorList[0]
+        error = Error(myError.code,myError.description,myError.consolLog)
+        error.description = error.description + " FileName: " + name
+        error.well = document.well.well_name
+        error.report = document.report
+        return error
+
+def cleanName(name):
     name = name.replace("/","")
     name = name.replace(":","")
     name = name.replace("*","")
@@ -74,37 +87,165 @@ def downloadWellFile(document):
     name = name.replace(">","")
     name = name.replace("|","")
 
-    filePath = destination + name + fileType
+    return name
 
-    # Check if file exists
-    if(not os.path.exists(root_folder + filePath)):
+def SaveFileToDatabase(document, file_name, file_ext, file_location, file_size):
+    try:
+        file = File.objects.filter(
+            file_name = file_name,
+            file_ext = file_ext,
+            file_location = file_location
+        ).first()
+        if(file is None):
+            file = File.objects.create(
+                file_name = file_name,
+                file_ext = file_ext,
+                file_location = file_location,
+                file_size = file_size
+            )
+        else:
+            return 2
+            
+
+        document.file = file
+        document.status = 2
+        document.save()
+
+    except Exception as e:
+        print(e)
+        return 3
+
+    return 1
+
+def makeDirectory(newFolder, S3):
+    if S3:
+        # Also make the temporary directory
+        makeDirectory(newFolder, False)
+        # Now make the S3 directory
         try:
-            with urllib.request.urlopen(url) as response, open(root_folder + filePath, 'wb') as out_file:
-                shutil.copyfileobj(response, out_file)
+            s3 = boto3.client('s3')
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            directory_name = newFolder
+            s3.put_object(Bucket=bucket_name, Key=(directory_name))
         except Exception as e:
-            myError = errorList[4]
+            myError = errorList[1]
             error = Error(myError.code,myError.description,myError.consolLog)
-            error.description = error.description + ". Well: " + document.well.well_name + ". Document: " + document.document_name
-            error.consolLog = error.consolLog + ". Well: " + document.well.well_name + ". Document: " + document.document_name
             print(f"Error {error.code}: {error.consolLog}")
-            print(e)
+    else:
+        root_folder = settings.MEDIA_ROOT
+        newPath = root_folder + newFolder
+        if (not os.path.isdir(newPath)):
+            try:
+                os.mkdir(newPath)
+            except Exception as e:
+                myError = errorList[1]
+                error = Error(myError.code,myError.description,myError.consolLog)
+                error.consolLog = error.consolLog + "    New Folder: " + newFolder
+                print(f"Error {error.code}: {error.consolLog}")
 
-            return error
-
-    fileSize = os.path.getsize(root_folder + filePath)
-
-    myError = errorList[0]
-    error = Error(myError.code,myError.description,myError.consolLog)
-    error.description = error.description + " FileName: " + name
-    error.well = document.well.well_name
-    error.report = document.report
-    error.file_name = name
-    error.file_ext = fileType
-    error.file_location = destination
-    error.file_size = fileSize
-    return error
-    
-        
+                return error    
 			
+    return True
 
+def downloadFile(fromFilePath, destination, fileName):
+    toFilePath = destination + fileName
+    root_folder = settings.MEDIA_ROOT
+    myPath = root_folder + toFilePath
+    if settings.USE_S3:
+        # Check if file exists
+        if(not os.path.exists(myPath)):
+            # Download File
+            try:
+                with urllib.request.urlopen(fromFilePath) as response, open(myPath, 'wb') as out_file:
+                    shutil.copyfileobj(response, out_file)
+            except Exception as e:
+                myError = errorList[4]
+                error = Error(myError.code,myError.description,myError.consolLog)
+                print(f"Error {error.code}: {error.consolLog}")
+                print(e)
 
+                return error
+
+        uploadFileS3(myPath, destination)
+
+    else:
+        # Check if file exists
+        if(not os.path.exists(myPath)):
+            # Download File
+            try:
+                with urllib.request.urlopen(fromFilePath) as response, open(myPath, 'wb') as out_file:
+                    shutil.copyfileobj(response, out_file)
+            except Exception as e:
+                myError = errorList[4]
+                error = Error(myError.code,myError.description,myError.consolLog)
+                print(f"Error {error.code}: {error.consolLog}")
+                print(e)
+
+                return error
+
+def uploadFileS3(myPath, destination):
+    s3 = boto3.resource('s3')
+    bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+    directory_name = destination
+    s3.Bucket(bucket_name).upload_file(myPath, directory_name)
+
+def copyToTemp(filePath, tempFolder, fileName):
+    if settings.USE_S3:
+        # filePath is the s3 key (like a file path)
+        # tempPath is the path and file name that will be created inside the temp folder
+
+        s3 = boto3.resource('s3')
+        bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+
+        #Check if file exists
+        try:
+            s3.Object(bucket_name, filePath).load()
+        except botocore.exceptions.ClientError as e:
+            if e.response['Error']['Code'] == "404":
+                print("404")
+                return False
+            else:
+                # Something else has gone wrong.
+                raise
+        
+        #Download File
+        makeDirectory(settings.MEDIA_ROOT + tempFolder, False)
+        destination = settings.MEDIA_ROOT + tempFolder + fileName
+        s3.Bucket(bucket_name).download_file(filePath, destination)
+        return True
+    else:
+        root_folder = settings.MEDIA_ROOT
+        filePath = root_folder + filePath
+        tempPath = root_folder + 'temp/' + tempFolder + fileName
+        # Check if file exists
+        if(not os.path.exists(tempPath)):
+            # Copy File
+            try:
+                shutil.copy(filePath, tempPath)
+                return True
+            except Exception as e:
+                myError = errorList[4]
+                error = Error(myError.code,myError.description,myError.consolLog)
+                print(f"Error {error.code}: {error.consolLog}")
+                print(e)
+
+                return False
+        else:
+            return False
+
+def zipFiles(name,folder):
+    if settings.USE_S3:
+        zipPath = settings.MEDIA_ROOT + name
+        folder = settings.MEDIA_ROOT + folder
+        shutil.make_archive(zipPath, 'zip', folder)
+    else:
+        zipPath = settings.MEDIA_ROOT + 'temp/' + name
+        folder = settings.MEDIA_ROOT + folder
+        shutil.make_archive(zipPath, 'zip', folder)
+
+    return True
+
+def getFileSize(filePath):
+    root_folder = settings.MEDIA_ROOT
+    size = os.path.getsize(root_folder + filePath)
+    return size
