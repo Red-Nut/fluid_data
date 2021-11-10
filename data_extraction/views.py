@@ -337,15 +337,18 @@ def saveFileBucket(request):
 	emptyFileBucket(user)
 
 	fileBucket.prepareFileBucket(userFileBucket.id, user.id)
-	print("next")
-
+	
 	response = {'success':True}
 	return JsonResponse(response)	
 @login_required
 def deleteFileBucket(request, id):
 	fileBucket = UserFileBucket.objects.filter(id=id).first()
 
+	downloader.deleteFile('file_buckets/' + fileBucket.name + '.zip', settings.USE_S3)
+
 	fileBucket.delete()
+
+	
 
 	return redirect(profile)
 

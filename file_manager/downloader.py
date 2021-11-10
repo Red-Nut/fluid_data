@@ -119,9 +119,6 @@ def SaveFileToDatabase(document, file_name, file_ext, file_location, file_size):
 
 def makeDirectory(newFolder, S3):
     if S3:
-        # Also make the temporary directory
-        makeDirectory(newFolder, False)
-        # Now make the S3 directory
         try:
             s3 = boto3.client('s3')
             bucket_name = settings.AWS_STORAGE_BUCKET_NAME
@@ -232,6 +229,66 @@ def copyToTemp(filePath, tempFolder, fileName):
                 return False
         else:
             return False
+
+def deleteDirectory(path, S3):
+    if S3:
+        try:
+            s3 = boto3.client('s3')
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            bucket = s3.Bucket(bucket_name)
+            prefix = path + '/'
+            bucket.objects.filter(Prefix=prefix).delete()
+        except Exception as e:
+            #myError = errorList[1]
+            #error = Error(myError.code,myError.description,myError.consolLog)
+            #print(f"Error {error.code}: {error.consolLog}")
+            return False
+    else:
+        root_folder = settings.MEDIA_ROOT
+        path = root_folder + path
+        if (os.path.isdir(path)):
+            try:
+                shutil.rmtree(path)
+            except OSError as e:
+                #myError = errorList[1]
+                #error = Error(myError.code,myError.description,myError.consolLog)
+                #error.consolLog = error.consolLog + "    Deleted Folder: " + path
+                #print(f"Error {error.code}: {error.consolLog}")
+                print(e)
+
+                return False    
+			
+    return True
+
+def deleteFile(path, S3):
+    if S3:
+        try:
+            s3 = boto3.client('s3')
+            bucket_name = settings.AWS_STORAGE_BUCKET_NAME
+            print(path)
+            s3.delete_object(Bucket=bucket_name, Key=path)
+        except Exception as e:
+            #myError = errorList[1]
+            #error = Error(myError.code,myError.description,myError.consolLog)
+            #print(f"Error {error.code}: {error.consolLog}")
+            print(e)
+            return False
+    else:
+        root_folder = settings.MEDIA_ROOT
+        path = root_folder + path
+        if (os.path.exists(path)):
+            try:
+                os.remove(path)
+            except OSError as e:
+                #myError = errorList[1]
+                #error = Error(myError.code,myError.description,myError.consolLog)
+                #error.consolLog = error.consolLog + "    Deleted Folder: " + path
+                #print(f"Error {error.code}: {error.consolLog}")
+                print(e)
+
+                return False    
+			
+    return True
 
 def zipFiles(name,folder):
     if settings.USE_S3:
