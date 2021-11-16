@@ -25,13 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-la8kp0z$@%up48!fwhq=tb%5_plpohhhf-*re(rb(t=-uxuc_l'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-#ALLOWED_HOSTS = []
-
+SECRET_KEY = env('SECRET_KEY')
 
 # Application definition
 
@@ -43,6 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_mysql',
+    'storages',
+    'django.contrib.sites',
     'background_task',
     'data_extraction',
     'administration',
@@ -51,7 +47,7 @@ INSTALLED_APPS = [
     'file_manager',
     'interpretation',
 ]
-
+SITE_ID=1
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -115,22 +111,6 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
-
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/3.2/howto/static-files/
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'static/')
-STATIC_URL = '/static/'
-
-STATICFILES_DIRS = (
-    os.path.join(BASE_DIR, 'data_extraction/static/'),
-)
-
-#MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
-#MEDIA_ROOT = '/mnt/alpha/Well_Data/'
-MEDIA_URL = '/media/'
-
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
