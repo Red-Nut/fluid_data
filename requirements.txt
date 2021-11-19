@@ -4,6 +4,7 @@ wheel
 requests
 mysqlclient
 django-mysql
+django-allauth
 python-dateutil
 Pillow
 pdf2image

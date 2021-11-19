@@ -1,6 +1,6 @@
 from data_extraction.settings.base import *
 
-ALLOWED_HOSTS = ['localhost','13.54.13.187','fluiddata.com.au','www.fluiddata.com.au']
+ALLOWED_HOSTS = ['localhost', '192.168.0.64','13.54.13.187','fluiddata.com.au','www.fluiddata.com.au']
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -40,5 +40,5 @@ STATICFILES_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
 # Media
 MEDIA_ROOT = os.path.join(BASE_DIR, 'temp/')
 AWS_MEDIA_LOCATION = 'media'
-MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/{AWS_MEDIA_LOCATION}/'
+MEDIA_URL = f'https://{AWS_S3_CUSTOM_DOMAIN}/'
 DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'

@@ -22,6 +22,7 @@ def downloadWellFile(document):
 
     destinationWell = 'well_data/' + wellFolder + '/'
     makeDirectory(destinationWell, settings.USE_S3)
+    makeDirectory(destinationWell, False)
 
     if report is None:
         destination = destinationWell

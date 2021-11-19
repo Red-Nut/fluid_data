@@ -63,10 +63,10 @@ def prepareFileBucket(bucketId, userId):
         result = downloader.copyToTemp(sPath, dfolder, dName)
 
     # Zip Folder
-    result = downloader.zipFiles(userFileBucket.name,destination)
+    result = downloader.zipFiles('file_buckets/' + userFileBucket.name,destination)
 
     if settings.USE_S3:
-        downloader.uploadFileS3(settings.MEDIA_ROOT + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
+        downloader.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
 
     # Update file bucket status
     userFileBucket.status = 3
