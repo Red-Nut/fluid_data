@@ -233,7 +233,7 @@ def fileBucketID(request, id):
 	context = FileBucket(fileBucket)
 	context["name"] = fileBucket.name
 	context["saved"] = True
-	context["link"] = settings.MEDIA_URL + "file_buckets/" + fileBucket.name + ".zip",
+	context["link"] = settings.MEDIA_URL + "file_buckets/" + fileBucket.name + ".zip"
 
 	return render(request, "data/fileBucket.html", context)
 
