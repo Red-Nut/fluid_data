@@ -16,3 +16,4 @@ django-environ
 django-storages
 boto3
 Celery
+redis

@@ -304,16 +304,18 @@ def deleteFile(path, S3):
 
 def zipFiles(name,folder):
     if settings.USE_S3:
-        zipPath = settings.MEDIA_ROOT + name
+        zipPath = name
+        zipPathFull = settings.MEDIA_ROOT + zipPath
         folder = settings.MEDIA_ROOT + folder
-        shutil.make_archive(zipPath, 'zip', folder)
+        shutil.make_archive(zipPathFull, 'zip', folder)
 
         fileSize = getFileSize(zipPath + '.zip')
         return fileSize
     else:
-        zipPath = settings.MEDIA_ROOT + 'temp/' + name
+        zipPath = 'temp/' + name
+        zipPathFull = settings.MEDIA_ROOT + zipPath
         folder = settings.MEDIA_ROOT + folder
-        shutil.make_archive(zipPath, 'zip', folder)
+        shutil.make_archive(zipPathFull, 'zip', folder)
 
         fileSize = getFileSize(zipPath + '.zip')
         return fileSize
