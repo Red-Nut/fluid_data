@@ -14,7 +14,7 @@ Fluid Data - File Bucket
 <div class="container-fluid" id="mainView">
     <h1>File Bucket</h1>
     <h3>{{name}}</h3>
-    {% if saved == false %}
+    {% if saved %}
     <table>
         <tr><th class="p-2">Status: </th><td>{{status}}</td></tr>
         {% if status == "Preparing files" %}
@@ -22,6 +22,12 @@ Fluid Data - File Bucket
         {% endif %}
         <tr><th class="p-2">Total Size: </th><td>{{totalSize}}</td></tr>
     </table>
+    {% endif %}
+    {% if saved %}
+    <a class="btn btn-primary" href="{% url 'deleteBucket' id %}">Delete</a>
+    <a class="btn btn-primary" href="{{link}}">Download</a>
+    {% else %}
+    <button class="btn btn-primary" onclick=SaveBucket()>Save</button>
     {% endif %}
     <br>
     <table width=100% class="table">
@@ -36,11 +42,7 @@ Fluid Data - File Bucket
         </tr>
         {% endfor %}
     </table>
-    {% if saved %}
-    <a class="btn btn-primary" href="{% url 'deleteBucket' id %}">Delete</a>
-    {% else %}
-    <button class="btn btn-primary" onclick=SaveBucket()>Save</button>
-    {% endif %}
+    
 </div>
 
 

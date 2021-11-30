@@ -7,13 +7,19 @@ from data_extraction.myExceptions import Error, downloadList as errorList
 from django.conf import settings
 
 import os
+import sys
 import requests
 import urllib.request
 import shutil
 import boto3
 import botocore
 
+from boto3.s3.transfer import TransferConfig
+
 def downloadWellFile(document):
+    print("DOWNLOADING WELL FILE")
+    print("WELL: " + document.well.well_name)
+    print("DOCUMENT: " + document.document_name)
     # Set Destination Folder.
     wellFolder = document.well.well_name
     report = document.report
@@ -132,7 +138,7 @@ def makeDirectory(newFolder, S3):
     else:
         root_folder = settings.MEDIA_ROOT
         newPath = root_folder + newFolder
-        if (not os.path.isdir(newPath)):
+        if (not os.path.isdir(newPath)==True):
             try:
                 os.mkdir(newPath)
             except Exception as e:
@@ -142,7 +148,7 @@ def makeDirectory(newFolder, S3):
                 print(f"Error {error.code}: {error.consolLog}")
 
                 return error    
-			
+
     return True
 
 def downloadFile(fromFilePath, destination, fileName):
@@ -164,7 +170,7 @@ def downloadFile(fromFilePath, destination, fileName):
 
                 return error
 
-        uploadFileS3(myPath, destination)
+        uploadFileS3(myPath, toFilePath)
 
     else:
         # Check if file exists
@@ -182,10 +188,15 @@ def downloadFile(fromFilePath, destination, fileName):
                 return error
 
 def uploadFileS3(myPath, destination):
-    s3 = boto3.resource('s3')
+    #s3 = boto3.resource('s3')
+    s3_client=boto3.client('s3')
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
     directory_name = destination
-    s3.Bucket(bucket_name).upload_file(myPath, directory_name)
+    threshold = 1024*25
+    config = TransferConfig(multipart_threshold=threshold, max_concurrency=1, multipart_chunksize=threshold, use_threads=True)
+    #s3.Bucket(bucket_name).upload_file(myPath, directory_name)
+    #s3.meta.client.upload_file(myPath, bucket_name, directory_name,Config=config)
+    s3_client.upload_file(myPath, bucket_name, directory_name,Config=config)
 
 def copyToTemp(filePath, tempFolder, fileName):
     if settings.USE_S3:
@@ -207,7 +218,7 @@ def copyToTemp(filePath, tempFolder, fileName):
                 raise
         
         #Download File
-        makeDirectory(settings.MEDIA_ROOT + tempFolder, False)
+        makeDirectory(tempFolder, False)
         destination = settings.MEDIA_ROOT + tempFolder + fileName
         s3.Bucket(bucket_name).download_file(filePath, destination)
         return True

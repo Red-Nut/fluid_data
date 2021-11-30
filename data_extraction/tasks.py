@@ -1,23 +1,34 @@
+import logging
+import time
+from django.urls import reverse
+from django.core.mail import send_mail
+from django.contrib.auth import get_user_model
+from .celery import app
+ 
 from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from background_task import background
-
-from data_extraction.models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
-from data_extraction.myExceptions import Error, downloadList as errorList
-from file_manager.downloader import makeDirectory
-from . import downloader
-
-import os
-import shutil
-from zipfile import ZipFile
-
-def prepareFileBucket(bucketId, userId):
+from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
+from file_manager import downloader, convertToJPEG, fileBucket
+ 
+#@app.task
+def saveFileBucket(userId):
     user = User.objects.get(pk=userId)
-    userFileBucket = UserFileBucket.objects.get(pk=bucketId)
+    unsaved = UserFileBucket.objects.filter(user=user).first()
+
+    # Create new bucket.
+    user = User.objects.get(pk=userId)
+    userFileBucket = UserFileBucket.objects.create(user=user)
+    name = user.first_name + user.last_name + str(userFileBucket.id)
+    userFileBucket.name = name
     userFileBucket.status = 2
     userFileBucket.save()
+
+    # Copy files from temporary bucket.
+    documents = FileBucketFiles.objects.filter(bucket=unsaved).all()
+    for document in documents:
+        FileBucketFiles.objects.create(bucket=userFileBucket, document=document.document)
 
     # Notify user
     send_mail(
@@ -34,13 +45,17 @@ def prepareFileBucket(bucketId, userId):
     for fileBucketfile in fileBucketFiles:
         documents.append(fileBucketfile.document)
 
+    # Empty temporary bucket.
+    emptyFileBucket(user)
+
     # Download each file
     for document in documents:
-        result = downloader.downloadWellFile(document)
-        if(result.code != "50000" and result.code != "50004"):
-            # Failed, notify users
-            print("file not downloaded")
-            print(result.code)
+        if(document.status != 2):
+            result = downloader.downloadWellFile(document)
+            if(result.code != "50000" and result.code != "50004"):
+                # Failed, notify users
+                print("file not downloaded")
+                print(result.code)
 
     # Create File Bucket
     downloader.makeDirectory('file_buckets/',False)
@@ -74,13 +89,23 @@ def prepareFileBucket(bucketId, userId):
     # Notify user
     send_mail(
         subject='Fluid Data - Files ready Download',
-        message='Data package ' + userFileBucket.name + ' is ready for download. Access the files from your profile page.',
+        message='Data package ' + userFileBucket.name + ' is ready for download. Access the files from your profile page. Or using this link: ' + settings.MEDIA_URL + "file_buckets/" + userFileBucket.name + ".zip",
         from_email=settings.EMAIL_HOST_USER,
         recipient_list=[user.email],
         fail_silently=False,
     )
 
 
+@app.task
+def deleteFileBucket(filePath, useS3):
+    downloader.deleteFile(filePath, useS3)
 
+def emptyFileBucket(user):
+	fileBucket = UserFileBucket.objects.filter(user=user).first()
 
+	if(fileBucket is not None):
+		files = FileBucketFiles.objects.filter(bucket=fileBucket).all()
+		for file in files:
+			file.delete()
 
+	return True

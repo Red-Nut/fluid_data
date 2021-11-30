@@ -44,5 +44,8 @@ Collect Static
 If useing AWS, create temp folder in the main project folder
     mkdir temp
 
+Install redis server
+    sudo apt install redis-server
+
 Test to project with:
     python manage.py runserver 0.0.0.0:8000 --settings=data_extraction.settings.dev

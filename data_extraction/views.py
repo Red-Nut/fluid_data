@@ -17,6 +17,7 @@ from interpretation import googleText
 from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
 from .forms import WellFilter
 from . import myExceptions
+from . import tasks
 
 import json
 from json import JSONEncoder
@@ -25,14 +26,17 @@ import time
 
 from django.contrib.auth import logout
 
+# Logout.
 def logout_view(request):
 	logout(request)
 	return render(request, "public/logout.html")
 
+# Index.
 @login_required
 def index(request):
 	return render(request, "data/index.html")
 
+# Well Search.
 @login_required
 def search(request):
 	if request.method == "POST":
@@ -116,6 +120,7 @@ def search(request):
 	
 	return render(request, "data/search.html", context)
 
+# File Search.
 @login_required
 def lasFiles(request):
 	if request.method == "POST":
@@ -179,9 +184,10 @@ def lasFiles(request):
 				lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
 				orderBy, start, end)
 	else:
-		wellData = internalAPI.LASsearch(None, None, None, None, None, None, None,
-				None, None, None, None, None, None, 
-				None, 0, 20)
+		wellData = None
+		#wellData = internalAPI.LASsearch(None, None, None, None, None, None, None,
+		#		None, None, None, None, None, None, 
+		#		None, 0, 20)
 		form = WellFilter()
 		
 		page = 0
@@ -209,7 +215,7 @@ def lasFiles(request):
 	
 	return render(request, "data/searchLasFiles.html", context)
 
-# File Bucket
+# File Bucket.
 @login_required
 def fileBucketNone(request):
 	fileBucket = UserFileBucket.objects.filter(user=request.user).first()
@@ -219,6 +225,7 @@ def fileBucketNone(request):
 	context["saved"] = False
 
 	return render(request, "data/fileBucket.html", context)
+
 @login_required
 def fileBucketID(request, id):
 	fileBucket = UserFileBucket.objects.filter(id=id).first()
@@ -226,15 +233,17 @@ def fileBucketID(request, id):
 	context = FileBucket(fileBucket)
 	context["name"] = fileBucket.name
 	context["saved"] = True
+	context["link"] = settings.MEDIA_URL + "file_buckets/" + fileBucket.name + ".zip",
 
 	return render(request, "data/fileBucket.html", context)
+
 @login_required
 def FileBucket(fileBucket):
 	fileBucketFiles = FileBucketFiles.objects.filter(bucket=fileBucket).all()
 
 	documents = []
 	sizeKnown = True
-	totalSize = 0
+	totalSizeByte = 0
 	fileCount = 0
 	totalFiles = 0
 	for fileBucketFile in fileBucketFiles:
@@ -243,18 +252,20 @@ def FileBucket(fileBucket):
 
 		if documentObject.file is not None:
 			fileCount = fileCount + 1
-			size = documentObject.file.file_size
+			sizeByte = documentObject.file.file_size
 			if sizeKnown:
-				totalSize = totalSize + size
+				totalSizeByte = totalSizeByte + sizeByte
+			
+			sizeText = fileSizeText(sizeByte)
+			
 		else:
-			size = "unknown"
+			sizeText = "unknown"
 			sizeKnown = False
-			totalSize = "unknown"
 
 		document = {
 			"well":documentObject.well.well_name,
 			"name":documentObject.document_name,
-			"size":size,
+			"size":sizeText,
 			"ext" : internalAPI.GetDocumentExt(documentObject),
 		}
 
@@ -265,15 +276,23 @@ def FileBucket(fileBucket):
 	else:
 		progress = None
 
+	if sizeKnown:
+		totalSizeText = fileSizeText(totalSizeByte)
+	else: 
+		totalSizeText = "unknown"
+
 	context = {
 		"id" : fileBucket.id,
 		"documents" : documents,
-		"totalSize" : totalSize,
+		"totalSize" : totalSizeText,
 		"status" :  dict(fileBucket.STATUS).get(fileBucket.status),
 		"progress" : progress,
+		"saved" : False,
 	}
 
 	return context
+
+# File Bucket - Add to.
 @login_required
 def saveToFileBucket(request):
 	data = json.loads(request.body.decode("utf-8"))
@@ -295,6 +314,8 @@ def saveToFileBucket(request):
 	response = {'count':fileBucketFiles.count()}
 
 	return JsonResponse(response)
+
+# File Bucket - Empty.
 @login_required
 def emptyFileBucketRequest(request):
 	success = emptyFileBucket(request.user)
@@ -311,6 +332,7 @@ def emptyFileBucketRequest(request):
 	else:
 		response = {'count':-1}
 		return JsonResponse(response)		
+
 def emptyFileBucket(user):
 	fileBucket = UserFileBucket.objects.filter(user=user).first()
 
@@ -320,43 +342,37 @@ def emptyFileBucket(user):
 			file.delete()
 
 	return True
+
+# File Bucket - Save.
 @login_required
 def saveFileBucket(request):
-	user = request.user
-	unsaved = UserFileBucket.objects.filter(user=request.user).first()
-
-	userFileBucket = UserFileBucket.objects.create(user=request.user)
-	name = user.first_name + user.last_name + str(userFileBucket.id)
-	userFileBucket.name = name
-	userFileBucket.save()
-
-	documents = FileBucketFiles.objects.filter(bucket=unsaved).all()
-	for document in documents:
-		FileBucketFiles.objects.create(bucket=userFileBucket, document=document.document)
-
-	emptyFileBucket(user)
-
-	fileBucket.prepareFileBucket(userFileBucket.id, user.id)
+	userId = request.user.id
 	
+	#tasks.saveFileBucket.delay(userId)
+	tasks.saveFileBucket(userId)
+
 	response = {'success':True}
 	return JsonResponse(response)	
+
+# File Bucket - Delete.
 @login_required
 def deleteFileBucket(request, id):
 	fileBucket = UserFileBucket.objects.filter(id=id).first()
 
-	downloader.deleteFile('file_buckets/' + fileBucket.name + '.zip', settings.USE_S3)
+	filePath = 'file_buckets/' + fileBucket.name + '.zip'
+	
+	tasks.deleteFileBucket.delay(filePath, settings.USE_S3)
 
 	fileBucket.delete()
 
-	
-
 	return redirect(profile)
 
-
+# API.
 @login_required
 def api(request):
 	return render(request, "data/api.html")
 
+# Profile.
 @login_required
 def profile(request):
 	fileBuckets = UserFileBucket.objects.filter(user=request.user).order_by("-id")
@@ -379,9 +395,10 @@ def profile(request):
 			if documentObject.file is not None:
 				if sizeKnown:
 					totalSize = totalSize + documentObject.file.file_size
+					totalSizeText = fileSizeText(totalSize)
 			else:
 				sizeKnown = False
-				totalSize = "unknown"
+				totalSizeText = "unknown"
 
 
 			document = {
@@ -396,7 +413,7 @@ def profile(request):
 			"name" : bucketObject.name,
 			"status" : dict(bucketObject.STATUS).get(bucketObject.status),
 			"documents" : documents,
-			"totalSize" : totalSize,
+			"totalSize" : totalSizeText,
 			"link" : settings.MEDIA_URL + "file_buckets/" + bucketObject.name + ".zip",
 			"created": bucketObject.date_created.strftime("%d/%m/%Y"),
 			"modified": bucketObject.date_modified.strftime("%d/%m/%Y"),
@@ -412,10 +429,12 @@ def profile(request):
 
 	return render(request, "data/profile.html", context)
 
+# Company Profile.
 @login_required
 def company(request):
 	return render(request, "data/company.html")
 
+# Well Details.
 @login_required
 def details(request, id):
 	wellData = internalAPI.retrieveId(id)
@@ -445,4 +464,16 @@ def getDocumentText(document):
 
 	return pages
 
-	
+def fileSizeText(size):
+	if(size<=99):
+		text = round(size,0)
+		text = str(text) + " byte"
+	elif(size > 1000*1000):
+		text = round(size/1000/1000,2)
+		text = str(text) + " Mb"
+	else:
+		text = round(size/1000,2)
+		text = str(text) + " kb"
+
+	return text
+

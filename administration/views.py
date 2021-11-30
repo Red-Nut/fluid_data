@@ -139,6 +139,19 @@ def DownloadAllMissing(request):
 	json_resonse = json.dumps(results)
 	return HttpResponse(json_resonse)
 
+def DeleteAllFiles(request):
+    documents = Document.objects.all()
+
+    for document in documents:
+        document.status = 1
+        document.save
+
+    files = File.objects.all()
+    for file in files:
+        file.delete()
+
+    return HttpResponse("done")
+
 def DownloadAllWCRs(request):
     documents = Document.objects.filter(status=1).all()
     documents = documents.filter(report__report_type__type_name="Well Completion Report").all()

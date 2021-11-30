@@ -30,6 +30,7 @@ urlpatterns = [
     path('update-companies', views.UpdateCompanies, name='admin-updateCompanies'),
     path('download-all', views.DownloadAllMissing, name='admin-DownloadAll'),
     path('download-wcr', views.DownloadAllWCRs, name='admin-DownloadWCRs'),
+    path('delete-all', views.DeleteAllFiles, name='admin-DeleteAll'),
     path('convert', views.ConvertAllMissingToJPEG, name='admin-convertAll'),
     path('dup', views.RemoveDuplicateDocuments, name='admin-removeDuplicate'),
     path('changeWell', views.changeWell, name='admin-changeWell'),

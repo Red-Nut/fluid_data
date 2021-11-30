@@ -1,14 +1,15 @@
 
 {% extends 'data/base.html' %}
 {% block title %}
-Data Extraction - Home
+Fluid Data - Search
 {% endblock %}
 
 {% block head %}
 <div style="border-bottom: 1px solid black;" class="p-3">
-    <button class="btn btn-primary" onclick=AddChecked()>Add Selected to Bucket</button>
-    <a id="bucketCount" class="btn btn-primary" href="{% url 'fileBucket' %}" >View Bucket ({{fileBucketFiles}})</a>
-    <button class="btn btn-primary" onclick=EmptyBucket()>Empty Bucket</button>
+    <button class="btn btn-primary" onclick=AddChecked() id="buttonAdd">Add Selected to Bucket</button>
+    <p class="btn btn-primary" style="display:none" id="pleaseWait">Please wait ...</p>
+    <a id="bucketCount" class="btn btn-primary" href="{% url 'fileBucket' %}"id="bucketCount" >View Bucket ({{fileBucketFiles}})</a>
+    <button class="btn btn-primary" onclick=EmptyBucket() id="emptyBucket">Empty Bucket</button>
 </div>
 {% endblock %}
 
@@ -187,14 +188,22 @@ Data Extraction - Home
                 </table>
             </div>
         </div>
+        <br>
         <!-- Filter Buttons -->
-        <table style="min-width: 400px;">
-            <tr>
-                <td style="text-align: right;"><botton id="clearFilter" class="btn btn-primary" onclick="ClearFilter()">Clear Filter</botton></td>
-                <td style="text-align: right;"><input id="btnFilter" type="submit" value="Apply Filter" class="btn btn-primary" ></td>
-            </tr>
-        </table>
-        <div style=display:none;>
+        <div id="filterButtons">
+            <table style="min-width: 400px;">
+                <tr>
+                    <td style="text-align: right;"><botton id="clearFilter" class="btn btn-primary" onclick="ClearFilter()">Clear Filter</botton></td>
+                    <td style="text-align: right;"><input id="btnFilter" type="submit" value="Apply Filter" class="btn btn-primary" ></td>
+                </tr>
+            </table>
+        </div>
+        <div id="fitlerButtonsLoading" style="display:none">
+            <p class="btn btn-primary">Please wait while results are loading ...</p>
+        </div>
+
+        <!-- Hiddent form variables -->
+        <div style="display:none;">
             {{ form.orderBy }}
             {{ form.page }}
             {{ form.show_qty }}
@@ -238,7 +247,7 @@ Data Extraction - Home
     <table width=100% class="table">
         <thead>
             <tr class="table-dark">
-                <th></th>
+                <th><input type="checkbox" id="checkboxAll" name="checkboxAll" value="checkboxAll" onclick="checkboxAll();"></th>
                 <th id="well_nameClick" class="link" onclick="OrderBy('well_name', true)">
                     Well
                     <svg id="well_nameD" style="display:none;" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-exclamation-triangle-fill flex-shrink-0 me-2" viewBox="0 0 16 16">
@@ -432,21 +441,38 @@ Data Extraction - Home
         btnFilter.click();
     }
 
+    function checkboxAll(){
+        masterCheckbox = document.getElementById('checkboxAll')
+        setting = masterCheckbox.checked
+        console.log(setting)
+
+        $("input[type='checkbox']").each(function(){
+            id = $(this).attr('id');
+            if (id != "checkboxAll"){
+                $(this).prop("checked", setting);
+            }
+        });
+    }
     
     
 </script>
 
 <script>
     function AddChecked(){
+        document.getElementById("buttonAdd").style.display = "none";
+        document.getElementById("bucketCount").style.display = "none";
+        document.getElementById("emptyBucket").style.display = "none";
+        document.getElementById("pleaseWait").style.display = "inline-block";
         data = []
         $("input[type='checkbox']").each(function(){
             value = $(this).attr('value'); // grab value of original
             isChecked = $(this).is(":checked"); //check if checked
-
-            if(isChecked){
-                values = value.split(",")
-                for (let i in values) {
-                    data.push(values[i])
+            if (value != "checkboxAll"){
+                if(isChecked){
+                    values = value.split(",")
+                    for (let i in values) {
+                        data.push(values[i])
+                    }
                 }
             }
         });
@@ -466,6 +492,11 @@ Data Extraction - Home
             "X-CSRFToken": csrftoken },
             // on success
             success: function (response) {
+                document.getElementById("buttonAdd").style.display = "inline-block";
+                document.getElementById("bucketCount").style.display = "inline-block";
+                document.getElementById("emptyBucket").style.display = "inline-block";
+                document.getElementById("pleaseWait").style.display = "none";
+
                 count = response.count;
                 console.log("Count: " + count);
                 if(count == -1){
