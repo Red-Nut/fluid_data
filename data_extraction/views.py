@@ -348,8 +348,7 @@ def emptyFileBucket(user):
 def saveFileBucket(request):
 	userId = request.user.id
 	
-	#tasks.saveFileBucket.delay(userId)
-	tasks.saveFileBucket(userId)
+	tasks.saveFileBucket.delay(userId)
 
 	response = {'success':True}
 	return JsonResponse(response)	

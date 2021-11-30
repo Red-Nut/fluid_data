@@ -308,6 +308,7 @@ class UserFileBucket(CreatedModifiedModel):
         choices=STATUS,
         default=1,
     )
+    zipSize = models.PositiveIntegerField(null=True, blank=True)
 
 class FileBucketFiles(models.Model):
     bucket = models.ForeignKey(UserFileBucket, on_delete=models.CASCADE, related_name="documents")

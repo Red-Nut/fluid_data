@@ -307,12 +307,16 @@ def zipFiles(name,folder):
         zipPath = settings.MEDIA_ROOT + name
         folder = settings.MEDIA_ROOT + folder
         shutil.make_archive(zipPath, 'zip', folder)
+
+        fileSize = getFileSize(zipPath + '.zip')
+        return fileSize
     else:
         zipPath = settings.MEDIA_ROOT + 'temp/' + name
         folder = settings.MEDIA_ROOT + folder
         shutil.make_archive(zipPath, 'zip', folder)
 
-    return True
+        fileSize = getFileSize(zipPath + '.zip')
+        return fileSize
 
 def getFileSize(filePath):
     root_folder = settings.MEDIA_ROOT

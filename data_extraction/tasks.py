@@ -12,7 +12,7 @@ from django.conf import settings
 from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
 from file_manager import downloader, convertToJPEG, fileBucket
  
-#@app.task
+@app.task
 def saveFileBucket(userId):
     user = User.objects.get(pk=userId)
     unsaved = UserFileBucket.objects.filter(user=user).first()
@@ -77,13 +77,14 @@ def saveFileBucket(userId):
         result = downloader.copyToTemp(sPath, dfolder, dName)
 
     # Zip Folder
-    result = downloader.zipFiles('file_buckets/' + userFileBucket.name,destination)
+    zipSize = downloader.zipFiles('file_buckets/' + userFileBucket.name,destination)
 
     if settings.USE_S3:
         downloader.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
 
     # Update file bucket status
     userFileBucket.status = 3
+    userFileBucket.zipSize = zipSize
     userFileBucket.save()
 
     # Notify user
