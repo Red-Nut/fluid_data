@@ -1,14 +1,18 @@
+# Django imports.
 from django.http import JsonResponse
-from django.shortcuts import render
+
+# Third party imports.
 import json
 
+# This module imports.
 from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, RetreiveAllQLD, ResultEncoder
 
+# Other module imports.
+from data_extraction.functions import ConvertToTrueFalse
 
 # Create your views here.
 def SearchGov(request):
-    #jsonStr = request.GET['data']
-    #data = json.loads(jsonStr)
+    # Load request variables.
     data = json.loads(request.body.decode("utf-8"))
 
     searchStr=data['searchStr']
@@ -16,49 +20,42 @@ def SearchGov(request):
     attachmentsOnlyStr = data['attachmentsOnly']
     WCRonlyStr = data['WCRonly']
     includeExistingStr = data['includeExisting']
-    #includeExistingStr = "Y"
 
-    if(attachmentsOnlyStr == "Y"):
-        attachmentsOnly = True
-    else: 
-        attachmentsOnly = False
+    # Convert Y/N to True/False.
+    attachmentsOnly = ConvertToTrueFalse(attachmentsOnlyStr)
+    WCRonly = ConvertToTrueFalse(WCRonlyStr)
+    includeExisting = ConvertToTrueFalse(includeExistingStr)
 
-    if(WCRonlyStr == "Y"):
-        WCRonly = True
-    else: 
-        WCRonly = False
-
-    if(includeExistingStr == "Y"):
-        includeExisting = True
-    else: 
-        includeExisting = False
-
+    # Select the appropriate search method.
     if(method == "Web"):
+        # Note web scrapping is not currently being developed as the API has now been rolled out.
         mySearch = WebScrapeSearchQLD(searchStr, attachmentsOnly, WCRonly, includeExisting)
     else:
         mySearch = APISearchQLD(searchStr,attachmentsOnly, WCRonly, includeExisting)
 
+    # Run the search.
     mySearch.search()
 
+    # Put the results into a reponse.
     response = {'searchName':repr(mySearch),'results':ResultEncoder().encode(mySearch)}
 
-    return JsonResponse(response)  # serialize and use JSON headers
+    # Convert to Json and return the response.
+    return JsonResponse(response)
 
 def AddDatabase(request):
-    #jsonStr = request.GET['data']
-    #data = json.loads(jsonStr)
+    # Load request variables.
     data = json.loads(request.body.decode("utf-8"))
 
     wellId = data['id']
     state = data['state']
 
+    # Run the add well function. 
     response = Add(wellId,state)
 
+    # Convert to Json and return the response.
     return JsonResponse(response)
 
 def AddMany(request):
-    #jsonStr = request.GET['data']
-    #data = json.loads(jsonStr)
     data = json.loads(request.body.decode("utf-8"))
 
     wellList = data['wellList']
@@ -73,12 +70,13 @@ def AddMany(request):
 
     return JsonResponse(response)
     
-def AddAllQLD(request):
-    response = RetreiveAllQLD(True)
-
-    return JsonResponse(response)
-
 def UpdateAllQLD(request):
-    response = RetreiveAllQLD(True)
+    responseList = RetreiveAllQLD()
+    response = {'results':ResultEncoder().encode(responseList)}
 
     return JsonResponse(response)
+
+
+
+
+
