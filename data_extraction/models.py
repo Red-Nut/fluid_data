@@ -19,7 +19,7 @@ class File(CreatedModifiedModel):
     file_size = models.IntegerField()
     
     def __str__(self):
-	    return f"{self.file_name}.{self.file_ext}"
+        return f"{self.file_name}.{self.file_ext}"
 
     def __repr__(self):
         str = "Id: {}, file name: {}, location: {}\n" 
@@ -33,7 +33,7 @@ class Company(CreatedModifiedModel):
     company_name = models.CharField(max_length = 255, unique = True)
 
     def __str__(self):
-	    return f"{self.company_name}"
+        return f"{self.company_name}"
 
     def __repr__(self):
         str = "Id: {}, name: {}\n" 
@@ -45,7 +45,7 @@ class State(CreatedModifiedModel):
     name_short = models.CharField(max_length=20)
 
     def __str__(self):
-	    return f"{self.name_short}"
+        return f"{self.name_short}"
 
     def __repr__(self):
         str = "Id: {}, name: {}\n" 
@@ -62,7 +62,7 @@ class WellStatus(CreatedModifiedModel):
     status_name = models.CharField(max_length=100)
     
     def __str__(self):
-	    return f"{self.status_name}"
+        return f"{self.status_name}"
 
     def __repr__(self):
         str = "Id: {}, status_name: {}\n" 
@@ -73,7 +73,7 @@ class WellClass(CreatedModifiedModel):
     class_name = models.CharField(max_length=100)
     
     def __str__(self):
-	    return f"{self.class_name}"
+        return f"{self.class_name}"
 
     def __repr__(self):
         str = "Id: {}, class_name: {}\n" 
@@ -84,7 +84,7 @@ class WellPurpose(CreatedModifiedModel):
     purpose_name = models.CharField(max_length=100)
     
     def __str__(self):
-	    return f"{self.purpose_name}"
+        return f"{self.purpose_name}"
 
     def __repr__(self):
         str = "Id: {}, purpose_name: {}\n" 
@@ -130,7 +130,7 @@ class Well(CreatedModifiedModel):
     modified = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
-	    return f"{self.well_name}"
+        return f"{self.well_name}"
 
     def __repr__(self):
         str = "Id: {}, name: {}\n" 
@@ -143,7 +143,7 @@ class ReportType(CreatedModifiedModel):
     type_name = models.CharField(max_length=100)
 
     def __str__(self):
-	    return f"{self.type_name}"
+        return f"{self.type_name}"
 
 class Report(CreatedModifiedModel):
     gov_id = models.CharField(max_length=100) 
@@ -205,7 +205,7 @@ class Document(CreatedModifiedModel):
     converted = models.BooleanField(default=False)
 
     def __str__(self):
-	    return f"{self.document_name}"
+        return f"{self.document_name}"
 
     def __repr__(self):
         str = "Id: {}, well_id: {}, name: {}, file_id: {}\n" 
@@ -233,7 +233,7 @@ class Page(CreatedModifiedModel):
         unique_together=('document_id', 'page_no')
 
     def __str__(self):
-	    return f"Page: {self.page_no} ({self.document})"
+        return f"Page: {self.page_no} ({self.document})"
 
     def __repr__(self):
         str = "Id: {}, document id: {}, page no: {}, file id: {}\n" 
@@ -275,7 +275,7 @@ class Data(CreatedModifiedModel):
     extraction_method = models.IntegerField()
 
     def __str__(self):
-	    return f"{self.page}"
+        return f"{self.page}"
 
     def __repr__(self):
         str = "Id: {}, page id: {}\n" 

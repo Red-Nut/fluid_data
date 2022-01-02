@@ -1,21 +1,25 @@
+# Django imports.
 from django.shortcuts import render
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.contrib.auth.models import User
 
-from data_extraction.models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
-from data_extraction import myExceptions
-from search import config_search
-from file_manager import downloader, convertToJPEG
-from interpretation import googleText
-
-
-
+# Third party imports.
 import json
 import time
 
-# Create your views here.
+# This module imports.
+
+# Other module imports.
+from data_extraction.functions import ResultEncoder
+from data_extraction.models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
+from data_extraction import myExceptions
+from search import config_search
+from file_manager import fileModule, convertToJPEG
+from interpretation import googleText
+
+
 def index(request):
     return render(request, "administration/index.html")
 
@@ -139,6 +143,15 @@ def DownloadAllMissing(request):
 	json_resonse = json.dumps(results)
 	return HttpResponse(json_resonse)
 
+def DownloadFilesForWell(request,id):
+    well = Well.objects.filter(id=id).first()
+    documents = Document.objects.filter(well=well).all()
+
+    results=DownloadMissingFiles(documents)
+
+    json_resonse = json.dumps(results)
+    return HttpResponse(json_resonse)
+
 def DeleteAllFiles(request):
     documents = Document.objects.all()
 
@@ -190,7 +203,7 @@ def DownloadMissingFiles(documents):
             results.append("Ignored: " + document.document_name)
         else: 
             #print("DOWNLOADING FILE - Well: " + document.well.well_name + " File: " + document.document_name)
-            result = downloader.downloadWellFile(document)
+            result = fileModule.downloadWellFile(document)
             if result.code == "50000":
                 try:
                     file = File.objects.filter(
@@ -252,6 +265,14 @@ def ConvertAllMissingToJPEG(request):
 
 	json_resonse = json.dumps(results)
 	return HttpResponse(json_resonse)
+
+def ConvertToJPEG(request,id):
+    document = Document.objects.filter(id=id).first()
+    result = convertToJPEG.convertFile(document)
+    
+    response = ResultEncoder().encode(result)
+    json_resonse = json.dumps(response)
+    return HttpResponse(json_resonse)
 
 def RemoveDuplicateDocuments(request):
 	allDocs = Document.objects.all()

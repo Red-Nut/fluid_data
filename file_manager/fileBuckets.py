@@ -6,8 +6,7 @@ from background_task import background
 
 from data_extraction.models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
 from data_extraction.myExceptions import Error, downloadList as errorList
-from file_manager.downloader import makeDirectory
-from . import downloader
+from . import fileModule
 
 import os
 import shutil
@@ -36,18 +35,18 @@ def prepareFileBucket(bucketId, userId):
 
     # Download each file
     for document in documents:
-        result = downloader.downloadWellFile(document)
+        result = fileModule.downloadWellFile(document)
         if(result.code != "50000" and result.code != "50004"):
             # Failed, notify users
             print("file not downloaded")
             print(result.code)
 
     # Create File Bucket
-    downloader.makeDirectory('file_buckets/',False)
+    fileModule.makeDirectory('file_buckets/',False)
     
 
     destination = 'file_buckets/' + userFileBucket.name + '/'
-    downloader.makeDirectory(destination, False)
+    fileModule.makeDirectory(destination, False)
     
 
     # Copy Files
@@ -55,17 +54,17 @@ def prepareFileBucket(bucketId, userId):
         sPath = document.file.file_location + document.file.file_name + document.file.file_ext
         
         dfolder = destination + document.well.well_name + '/'
-        downloader.makeDirectory(dfolder, False)
+        fileModule.makeDirectory(dfolder, False)
         
         dName = document.file.file_name + document.file.file_ext
 
-        result = downloader.copyToTemp(sPath, dfolder, dName)
+        result = fileModule.copyToTemp(sPath, dfolder, dName)
 
     # Zip Folder
-    result = downloader.zipFiles('file_buckets/' + userFileBucket.name,destination)
+    result = fileModule.zipFiles('file_buckets/' + userFileBucket.name,destination)
 
     if settings.USE_S3:
-        downloader.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
+        fileModule.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
 
     # Update file bucket status
     userFileBucket.status = 3

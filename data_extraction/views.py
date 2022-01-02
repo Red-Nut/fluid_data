@@ -1,3 +1,4 @@
+# Django imports.
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
@@ -7,24 +8,23 @@ from django.views.generic.edit import CreateView
 from django.urls import reverse_lazy
 from django.db.models import Q
 from django.conf import settings
+from django.contrib.auth import logout
 
+# Third party imports.
+import json
 
-from search import config_search
-from api import internalAPI
-from file_manager import downloader, convertToJPEG, fileBucket
-from interpretation import googleText
-
+# This module imports.
 from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
+from .functions import fileSizeAsText, getDocumentTextAsPagesObject
 from .forms import WellFilter
-from . import myExceptions
 from . import tasks
 
-import json
-from json import JSONEncoder
-import jsonpickle
-import time
+# Other module imports.
+from api import internalAPI
+from file_manager import fileModule, convertToJPEG, fileBuckets
+from interpretation import googleText
 
-from django.contrib.auth import logout
+
 
 # Logout.
 def logout_view(request):
@@ -256,7 +256,7 @@ def FileBucket(fileBucket):
 			if sizeKnown:
 				totalSizeByte = totalSizeByte + sizeByte
 			
-			sizeText = fileSizeText(sizeByte)
+			sizeText = fileSizeAsText(sizeByte)
 			
 		else:
 			sizeText = "unknown"
@@ -277,7 +277,7 @@ def FileBucket(fileBucket):
 		progress = None
 
 	if sizeKnown:
-		totalSizeText = fileSizeText(totalSizeByte)
+		totalSizeText = fileSizeAsText(totalSizeByte)
 	else: 
 		totalSizeText = "unknown"
 
@@ -347,7 +347,6 @@ def emptyFileBucket(user):
 @login_required
 def saveFileBucket(request):
 	userId = request.user.id
-	
 	tasks.saveFileBucket.delay(userId)
 
 	response = {'success':True}
@@ -394,7 +393,7 @@ def profile(request):
 			if documentObject.file is not None:
 				if sizeKnown:
 					totalSize = totalSize + documentObject.file.file_size
-					totalSizeText = fileSizeText(totalSize)
+					totalSizeText = fileSizeAsText(totalSize)
 			else:
 				sizeKnown = False
 				totalSizeText = "unknown"
@@ -446,33 +445,7 @@ def details(request, id):
 
 
 
-def getDocumentText(document):
-	pageObjects = Page.objects.filter(document=document).order_by("page_no")
 
-	pages = []
-	for pageObject in pageObjects:
-		texts = Text.objects.filter(
-				page = pageObject
-			).order_by(
-				"BoundingPolys__y", "BoundingPolys__x"
-			).all()
 
-		page = {page:pageObject,texts:texts}
 
-		pages.append(page)
-
-	return pages
-
-def fileSizeText(size):
-	if(size<=99):
-		text = round(size,0)
-		text = str(text) + " byte"
-	elif(size > 1000*1000):
-		text = round(size/1000/1000,2)
-		text = str(text) + " Mb"
-	else:
-		text = round(size/1000,2)
-		text = str(text) + " kb"
-
-	return text
 

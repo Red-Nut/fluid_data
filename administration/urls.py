@@ -28,10 +28,14 @@ urlpatterns = [
 
 
     path('update-companies', views.UpdateCompanies, name='admin-updateCompanies'),
+
+    
     path('download-all', views.DownloadAllMissing, name='admin-DownloadAll'),
     path('download-wcr', views.DownloadAllWCRs, name='admin-DownloadWCRs'),
+    path('download-well/<int:id>/', views.DownloadFilesForWell),
     path('delete-all', views.DeleteAllFiles, name='admin-DeleteAll'),
     path('convert', views.ConvertAllMissingToJPEG, name='admin-convertAll'),
+    path('convert/<int:id>/', views.ConvertToJPEG),
     path('dup', views.RemoveDuplicateDocuments, name='admin-removeDuplicate'),
     path('changeWell', views.changeWell, name='admin-changeWell'),
     path('text', views.GoogleText),

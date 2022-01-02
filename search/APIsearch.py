@@ -357,13 +357,13 @@ class RetriveQLD:
 
             # Process well metadata.
             result = self.ProcessWellResult()
-            if(result.code != "00000"):
+            if(result.code != "10000"):
                 self.success = False
                 self.errors.append(result)
                 return
 
             result = self.ProcessResources()
-            if(result.code != "00000"):
+            if(result.code != "10000"):
                 self.success = False
                 self.errors.append(result)
                 return

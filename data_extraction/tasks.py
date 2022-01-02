@@ -10,7 +10,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
-from file_manager import downloader, convertToJPEG, fileBucket
+from file_manager import fileModule, convertToJPEG, fileBuckets
  
 @app.task
 def saveFileBucket(userId):
@@ -50,19 +50,21 @@ def saveFileBucket(userId):
 
     # Download each file
     for document in documents:
+        print("Document Name: " + document.document_name)
         if(document.status != 2):
-            result = downloader.downloadWellFile(document)
+            print("Document Status: " + document.status)
+            result = fileModule.downloadWellFile(document)
             if(result.code != "50000" and result.code != "50004"):
                 # Failed, notify users
                 print("file not downloaded")
                 print(result.code)
 
     # Create File Bucket
-    downloader.makeDirectory('file_buckets/',False)
+    fileModule.makeDirectory('file_buckets/',False)
     
 
     destination = 'file_buckets/' + userFileBucket.name + '/'
-    downloader.makeDirectory(destination, False)
+    fileModule.makeDirectory(destination, False)
     
 
     # Copy Files
@@ -70,17 +72,21 @@ def saveFileBucket(userId):
         sPath = document.file.file_location + document.file.file_name + document.file.file_ext
         
         dfolder = destination + document.well.well_name + '/'
-        downloader.makeDirectory(dfolder, False)
+        fileModule.makeDirectory(dfolder, False)
         
         dName = document.file.file_name + document.file.file_ext
 
-        result = downloader.copyToTemp(sPath, dfolder, dName)
+        result = fileModule.copyToTemp(sPath, dfolder, dName)
 
     # Zip Folder
-    zipSize = downloader.zipFiles('file_buckets/' + userFileBucket.name,destination)
+    result = fileModule.zipFiles('file_buckets/' + userFileBucket.name,destination)
+    if result.code != "00000":
+        return result
+
+    zipSize = result.fileSize
 
     if settings.USE_S3:
-        downloader.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
+        fileModule.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
 
     # Update file bucket status
     userFileBucket.status = 3
@@ -99,7 +105,7 @@ def saveFileBucket(userId):
 
 @app.task
 def deleteFileBucket(filePath, useS3):
-    downloader.deleteFile(filePath, useS3)
+    fileModule.deleteFile(filePath, useS3)
 
 def emptyFileBucket(user):
 	fileBucket = UserFileBucket.objects.filter(user=user).first()

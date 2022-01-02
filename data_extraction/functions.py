@@ -1,5 +1,8 @@
+# Third party imports.
+import json
+
 # Other module imports.
-from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
+from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
 
 # _______________________________________ GENERIC FUNCTIONS _______________________________________
 
@@ -30,6 +33,45 @@ def IsNumber(s):
  
     return False
 
+def CleanStr(str):
+    str = str.replace("/","")
+    str = str.replace(":","")
+    str = str.replace("*","")
+    str = str.replace("?","")
+    str = str.replace('"',"")
+    str = str.replace("<","")
+    str = str.replace(">","")
+    str = str.replace("|","")
+    str = str.replace("\r\n"," ")
+
+    return str
+
+def CleanURL(str):
+    str = str.replace(" ", "%20")
+    return str
+
+def GetExtFromFileNameOrPath(str):
+    x = len(str) - str.rfind('.')
+    ext = str[-x:]
+    return ext
+
+#
+def fileSizeAsText(size):
+	if(size<=99):
+		text = round(size,0)
+		text = str(text) + " byte"
+	elif(size > 1000*1000):
+		text = round(size/1000/1000,2)
+		text = str(text) + " Mb"
+	else:
+		text = round(size/1000,2)
+		text = str(text) + " kb"
+
+	return text
+
+class ResultEncoder(json.JSONEncoder):
+    def default(self, o):
+        return o.__dict__
 # _______________________________________ DATABASE FUNCTIONS _______________________________________
 
 def wellExists(name):
@@ -39,3 +81,22 @@ def wellExists(name):
         return False
     else:
         return True
+
+def getDocumentTextAsPagesObject(document):
+	pageObjects = Page.objects.filter(document=document).order_by("page_no")
+
+	pages = []
+	for pageObject in pageObjects:
+		texts = Text.objects.filter(
+				page = pageObject
+			).order_by(
+				"BoundingPolys__y", "BoundingPolys__x"
+			).all()
+
+		page = {page:pageObject,texts:texts}
+
+		pages.append(page)
+
+	return pages
+
+
