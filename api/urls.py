@@ -1,6 +1,12 @@
+# Django imports.
 from django.urls import path
 
-from .import internalAPI, externalAPI, vA
+# Third party imports.
+
+# This module imports.
+from .import externalAPI, vA
+
+# Other module imports.
 
 urlpatterns = [
     # Internal API

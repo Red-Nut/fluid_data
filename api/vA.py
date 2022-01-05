@@ -1,9 +1,15 @@
+# Django imports.
 from django.shortcuts import render, HttpResponse
 
+# Third party imports.
 import json
 from dateutil.parser import *
 
+# This module imports.
+
+# Other module imports.
 from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
+
 
 # Create your views here.
 def index(request):
