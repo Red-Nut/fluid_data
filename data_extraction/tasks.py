@@ -1,16 +1,22 @@
+# Django imports.
+from django.core.mail import send_mail
+from django.contrib.auth.models import User
+from django.conf import settings
+
+# Third party imports.
 import logging
 import time
 from django.urls import reverse
 from django.core.mail import send_mail
 from django.contrib.auth import get_user_model
 from .celery import app
- 
-from django.core.mail import send_mail
-from django.contrib.auth.models import User
-from django.conf import settings
 
+# This module imports.
 from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
+
+# Other module imports.
 from file_manager import fileModule, convertToJPEG, fileBuckets
+from administration import views as admin_views
  
 @app.task
 def saveFileBucket(userId):
@@ -116,3 +122,9 @@ def emptyFileBucket(user):
 			file.delete()
 
 	return True
+
+@app.task
+def UpdateCompanyNames():
+    admin_views.UpdateCompanyNamesTask()
+
+    return

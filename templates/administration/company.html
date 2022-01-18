@@ -1,0 +1,21 @@
+{% extends 'administration/base.html' %}
+
+{% block main %}
+<!-- Search -->
+<div id="search" class="container-fluid">
+   <h1>{{company.company_name}}</h1>
+   <table class=table>
+      <tr><th>Well Name</th></tr>
+      {% for well in wells%}
+      <tr><td><a href="/well/{{well.id}}">{{well.well_name}}</a></td></tr>
+      {% endfor %}
+   </table>
+</div>
+
+
+
+
+
+{% endblock %}
+
+

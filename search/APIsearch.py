@@ -7,7 +7,7 @@ from . import config_search
 
 # Other module imports.
 from data_extraction.functions import wellExists, IsNumber
-from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
+from data_extraction.models import Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
 
 
@@ -634,9 +634,11 @@ class RetriveQLD:
             operator = self.result.get('operator', 'None').title()
 
         # Operator corrections
-        for correction in config_search.ownerCorrections:
-            if operator == correction[0]:
-                operator = correction[1]
+        correction = CompanyNameCorrections.objects.filter(alternateName=operator).first()
+        if(correction is not None):
+            company = Company.objects.filter(company_name=correction.correctName).first()
+            if (company is None):
+                operator = company.company_name
 
         if(operator == 'None'):
             return None

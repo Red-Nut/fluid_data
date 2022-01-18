@@ -1,6 +1,6 @@
 # Django imports.
 from django.shortcuts import render, HttpResponse
-from django.conf import settings
+
 
 # Third party imports.
 import json
@@ -9,6 +9,7 @@ from dateutil.parser import *
 # This module imports.
 
 # Other module imports.
+from data_extraction.functions import GetDocumentExt, GetDocumentLink
 from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
 
 
@@ -264,19 +265,26 @@ def WellJson(well):
 
     return wellJson
 
-def GetDocumentExt(document):
-    if(document.file is None):
-        x = len(document.url) - document.url.rfind('.')
-        ext = document.url.lower()[-x:]
-    else:
-        ext = document.file.file_ext
+def WellCount():
+    return Well.objects.count()
 
-    return ext
+def DocumentCount():
+    return Document.objects.count()
 
-def GetDocumentLink(document):
-    if(document.file is None):
-        link = None
-    else:
-        link = settings.MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + document.file.file_ext.replace(".","")
+def DocumentMissingCount():
+    return Document.objects.filter(status=Document.MISSING).count()
 
-    return link
+def DocumentDownloadCount():
+    return Document.objects.filter(status=Document.DOWNLOADED).count()
+
+def DocumentIgnoredCount():
+    return Document.objects.filter(status=Document.IGNORED).count()
+
+def DocumentNotConvertedCount():
+    return Document.objects.filter(conversion_status=Document.NOTCONVERTED).count()
+
+def DocumentConvertedCount():
+    return Document.objects.filter(conversion_status=Document.CONVERTED).count()
+
+def DocumentIgnoreConvertedCount():
+    return Document.objects.filter(conversion_status=Document.IGNORED).count()

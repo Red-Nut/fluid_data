@@ -4,7 +4,7 @@ from django.urls import path
 # Third party imports.
 
 # This module imports.
-from .import externalAPI, vA
+from .import vA
 
 # Other module imports.
 
@@ -12,7 +12,7 @@ urlpatterns = [
     # Internal API
 
     # External API
-    path('', externalAPI.index),
+    path('', vA.index),
     
     # Version A
     path('vA/wellList/', vA.wellList),

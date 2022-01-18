@@ -12,21 +12,112 @@ import time
 # This module imports.
 
 # Other module imports.
-from data_extraction.functions import ResultEncoder
-from data_extraction.models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
+from data_extraction.functions import ResultEncoder, NumberToText
+from data_extraction.models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
 from data_extraction import myExceptions
+from data_extraction import tasks
 from search import config_search
 from file_manager import fileModule, convertToJPEG
 from interpretation import googleText
+from api import internalAPI
 
 
 def index(request):
-    return render(request, "administration/index.html")
+    totalWells = internalAPI.WellCount()
+    documentCount = internalAPI.DocumentCount()
+    documentMissingCount = internalAPI.DocumentMissingCount()
+    documentDownloadCount = internalAPI.DocumentDownloadCount()
+    documentIgnoredCount = internalAPI.DocumentIgnoredCount()
+    documentNotConvertedCount = internalAPI.DocumentNotConvertedCount()
+    documentConvertedCount = internalAPI.DocumentConvertedCount()
+    documentIgnoreConvertedCount = internalAPI.DocumentIgnoreConvertedCount()
 
-def operations(request):
-    return render(request, "administration/operations.html")
+    companies = Company.objects.order_by("company_name").all()
 
-def status(request):
+    context = {
+        # Well Data
+		"totalWells" :  totalWells,
+        "totalWellsStr" :  NumberToText(totalWells),
+
+        # Document Data
+        "documentCount" :  documentCount,
+        "documentCountStr" :  NumberToText(documentCount),
+
+        # Document Download Data
+        "documentMissingCount" :  documentMissingCount,
+        "documentMissingCountStr" :  NumberToText(documentMissingCount),
+        "documentDownloadCount" :  documentDownloadCount,
+        "documentDownloadCountStr" :  NumberToText(documentDownloadCount),
+        "documentIgnoredCount" :  documentIgnoredCount,
+        "documentIgnoredCountStr" :  NumberToText(documentIgnoredCount),
+
+        # Document Conversion Data
+        "documentNotConvertedCount" :  documentNotConvertedCount,
+        "documentNotConvertedCountStr" :  NumberToText(documentNotConvertedCount),
+        "documentConvertedCount" :  documentConvertedCount,
+        "documentConvertedCountStr" :  NumberToText(documentConvertedCount),
+        "documentIgnoreConvertedCount" :  documentIgnoreConvertedCount,
+        "documentIgnoreConvertedCountStr" :  NumberToText(documentIgnoreConvertedCount),
+
+        # Company Data
+        "companies" : companies,
+        "companyCountStr" : NumberToText(companies.count()),
+        
+	}
+    return render(request, "administration/index.html", context)
+
+def Companies(request,id):
+    company = Company.objects.filter(id=id).first()
+    wells = Well.objects.filter(owner=company).all()
+
+    context = {
+		"company" :  company,
+        "wells" :  wells,        
+	}
+    return render(request, "administration/company.html", context)
+
+def WellsPage(request,page):
+    totalWells = internalAPI.WellCount()
+    wells = Well.objects.all()
+    
+    # Order results.
+    wells = wells.order_by("well_name")
+
+    # Limit results.
+    start = page*100
+    end = (page+1)*100
+    if(start != None and start != '' and end != None and end != ''):
+        wells = wells[start:end]
+
+    context = {
+        "totalWells" : totalWells,
+        "wells" : wells,
+        "page" : page,
+    }
+
+    return render(request, "administration/wells.html", context)
+
+def WellsByLetter(request,letter,page):
+    wells = Well.objects.filter(well_name__startswith=letter).all()
+    
+    # Order results.
+    wells = wells.order_by("well_name")
+
+    # Limit results.
+    start = page*100
+    end = (page+1)*100
+    if(start != None and start != '' and end != None and end != ''):
+        wells = wells[start:end]
+
+    context = {
+        "wells" : wells,
+        "page" : page,
+        "letter" : letter,
+    }
+
+    return render(request, "administration/wells.html", context)
+
+def ConversionPage(request):
     WCRs = Report.objects.filter(report_type__type_name="Well Completion Report").all()
 
     WCRs_d = []
@@ -90,50 +181,69 @@ def status(request):
 
     return render(request, "administration/index.html", context)
 
-def search(request):
+def ExtractionPage(request):
 	return render(request, "administration/search.html")
 
-def UpdateCompanies(request):
-	wells = Well.objects.all()
+def UpdateCompanyNames(request):
+    tasks.UpdateCompanyNames.delay()
 
-	for well in wells:
-		owner = well.owner.company_name
+    return redirect(index)
 
-		newOwner = None
+def UpdateCompanyNamesTask():
+    companies = Company.objects.all()
+    #wells = Well.objects.filter(owner__company_name = "Tri-Star Australia Holding Company").all()
 
-		for correction in config_search.ownerCorrections:
-			if owner == correction[0]:
-				newOwner = correction[1]
+    for company in companies:
+        correction = CompanyNameCorrections.objects.filter(alternateName=company.company_name).first()
 
-		# Select or create the company object.
-		if(newOwner is not None):
-			company = Company.objects.filter(company_name=newOwner).first()
-			if (company is None):
-				try:
-					company = Company.objects.create(company_name = newOwner)
-				except:
-					# Handle Error
-					print("Failed to create new company.")
-					return
-			
-			# Assign company to well.
-			well.owner = company
-			well.save()
+        # Select or create the company object.
+        if(correction is not None):
+            # Filter not working as case sensitive
+            if correction.alternateName == company.company_name:
+                correctCompany = Company.objects.filter(company_name=correction.correctName).first()
+                if (correctCompany is None):
+                    try:
+                        correctCompany = Company.objects.create(company_name = correction.correctName)
+                    except:
+                        # Handle Error
+                        print("Failed to create new company.")
+                        return
+                
+                # Assign company to each well.
+                wells = Well.objects.filter(owner=company).all()
+                for well in wells:
+                    well.owner = correctCompany
+                    well.save()
+                    print("Updated " + company.company_name + " to " + correctCompany.company_name + " for " + well.well_name)
 
-			# Check if old company can be deleted.
-			check = Well.objects.filter(owner__company_name=owner).first()
+                # Check if old company can be deleted.
+                check = Well.objects.filter(owner=company).first()
 
-			if(check is None):
-				# Delete old company object
-				oldCompany = Company.objects.filter(company_name=owner).first()
-				try:
-					oldCompany.delete()
-				except:
-					print("Failed to delete company: " + owner)
+                if(check is None):
+                    # Delete old company object
+                    try:
+                        company.delete()
+                        print("Successfully deleted company: " + company.company_name)
+                    except:
+                        print("Failed to delete company: " + company.company_name)
+    
+    companies = Company.objects.all()
+    for company in companies:
+        # Check if old company can be deleted.
+        check = Well.objects.filter(owner=company).first()
 
+        if(check is None):
+            # Delete old company object
+            oldCompany = Company.objects.filter(company_name=company.company_name).first()
+            owner = oldCompany.company_name
+            try:
+                oldCompany.delete()
+                print("Successfully deleted company: " + owner)
+            except:
+                print("Failed to delete company: " + owner)
 
+    return
 
-	return HttpResponse("Update Complete")
 
 def DownloadAllMissing(request):
 	documents = Document.objects.filter(status=1).all()

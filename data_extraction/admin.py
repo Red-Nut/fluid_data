@@ -1,10 +1,16 @@
 from django.contrib import admin
-from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
+from .models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
 
 # Company.
 class CompanyAdmin(admin.ModelAdmin):
     list_display = ("id", "company_name")
 admin.site.register(Company, CompanyAdmin)
+
+# CompanyNameCorrections
+class CompanyNameCorrectionsAdmin(admin.ModelAdmin):
+    list_display = ("id", "alternateName", "correctName")
+    list_filter = ("correctName",)
+admin.site.register(CompanyNameCorrections, CompanyNameCorrectionsAdmin)
 
 # Data. 
 class DataAdmin(admin.ModelAdmin):

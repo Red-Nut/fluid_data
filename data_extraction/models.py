@@ -177,6 +177,14 @@ class Document(CreatedModifiedModel):
         (DOWNLOADED, _('Downloaded')),
         (IGNORED, _('Ignored')),
     )
+
+    NOTCONVERTED=1
+    CONVERTED=2
+    CONVERSION = (
+        (NOTCONVERTED, _('Not Converted')),
+        (CONVERTED, _('Converted')),
+        (IGNORED, _('Ignored')),
+    )
     
     document_name = models.CharField(max_length=255)
     well = models.ForeignKey(
@@ -202,14 +210,18 @@ class Document(CreatedModifiedModel):
         choices=STATUS,
         default=1,
     )
-    converted = models.BooleanField(default=False)
+    converted = models.BooleanField(default=False, null=True)
+    conversion_status = models.PositiveSmallIntegerField(
+        choices=CONVERSION,
+        default=1,
+    )
 
     def __str__(self):
         return f"{self.document_name}"
 
     def __repr__(self):
         str = "Id: {}, well_id: {}, name: {}, file_id: {}\n" 
-        str =str.format( self.id, self.well.id, self.company_name, self.file.id)
+        str =str.format( self.id, self.well.id, self.document_name, self.file)
         return str
 
 # ***************************** Page Text  ***************************** 
@@ -313,3 +325,17 @@ class UserFileBucket(CreatedModifiedModel):
 class FileBucketFiles(models.Model):
     bucket = models.ForeignKey(UserFileBucket, on_delete=models.CASCADE, related_name="documents")
     document = models.ForeignKey(Document,on_delete=models.CASCADE)
+
+
+# ***************************** Database Functions  ***************************** 
+class CompanyNameCorrections(models.Model):
+    alternateName = models.CharField(max_length=255, unique=True)
+    correctName = models.CharField(max_length=255)
+
+    def __str__(self):
+        return f"{self.alternateName}"
+
+    def __repr__(self):
+        str = "Id: {}, Alternative Name: {}, Corrected Name: {}\n" 
+        str =str.format( self.id, self.alternateName, self.correctName)
+        return str

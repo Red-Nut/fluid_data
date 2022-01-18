@@ -1,3 +1,6 @@
+# Django imports.
+from django.conf import settings
+
 # Third party imports.
 import json
 
@@ -55,7 +58,10 @@ def GetExtFromFileNameOrPath(str):
     ext = str[-x:]
     return ext
 
-#
+def NumberToText(value):
+    return ("{:,}".format(value))
+
+# _______________________________________ APP FUNCTIONS _______________________________________
 def fileSizeAsText(size):
 	if(size<=99):
 		text = round(size,0)
@@ -69,9 +75,27 @@ def fileSizeAsText(size):
 
 	return text
 
+def GetDocumentExt(document):
+    if(document.file is None):
+        x = len(document.url) - document.url.rfind('.')
+        ext = document.url.lower()[-x:]
+    else:
+        ext = document.file.file_ext
+
+    return ext
+
+def GetDocumentLink(document):
+    if(document.file is None):
+        link = None
+    else:
+        link = settings.MEDIA_URL + 'well_data/' + document.file.file_location + document.file.file_name + '.' + document.file.file_ext.replace(".","")
+
+    return link
+
 class ResultEncoder(json.JSONEncoder):
     def default(self, o):
         return o.__dict__
+
 # _______________________________________ DATABASE FUNCTIONS _______________________________________
 
 def wellExists(name):

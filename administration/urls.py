@@ -22,18 +22,19 @@ from .import views
 
 urlpatterns = [
     path('', views.index, name='admin-index'),
-    path('status/', views.status, name='admin-status'),
-    path('search/', views.search, name='admin-search'),
-    path('operations/', views.operations, name='admin-operations'),
+    path('wells/<int:page>/', views.WellsPage, name='admin-wells'),
+    path('wells/<slug:letter>/<int:page>/', views.WellsByLetter, name='admin-wells-letter'),
+    path('company/<int:id>/', views.Companies, name='admin-company'),
+    path('conversion/', views.ConversionPage, name='admin-conversion'),
+    path('extraction/', views.ExtractionPage, name='admin-extraction'),
 
 
-    path('update-companies', views.UpdateCompanies, name='admin-updateCompanies'),
+    path('update-companies', views.UpdateCompanyNames, name='admin-updateCompanies'),
 
     
     path('download-all', views.DownloadAllMissing, name='admin-DownloadAll'),
     path('download-wcr', views.DownloadAllWCRs, name='admin-DownloadWCRs'),
     path('download-well/<int:id>/', views.DownloadFilesForWell),
-    path('delete-all', views.DeleteAllFiles, name='admin-DeleteAll'),
     path('convert', views.ConvertAllMissingToJPEG, name='admin-convertAll'),
     path('convert/<int:id>/', views.ConvertToJPEG),
     path('dup', views.RemoveDuplicateDocuments, name='admin-removeDuplicate'),

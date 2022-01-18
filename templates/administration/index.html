@@ -1,14 +1,123 @@
 {% extends 'administration/base.html' %}
 
-{% block main %}
-<!-- Search -->
-<div id="search" class="container-fluid">
-   <h1>Administration</h1>
+{% block head %}
+   <script type="text/javascript">
+   window.onload = function () {
+      //Downloads Chart
+      var chart = new CanvasJS.Chart("chartDownloads",
+      {
+         title:{
+            text: "Document Downloads"
+         },
+         legend: {
+            maxWidth: 500,
+            itemWidth: 120
+         },
+         data: [
+         {
+            type: "pie",
+            showInLegend: true,
+            legendText: "{indexLabel}",
+            dataPoints: [
+               { y: {{documentMissingCount}}, indexLabel: "Missing" },
+               { y: {{documentDownloadCount}}, indexLabel: "Downloaded" },
+               { y: {{documentIgnoredCount}}, indexLabel: "Ignored" }
+            ]
+         }
+         ]
+      });
+      chart.render();
 
+      //Conversion Chart
+      var chart = new CanvasJS.Chart("chartConversion",
+      {
+         title:{
+            text: "Document Conversions"
+         },
+         legend: {
+            maxWidth: 500,
+            itemWidth: 120
+         },
+         data: [
+         {
+            type: "pie",
+            showInLegend: true,
+            legendText: "{indexLabel}",
+            dataPoints: [
+               { y: {{documentNotConvertedCount}}, indexLabel: "Not Converted" },
+               { y: {{documentConvertedCount}}, indexLabel: "Converted" },
+               { y: {{documentIgnoreConvertedCount}}, indexLabel: "Ignored" }
+            ]
+         }
+         ]
+      });
+      chart.render();
+   }
+   </script>
+   <script type="text/javascript" src="https://canvasjs.com/assets/script/canvasjs.min.js"></script>
+{% endblock %}
+
+
+
+{% block main %}
+<h1>Metrics</h1>
+
+<p>Total Wells: {{totalWellsStr}}</p>
+<p>Total Documents: {{documentCountStr}}</p>
+
+<div class="row">
+   <div class="col-lg">
+      <div id="chartDownloads" style="height: 300px; width: 100%;"></div>
+      <br>
+      <table class="table">
+         <tr>
+            <th>Missing</th><th>Downloaded</th><th>Ignored</th>
+         </tr>
+         <tr>
+            <td>{{documentMissingCountStr}}</td><td>{{documentDownloadCountStr}}</td><td>{{documentIgnoredCountStr}}</td>
+         </tr>
+         <tr>
+            <th colspan="2" style="text-align: right;">Total:</th><td>{{documentCountStr}}</td>
+         </tr>
+      </table>
+   </div>
+
+   <div class="col-lg">
+      <div id="chartConversion" style="height: 300px; width: 100%;"></div>
+      <br>
+      <table class="table">
+         <tr>
+            <th>Not Converted</th><th>Converted</th><th>Ignored</th>
+         </tr>
+         <tr>
+            <td>{{documentNotConvertedCountStr}}</td><td>{{documentConvertedCountStr}}</td><td>{{documentIgnoreConvertedCountStr}}</td>
+         </tr>
+         <tr>
+            <th colspan="2" style="text-align: right;">Total:</th><td>{{documentCountStr}}</td>
+         </tr>
+      </table>
+      
+   </div>
 </div>
 
+<!-- ******************* Operations ******************* -->
+<h1>Operations</h1>
+<div>
+   <p><a class="linkFormat" href="update-companies">Update Company Names</a></p>
+   <p><a class="linkFormat" href="dup">Remove Duplicate Documents</a></p>
+</div>
 
-
+<!-- ******************* Companies ******************* -->
+<h1>Companies</h1>
+<div>
+   <p>Total Companies: {{companyCountStr}}</p>
+   <table class=table>
+      <tr><th>Company Name</th></tr>
+      {% for company in companies%}
+      <tr><td><a href="/administration/company/{{company.id}}">{{company.company_name}}</a></td></tr>
+      {% endfor %}
+   </table>
+</div>
 
 
 {% endblock %}

@@ -35,6 +35,7 @@
         integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf" 
         crossorigin="anonymous">
     </script>
+    {% block head %}{% endblock %}
 </head>
 
 <body class="d-flex flex-column h-100">
@@ -58,10 +59,10 @@
             <!-- Navbar -->
             <div class="collapse navbar-collapse" id="navbarToggler">
                 <div class="navbar-nav ms-auto">
-                    <a class="nav-item text-light nav-link ps-2 me-3" href="{% url 'admin-index' %}">Admin Home</a>
-                    <a class="nav-item text-light nav-link ps-2 me-3" href="{% url 'admin-status' %}">Status</a>
-                    <a class="nav-item text-light nav-link ps-2 me-3" href="{% url 'admin-search' %}">Search Government</a>
-                    <a class="nav-item text-light nav-link ps-2 me-3" href="{% url 'admin-operations' %}">Operations</a>
+                    <a class="nav-item text-light nav-link ps-2 me-3" href="{% url 'admin-index' %}">Home</a>
+                    <a class="nav-item text-light nav-link ps-2 me-3" href="/administration/wells/1">Wells</a>
+                    <a class="nav-item text-light nav-link ps-2 me-3" href="{% url 'admin-conversion' %}">Conversion</a>
+                    <a class="nav-item text-light nav-link ps-2 me-3" href="{% url 'admin-extraction' %}">Extraction</a>
                 </div>
             </div>
         </nav>
@@ -69,7 +70,7 @@
         <div id="alerts">
         </div>
 
-        {% block head %}{% endblock %}
+        {% block header %}{% endblock %}
     </header>
 
 
