@@ -366,7 +366,7 @@ def deleteFileBucket(request, id):
 	return redirect(profile)
 
 # API.
-@login_required
+#@login_required
 def api(request):
 	return render(request, "data/api.html")
 
