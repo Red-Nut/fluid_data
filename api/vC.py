@@ -39,7 +39,7 @@ def retrieveId(request, id=0):
         'currentResultCount' : 1,
         'currentPage' : link,
         'nextPage' : "",
-    },
+    }
 
     # No id specified.
     if(id==0):
@@ -98,7 +98,7 @@ def retrieveName(request, name="None"):
         'currentResultCount' : 1,
         'currentPage' : link,
         'nextPage' : "",
-    },
+    }
 
     # No name spcifed.
     if(name=="None"):
@@ -147,7 +147,7 @@ def retrieveName(request, name="None"):
 
 def wellList(request):
     # Default limit:
-    defaultLimit = 1000
+    defaultLimit = 100000
 
     # link
     link = baseLink + "/wellList/"
@@ -210,7 +210,7 @@ def wellList(request):
             'currentResultCount' : currentCount,
             'currentPage' : currentLink,
             'nextPage' : nextLink,
-        },
+        }
 
         # Create the response object.
         response = {
@@ -237,7 +237,7 @@ def wellList(request):
 
 def wellListID(request):
     # Default limit:
-    defaultLimit = 1000
+    defaultLimit = 100000
 
     # link
     link = baseLink + "/wellListID/"
@@ -305,7 +305,7 @@ def wellListID(request):
             'currentResultCount' : currentCount,
             'currentPage' : currentLink,
             'nextPage' : nextLink,
-        },
+        }
 
         # Create the response object.
         response = {
@@ -535,7 +535,7 @@ def search(request):
             'currentResultCount' : currentCount,
             'currentPage' : currentLink,
             'nextPage' : nextLink,
-        },
+        }
 
         # Create the response object.
         response = {
