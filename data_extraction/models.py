@@ -327,6 +327,62 @@ class FileBucketFiles(models.Model):
     document = models.ForeignKey(Document,on_delete=models.CASCADE)
 
 
+class Organisation(CreatedModifiedModel):
+    organisation_name = models.CharField(max_length=255)
+    api_key = models.CharField(max_length=50)
+
+    def __str__(self):
+        return f"{self.organisation_name}"
+
+    def __repr__(self):
+        str = "Id: {}, name: {}\n" 
+        str =str.format( self.id, self.organisation_name)
+        return str
+
+class UserProfile(models.Model):
+    ACTIVE = 1
+    SUSPENDED = 2
+    INVITED = 3
+    DELETED = 9
+    STATUS = (
+        (ACTIVE, _('Active')),
+        (SUSPENDED, _('Suspended')),
+        (INVITED, _('Invited')),
+        (DELETED, _('Deleted')),
+    )
+
+    ADMIN = 0
+    STANDARD = 1
+    PRIVILEGE = (
+        (ADMIN, _('Admin')),
+        (STANDARD, _('Standard')),
+    )
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    organisation = models.ForeignKey(
+        Organisation, 
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="user_profiles"
+    )
+    status = models.PositiveSmallIntegerField(
+        choices=STATUS,
+        default=1,
+    )
+    privilege = models.PositiveSmallIntegerField(
+        choices=PRIVILEGE,
+        default=1,
+    )
+
+    def __str__(self):
+        return f"{self.user.username}"
+
+    def __repr__(self):
+        str = "Id: {}, name: {}\n" 
+        str =str.format( self.id, self.user.username)
+        return str
+
 # ***************************** Database Functions  ***************************** 
 class CompanyNameCorrections(models.Model):
     alternateName = models.CharField(max_length=255, unique=True)
