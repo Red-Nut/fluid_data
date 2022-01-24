@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
+from .models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, UserProfile, Organisation, Well, WellClass, WellStatus, WellPurpose
 
 # Company.
 class CompanyAdmin(admin.ModelAdmin):
@@ -71,3 +71,8 @@ class WellAdmin(admin.ModelAdmin):
     list_filter = ("well_name", "owner", "state", "permit", "status", "well_class", "purpose")
 admin.site.register(Well, WellAdmin)
 
+# UserProfiles
+admin.site.register(UserProfile)
+
+# Organisation
+admin.site.register(Organisation)

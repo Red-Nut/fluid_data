@@ -22,6 +22,7 @@ from .import views
 
 urlpatterns = [
     path('', views.index, name='admin-index'),
+    path('users/', views.UsersPage, name='admin-users'),
     path('wells/<int:page>/', views.WellsPage, name='admin-wells'),
     path('wells/<slug:letter>/<int:page>/', views.WellsByLetter, name='admin-wells-letter'),
     path('company/<int:id>/', views.Companies, name='admin-company'),
