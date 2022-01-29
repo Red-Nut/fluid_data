@@ -27,6 +27,9 @@ urlpatterns = [
     # PAGES WHEN LOGGED IN.
     path('home', views.index, name='home'),
 
+        #Change Password
+    path('change_password/', auth_views.PasswordChangeView.as_view(template_name='changePassword.html',success_url = 'profile/'), name='changePassword'),
+
         # Searching
     path('search', views.search, name='search'),
     path('las_files', views.lasFiles, name='las'),
@@ -41,8 +44,10 @@ urlpatterns = [
     path('api_page', views.api, name='api'),
 
         # Profile Pages.
-    path('profile', views.profile, name='profile'),
-    path('company', views.company, name='company'),
+    path('profile', views.Profile, name='profile'),
+    path('company', views.Company, name='company'),
+
+    path('update_profile', views.UpdateProfile, name='updateProfile'),
 
         # Well Details Page
     path('well/<int:id>/', views.details, name='details'),
