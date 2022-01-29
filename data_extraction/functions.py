@@ -3,6 +3,7 @@ from django.conf import settings
 
 # Third party imports.
 import json
+import re
 
 # Other module imports.
 from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
@@ -60,6 +61,13 @@ def GetExtFromFileNameOrPath(str):
 
 def NumberToText(value):
     return ("{:,}".format(value))
+
+def isValidEmail(email):
+    pattern = '^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$'
+    if(re.search(pattern, email)):
+        return True
+    else:
+        return False
 
 # _______________________________________ APP FUNCTIONS _______________________________________
 def fileSizeAsText(size):

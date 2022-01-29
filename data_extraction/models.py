@@ -342,12 +342,12 @@ class Organisation(CreatedModifiedModel):
 class UserProfile(models.Model):
     ACTIVE = 1
     SUSPENDED = 2
-    INVITED = 3
+    REQUESTED = 3
     DELETED = 9
     STATUS = (
         (ACTIVE, _('Active')),
         (SUSPENDED, _('Suspended')),
-        (INVITED, _('Invited')),
+        (REQUESTED, _('Requested')),
         (DELETED, _('Deleted')),
     )
 

@@ -14,8 +14,8 @@ from django.contrib.auth import logout
 import json
 
 # This module imports.
-from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
-from .functions import fileSizeAsText, getDocumentTextAsPagesObject
+from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, UserProfile, Organisation, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
+from .functions import fileSizeAsText, getDocumentTextAsPagesObject, isValidEmail
 from .forms import WellFilter
 from . import tasks
 
@@ -363,7 +363,7 @@ def deleteFileBucket(request, id):
 
 	fileBucket.delete()
 
-	return redirect(profile)
+	return redirect('profile')
 
 # API.
 #@login_required
@@ -372,15 +372,23 @@ def api(request):
 
 # Profile.
 @login_required
-def profile(request):
+def Profile(request):
+	userProfile = UserProfile.objects.filter(user__id = request.user.id).first()
+
+	privileges = dict(UserProfile.PRIVILEGE)
+	privilege = privileges[userProfile.privilege]
+
+	if userProfile.privilege == UserProfile.ADMIN:
+		organisationUsers = UserProfile.objects.filter(organisation = userProfile.organisation).all()
+	else:
+		organisationUsers = None
+
+	# File buckets.
 	fileBuckets = UserFileBucket.objects.filter(user=request.user).order_by("-id")
-
 	bucketCount = fileBuckets.count() - 1
-
 	fileBuckets = fileBuckets[:bucketCount]
 
 	buckets = []
-	
 	for bucketObject in fileBuckets:
 		documents = []
 		sizeKnown = True
@@ -419,18 +427,158 @@ def profile(request):
 		buckets.append(bucket)
 
 	
-
+	# Response Data.
 	context={
+		"userProfile" : userProfile,
+		"privilege" : privilege,
+		"organisationUsers" : organisationUsers,
+
 		"fileBuckets" : buckets,
 		"bucketCount" : bucketCount,
 	}
 
+	# Return Response.
 	return render(request, "data/profile.html", context)
+
+@login_required
+def UpdateProfile(request):
+	errors = []
+	success = False
+
+	if request.method == "POST":
+		data = json.loads(request.body.decode("utf-8"))
+
+		# Username
+		if 'username' in data:
+			username= data['username']
+		else:
+			username = None
+
+		if username is None:
+			errors.append("Username cannot be blank.")
+		elif len(username) < 1:
+			username = None
+			errors.append("Username cannot be blank.")
+
+		# First Name
+		if 'first_name' in data:
+			firstName= data['first_name']
+		else:
+			firstName = None
+
+		if firstName is None:
+			errors.append("First Name cannot be blank.")
+		elif len(firstName) < 1:
+			firstName = None
+			errors.append("First Name cannot be blank.")
+
+		# Last Name
+		if 'last_name' in data:
+			lastName= data['last_name']
+		else:
+			lastName = None
+		if lastName is None:
+			errors.append("Last Name cannot be blank.")
+		elif len(lastName) < 1:
+			lastName = None
+			errors.append("Last Name cannot be blank.")
+
+		if 'email' in data:
+			email= data['email']
+		else:
+			email = None
+
+		if email is None:
+			errors.append("Email cannot be blank.")
+		elif len(email) < 1:
+			email = None
+			errors.append("Email cannot be blank.")
+		elif not isValidEmail(email):
+			email = None
+			errors.append("Invalid email address.")
+
+		
+
+		if username is None or firstName is None or lastName is None or email is None:
+			success = False
+		else:
+			user = User.objects.filter(id=request.user.id).first()
+			profile = UserProfile.objects.filter(user__id=request.user.id)
+
+			try:
+				user.username = username
+				user.first_name = firstName
+				user.last_name = lastName
+				user.email = email
+
+				user.save()
+
+				success = True
+			except Exception as e:
+				if hasattr(e, 'message'):
+					errors.append("Failed to update user object in the database. Error message: " + e.message)
+				else:
+					errors.append("Failed to update user object in the database. Error message: " + str(e))
+					
+				success = False
+			
+
+		
+	else: 
+		success = False
+		errors.append("Method not POST")
+
+	# Response
+	response = {
+		'success' : success,
+		'errors' : errors,
+		'username' : username,
+		'first_name' : firstName,
+		'last_name' : lastName,
+		'email' : email,
+	}
+
+	json_resonse = json.dumps(response)
+	return HttpResponse(json_resonse)
+
 
 # Company Profile.
 @login_required
-def company(request):
-	return render(request, "data/company.html")
+def Company(request):
+	userProfile = UserProfile.objects.filter(user__id=request.user.id).first()
+
+	privileges = dict(UserProfile.PRIVILEGE)
+	privilege = privileges[userProfile.privilege]
+
+	if userProfile.privilege == UserProfile.ADMIN:
+		organisationUsersQuery = UserProfile.objects.filter(organisation = userProfile.organisation).all()
+
+		organisationUsers = []
+		statuses = dict(UserProfile.STATUS)
+		for userProfile in organisationUsersQuery:
+			organisationUser = {
+				"username" : userProfile.user.username,
+				"first_name" : userProfile.user.first_name,
+				"last_name" : userProfile.user.last_name,
+				"status" : statuses[userProfile.status],
+				"privilege" : privileges[userProfile.privilege],
+			}
+
+			organisationUsers.append(organisationUser)
+	else:
+		organisationUsers = None
+
+
+
+
+	# Response Data.
+	context={
+		"userProfile" : userProfile,
+		"privilege" : privilege,
+		"organisationUsers" : organisationUsers,
+	}
+
+	return render(request, "data/company.html", context)
 
 # Well Details.
 @login_required

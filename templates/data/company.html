@@ -11,9 +11,36 @@ Fluid Data - Company
 <div class="container-fluid">
     <div class="row">
         <div class="col-lg">
-            <h1>Company Profile</h1>
-            <p>lorel ipsum</p>
+            <h1>{{userProfile.organisation.organisation_name}} Profile</h1>
+            <p><strong>API Key</strong>: {{userProfile.organisation.api_key}}</p>
+            <br>
+            <p><strong>Current logged in User</strong>: {{userProfile.user.username}}</p>
+            <p><strong>Current logged in User Access Privileges</strong>: {{privilege}}</p>
         </div>
+        {% if privilege == "Admin" %}
+        <div class="col-lg">
+            <h3>Company Users</h3>
+            <table class="table">
+                <tr>
+                    <th>Username</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Status</th>
+                    <th>Access Privileges</th>
+                </tr>
+                {% for user in organisationUsers %}
+                <tr>
+                    <td>{{user.username}}</td>
+                    <td>{{user.first_name}}</td>
+                    <td>{{user.last_name}}</td>
+                    <td>{{user.status}}</td>
+                    <td>{{user.privilege}}</td>
+                </tr>
+                {% endfor %}
+
+            </table>
+        </div>
+        {% endif %}
 
     </div>
 
