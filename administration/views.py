@@ -13,7 +13,7 @@ import time
 
 # Other module imports.
 from data_extraction.functions import ResultEncoder, NumberToText
-from data_extraction.models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose
+from data_extraction.models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, UserProfile, Well, WellClass, WellStatus, WellPurpose
 from data_extraction import myExceptions
 from data_extraction import tasks
 from search import config_search
@@ -75,6 +75,21 @@ def Companies(request,id):
         "wells" :  wells,        
 	}
     return render(request, "administration/company.html", context)
+
+def UsersPage(request):
+    userProfiles = UserProfile.objects.order_by("organisation").order_by("user__username").all()
+    users = User.objects.order_by("username").all()
+
+    
+    for user in userProfiles:
+        users = users.exclude(id=user.user.id)
+
+    context = {
+        "users" : users,
+        "userProfiles" : userProfiles,
+    }
+
+    return render(request, "administration/users.html", context)
 
 def WellsPage(request,page):
     totalWells = internalAPI.WellCount()
