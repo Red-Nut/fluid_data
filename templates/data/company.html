@@ -10,31 +10,62 @@ Fluid Data - Company
 {% block main %}
 <div class="container-fluid">
     <div class="row">
-        <div class="col-lg">
+        <div class="col">
             <h1>{{userProfile.organisation.organisation_name}} Profile</h1>
             <p><strong>API Key</strong>: {{userProfile.organisation.api_key}}</p>
             <br>
             <p><strong>Current logged in User</strong>: {{userProfile.user.username}}</p>
             <p><strong>Current logged in User Access Privileges</strong>: {{privilege}}</p>
         </div>
+    </div>
+    <br>
+    <div class="row">
         {% if privilege == "Admin" %}
-        <div class="col-lg">
+        <div class="col">
             <h3>Company Users</h3>
             <table class="table">
                 <tr>
                     <th>Username</th>
                     <th>First Name</th>
                     <th>Last Name</th>
+                    <th>Email</th>
                     <th>Status</th>
                     <th>Access Privileges</th>
+                    <th></th>
+                    <th></th>
                 </tr>
                 {% for user in organisationUsers %}
-                <tr>
-                    <td>{{user.username}}</td>
-                    <td>{{user.first_name}}</td>
-                    <td>{{user.last_name}}</td>
-                    <td>{{user.status}}</td>
-                    <td>{{user.privilege}}</td>
+                <tr id="display{{user.id}}">
+                    <td id="updateusername{{user.id}}">{{user.username}}</td>
+                    <td id="updatefirst_name{{user.id}}">{{user.first_name}}</td>
+                    <td id="updatelast_name{{user.id}}">{{user.last_name}}</td>
+                    <td id="updateemail{{user.id}}">{{user.email}}</td>
+                    <td id="updatestatus{{user.id}}">{{user.status}}</td>
+                    <td id="updateprivilege{{user.id}}">{{user.privilege}}</td>
+                    <td><button onclick="edit({{user.id}})" class="btn btn-primary" >Edit</button></td>
+                    <td></td>
+                </tr>
+                <tr id="edit{{user.id}}" style="display:none">
+                    <td><input type="text" id="username{{user.id}}" value="{{user.username}}"></td>
+                    <td><input type="text" id="first_name{{user.id}}" value="{{user.first_name}}"></td>
+                    <td><input type="text" id="last_name{{user.id}}" value="{{user.last_name}}"></td>
+                    <td><input type="text" id="email{{user.id}}" value="{{user.email}}"></td>
+                    <td>
+                        <select id="status{{user.id}}">
+                            <option value="1">Active</option>
+                            <option value="2">Suspended</option>
+                            <option value="3">Requested</option>
+                            <option value="9">Deleted</option>
+                        </select>
+                    </td>
+                    <td>
+                        <select id="privilege{{user.id}}">
+                            <option value="0">Admin</option>
+                            <option value="1">Standard</option>
+                        </select>
+                    </td>
+                    <td><button onclick="save({{user.id}})" class="btn btn-primary" >Save</button></td>
+                    <td><button onclick="cancel({{user.id}})" class="btn btn-primary" >Cancel</button></td>
                 </tr>
                 {% endfor %}
 
@@ -47,6 +78,85 @@ Fluid Data - Company
     
 </div>
 
+<script>
+    function edit(id){
+        elDisplayRow = document.getElementById("display"+id)
+        elEditRow = document.getElementById("edit" + id)
+        
+        elDisplayRow.style.display = "none"
+        elEditRow.style.display = "table-row"
+    }
+    function display(id){
+        elDisplayRow = document.getElementById("display"+id)
+        elEditRow = document.getElementById("edit" + id)
+        
+        elDisplayRow.style.display = "table-row"
+        elEditRow.style.display = "none"
+    }
+    function save(id){
+        csrftoken = getCookie('csrftoken');
+
+        data = {
+            id: id,
+            username: document.getElementById("username"+id).value,
+            first_name: document.getElementById("first_name"+id).value,
+            last_name: document.getElementById("last_name"+id).value,
+            email: document.getElementById("email"+id).value,
+            status: document.getElementById("status"+id).value,
+            privilege: document.getElementById("privilege"+id).value
+        };
+
+        json = JSON.stringify(data);
+
+        $.ajax({
+            type: "POST",
+            credentials: 'same-origin',
+            url: "{% url 'updateProfile' %}",
+            data: json,
+            headers: { 'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            "X-CSRFToken": csrftoken },
+            
+            // on success
+            success: function (response) {
+                responseObject = JSON.parse(response)
+                success = responseObject.success;
+                errors = responseObject.errors
+                if(success == false){
+                    for (i = 0; i < errors.length; i++){
+                        AddAlert("danger", "Failed to update profile: " + errors[i], true);
+                    }
+                    console.log("Profile Update Errors:")
+                    console.log(errors)
+                } else if(success == true) {        
+                    document.getElementById("updateusername"+id).innerHTML = responseObject.username;
+                    document.getElementById("updatefirst_name"+id).innerHTML = responseObject.first_name;
+                    document.getElementById("updatelast_name"+id).innerHTML = responseObject.last_name;
+                    document.getElementById("updateemail"+id).innerHTML = responseObject.email;
+                    document.getElementById("updatestatus"+id).innerHTML = responseObject.status;
+                    document.getElementById("updateprivilege"+id).innerHTML = responseObject.privilege;
+                    
+                    AddAlert("info", "Profile Updated Succesfully.", true);   
+
+                    display(id)
+                } else {
+                    AddAlert("warning", "Something went wrong.", true);
+                }
+            },
+            // on error
+            error: function (response) {
+                // alert the error if any error occured
+                console.log(response.responseJSON.errors)
+                AddAlert("danger", "JSON Error: Check console.", true)
+            }
+        });
+    }
+    function cancel(id){
+
+        display(id)
+    }
+</script>
 
 {% endblock %}
 

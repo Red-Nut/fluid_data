@@ -14,7 +14,7 @@ from django.contrib.auth import logout
 import json
 
 # This module imports.
-from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, UserProfile, Organisation, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
+from .models import *
 from .functions import fileSizeAsText, getDocumentTextAsPagesObject, isValidEmail
 from .forms import WellFilter
 from . import tasks
@@ -483,6 +483,7 @@ def UpdateProfile(request):
 			lastName = None
 			errors.append("Last Name cannot be blank.")
 
+		# Email
 		if 'email' in data:
 			email= data['email']
 		else:
@@ -497,32 +498,75 @@ def UpdateProfile(request):
 			email = None
 			errors.append("Invalid email address.")
 
+		statusStr = None
+		privilegeStr = None
 		
-
+		# Check minimum data provided
 		if username is None or firstName is None or lastName is None or email is None:
 			success = False
 		else:
-			user = User.objects.filter(id=request.user.id).first()
-			profile = UserProfile.objects.filter(user__id=request.user.id)
+			user = None
+			# Check user being edited
+			if 'id' in data:
+				id= data['id']
 
-			try:
-				user.username = username
-				user.first_name = firstName
-				user.last_name = lastName
-				user.email = email
+				editor = User.objects.filter(id=request.user.id).first()
+				editorProfile = UserProfile.objects.filter(user=editor).first()
 
-				user.save()
-
-				success = True
-			except Exception as e:
-				if hasattr(e, 'message'):
-					errors.append("Failed to update user object in the database. Error message: " + e.message)
+				# Check priviliges
+				if editorProfile.privilege != editorProfile.ADMIN:
+					errors.append("User cannot make this change as they do not have admin privileges.")
 				else:
-					errors.append("Failed to update user object in the database. Error message: " + str(e))
+					user = User.objects.filter(id=id).first()
+					profile = UserProfile.objects.filter(user=user).first()
 					
-				success = False
-			
+					# Check same company
+					if profile.organisation != editorProfile.organisation:
+						errors.append("User cannot make this change as they are not apart of the same organisation as the user being edited.")
+						user = None
 
+			else:
+				user = User.objects.filter(id=request.user.id).first()
+				profile = UserProfile.objects.filter(user=user).first()
+			
+			if user == None:
+				success = False
+			else:
+				# Status
+				statuses = dict(UserProfile.STATUS)
+				if 'status' in data:
+					status= int(data['status'])
+					statusStr = str(statuses[status])
+				else:
+					status = profile.status
+
+				# Privilege
+				privileges = dict(UserProfile.PRIVILEGE)
+				if 'privilege' in data:
+					privilege= int(data['privilege'])
+					privilegeStr = str(privileges[privilege])
+				else:
+					privilege = profile.privilege
+
+				try:
+					user.username = username
+					user.first_name = firstName
+					user.last_name = lastName
+					user.email = email
+					profile.status = status
+					profile.privilege = privilege
+
+					user.save()
+					profile.save()
+
+					success = True
+				except Exception as e:
+					if hasattr(e, 'message'):
+						errors.append("Failed to update user object in the database. Error message: " + e.message)
+					else:
+						errors.append("Failed to update user object in the database. Error message: " + str(e))
+						
+					success = False
 		
 	else: 
 		success = False
@@ -536,6 +580,8 @@ def UpdateProfile(request):
 		'first_name' : firstName,
 		'last_name' : lastName,
 		'email' : email,
+		'status' : statusStr,
+		'privilege' : privilegeStr,
 	}
 
 	json_resonse = json.dumps(response)
@@ -555,13 +601,15 @@ def Company(request):
 
 		organisationUsers = []
 		statuses = dict(UserProfile.STATUS)
-		for userProfile in organisationUsersQuery:
+		for otherProfile in organisationUsersQuery:
 			organisationUser = {
-				"username" : userProfile.user.username,
-				"first_name" : userProfile.user.first_name,
-				"last_name" : userProfile.user.last_name,
-				"status" : statuses[userProfile.status],
-				"privilege" : privileges[userProfile.privilege],
+				"id" : otherProfile.user.id,
+				"username" : otherProfile.user.username,
+				"first_name" : otherProfile.user.first_name,
+				"last_name" : otherProfile.user.last_name,
+				"email" : otherProfile.user.email,
+				"status" : statuses[otherProfile.status],
+				"privilege" : privileges[otherProfile.privilege],
 			}
 
 			organisationUsers.append(organisationUser)
