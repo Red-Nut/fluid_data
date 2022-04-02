@@ -1,0 +1,153 @@
+
+{% extends 'data/base.html' %}
+{% block title %}
+Fluid Data - Search
+{% endblock %}
+
+{% block head %}
+<div style="border-bottom: 1px solid black;" class="p-3"></div>
+{% endblock %}
+
+{% block main %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-xl">
+            <h1>Application Programming Interface</h1>
+            <p>The Fluid Data Application Programming Interface (API) is still under active development. The method for accessing the data is subject to change, but the format of the response should stay relatively the same.</p>
+            
+            <h3>Versions</h3>
+            <p>The examples below show the usage of the most current version (vC). It is possible to use previous versions of the API by replacing this version number with that of the required API version. The version can also be omitted entirely from the link to use the latest version.</p>
+
+            <h3>Data Structure</h3>
+            <p>Queries to the API return a JSON string that includes the following properties:
+                <ul>
+                    <li>success: Was the query successful (True or False).</li>
+                    <li>errors: A list of errors that occured during the query process.</li>
+                    <li>pagination: Pagination object, see below.</li>
+                    <li>results: A list of query results.</li>
+                </ul>
+            </p>
+            <p>The pagination object includes the following properties:</p>
+            <ul>
+                <li>supported: Is pagination supported for this query type (True or False)</li>.
+                <li>limit: The limit on the number of results per query.</li>
+                <li>start: The starting row of the current query results.</li>
+                <li>end: The ending row of the current query results.</li>
+                <li>currentResultCount: The number of results currently shown in this result list.</li>
+                <li>currentPage: The link that will produce the current shown result list.</li>
+                <li>nextPage: The link that will produce the next page of results.</li>
+            </ul>
+
+            <p>For queries that support pagination, the default number of results per page (limit) can be overriden by setting the limit and start values in the query.</p>
+        </div>
+        <div class="col-xl">
+            <h1>Currently supported Queries</h1>
+            <!-- List all wells -->
+            <h3>List all wells in the database</h3>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/wellList/">fluiddata.com.au/api/vC/wellList/</a>
+            <p>This will produce an alphabetical list of every well currently in the database (my database, not the government database).</p>
+            <br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/wellListID/">fluiddata.com.au/api/vC/wellListID/</a>
+            <p>This will produce a list of every well currently in the database, and the id of each well. </p>
+
+            <p><u>Pagination Supported</u>: use the limit and start properties to customise.<br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/wellList/?limit=100&start=500">fluiddata.com.au/api/vC/wellList/?limit=100&start=500</a>
+            </p>
+            
+            <!-- Get well by Name -->
+            <h3>Get well details by Name</h3>
+            <i>fluiddata.com.au/api/vC/well/[name]</i>
+            <p>This will obtain the details of a single well given the EXACT name. </p>
+            <br>
+            <p>Example:<br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/well/Combabula North 68">fluiddata.com.au/api/vC/well/Combabula North 68</a>
+            </p>
+            
+            <p><u>Pagination NOT Supported</u></p>
+
+            <!-- Get well by ID -->
+            <h3>Get well details by ID</h3>
+            <i>fluiddata.com.au/api/vC/well/[id]</i>
+            <p>This will obtain the details of a single well given the id number in the database. You can get the id numbers using the wellListID method above or by doing a search detailed below. </p>
+            <br>
+            <p>Example:<br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/well/38044">fluiddata.com.au/api/vC/well/38044</a>
+            </p>
+            
+            <p><u>Pagination NOT Supported</u></p>
+
+            <!-- Search -->
+            <h3>Search for well</h3>
+            <i>fluiddata.com.au/api/vC/wellSearch?[parameters]</i>
+            <br>
+            <p>A search can be executed with the following parameters:</p>
+            <ul>
+                <li>name</li>
+                <li>operator</li>
+                <li>state (only "Queensland" currently in the database)</li>
+                <li>permit</li>
+                <li>class ("Appraisal", "Closed", "Development", "Exploration", "Project Abandoned", "Rehabilitation")</li>
+                <li>lat_min (minimum latitude)</li>
+                <li>lat_max (maximum latitude)</li>
+                <li>long_min (minimum longitude)</li>
+                <li>long_max (maximum longitude)</li>
+                <li>rig_release_start (earliest rig release date)</li>
+                <li>rig_release_end (oldest rig release date)</li>
+                <li>modified_start (earliest modified date)</li>
+                <li>modified_end (oldest modified date)</li>
+                <li>created_start (earliest created date)</li>
+                <li>created_end (oldest created date)</li>
+            </ul>
+            <br>
+            <p>If no parameters are supplied then the entire database will be converted to JSON and returned to you, if it doesn't timeout first.<br>
+            Search terms are case insensitive and search for partial terms is possible. For example, searching for the class "dev" will bring up wells in the "Development" class.<br>
+            <b>Examples:</b></br>
+            <u>Combabula Wells Operated by Origin</u><br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/wellSearch/?name=combabula&operator=origin">fluiddata.com.au/api/vC/wellSearch/?name=combabula&operator=origin</a><br><br>
+            <u>Wells with rig release date in June 2021</u><br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/wellSearch/?rig_release_start=1-6-2021&rig_release_end=30-6-2021">fluiddata.com.au/api/vC/wellSearch/?rig_release_start=1-6-2021&rig_release_end=30-6-2021</a><br><br>
+            <u>Origin development wells</u><br>
+            <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/wellSearch/?operator=origin&class=dev">fluiddata.com.au/api/vC/wellSearch/?operator=origin&class=dev</a>
+            </p>
+
+            <p><u>Pagination Supported</u>: use the limit and start properties to customise.<br>
+                <a class="linkFormat" href="http://www.fluiddata.com.au/api/vC/wellSearch/?name=combabula&operator=origin&limit=10">fluiddata.com.au/api/vC/wellSearch/?name=combabula&operator=origin&limit=10</a>
+            </p>
+
+        </div>
+    </div>
+
+    <!-- Change Log -->
+    <div>
+        <h1>Change Log</h1>
+        <!-- Version C -->
+        <h3>Version C (vC)</h3>
+        <p>Added success, errors and pagination parameters to the returned JSON for each query.</p>
+        <p>Pagination object includes the following properties:</p>
+        <ul>
+            <li>supported: Is pagination supported for this query type (True or False)</li>.
+            <li>limit: The limit on the number of results per query.</li>
+            <li>start: The starting row of the current query results.</li>
+            <li>end: The ending row of the current query results.</li>
+            <li>currentResultCount: The number of results currently shown in this result list.</li>
+            <li>currentPage: The link that will produce the current shown result list.</li>
+            <li>nextPage: The link that will produce the next page of results.</li>
+        </ul>
+        <!-- Version B -->
+        <h3>Version B (vB)</h3>
+        <p>Updated fluiddata.com.au/api/vB/wellSearch?[parameters]:</p>
+        <ul>
+            <li>added modified_start and modified_end parameters.</li>
+            <li>added created_start and created_end parameters.</li>
+        </ul>
+        <!-- Version A -->
+        <h3>Version A (vA)</h3>
+        Initial release of the API.
+        
+    </div>
+    
+</div>
+
+
+{% endblock %}
+

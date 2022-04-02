@@ -9,20 +9,25 @@ Fluid Data - Home
 {% block main %}
 <div class="container-fluid">
     <div class="row">
-        <div class="row">
             <div class="col-lg">
                 <h1>Fluid Data</h1>
                 <p>Welcome to Fluid Data, the number one location for downhole data in Australia.</p>
             </div>
-            <div class="col-lg">
-                <h1>Updates</h1>
-                <h2>22/10/2021: Site is Live</h2>
-                <p>The web application and database have been successfully migrated to Amazon's AWS servers.</p>
-            </div>
-        </div>
-
     </div>
-
+    <div class="row">
+        <div class="col-lg">
+            <h1>Search for Data</h1>
+            <p>To begin accessing our growing database, head to our <a class="linkFormat" href="{% url 'search' %}">search page</a>.</p>
+        </div>
+        <div class="col-lg">
+            <h1>Learn about our API</h1>
+            <p>Learn all about our Application Programming Interface and how you can integrate our database into your own software at our <a class="linkFormat" href="{% url 'api' %}">API Guide page</a>.</p>
+        </div>
+        <div class="col-lg">
+            <h1>More Information</h1>
+            <p>To learn more, visit our <a class="linkFormat" href="{% url 'help' %}">help page</a>.</p>
+        </div>
+    </div>
     
 </div>
 

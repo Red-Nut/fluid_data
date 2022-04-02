@@ -1,0 +1,45 @@
+{% extends 'data/base.html' %}
+{% block title %}
+Fluid Data - Home
+{% endblock %}
+
+{% block head %}
+{% endblock %}
+
+{% block main %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="row">
+            <div class="col-lg-8">
+                <h1>User Guide</h1>
+                <p>Coming Soon</p>
+            </div>
+            <div class="col-md-4">
+                <h1>Updates</h1>
+                <h2>02/04/2022: Admin Users</h2>
+                <p>Companies can now specify an admin user who can edit the profiles of other users of their company, including granting or taking away their access.</p>
+
+                <h2>13/02/2022: User Profile Editing</h2>
+                <p>It is now possible for a user to edit their profile or change their password.</p>
+
+                <h2>21/01/2022: API Version C</h2>
+                <p>Application Programming Interface has been updated to version C. Pagination is now supported for relvant API queries. 
+                    <br>For more details visit the <a class="linkFormat" href="{% url 'apiVc' %}">api page</a></p>
+
+                <h2>19/01/2022: API Version B</h2>
+                <p>Application Programming Interface has been updated to version B. Well search now includes modified and created date search parameters.
+                    <br>For more details visit the <a class="linkFormat" href="{% url 'apiVb' %}">api page</a></p>
+
+                <h2>22/10/2021: Site is Live</h2>
+                <p>The web application and database have been successfully migrated to Amazon's AWS servers.</p>
+            </div>
+        </div>
+
+    </div>
+
+    
+</div>
+
+
+{% endblock %}
+

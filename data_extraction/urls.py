@@ -43,6 +43,10 @@ urlpatterns = [
         # API Page.
     path('api_page', views.api, name='api'),
 
+        # API previous versions
+    path('apiVc', views.apiVc, name='apiVc'),
+    path('apiVb', views.apiVb, name='apiVb'),
+
         # Profile Pages.
     path('profile', views.Profile, name='profile'),
     path('company', views.Company, name='company'),
@@ -51,6 +55,9 @@ urlpatterns = [
 
         # Well Details Page
     path('well/<int:id>/', views.details, name='details'),
+
+        # Help Page.
+    path('help', views.help, name='help'),
 
         # Logout
     path('logout', views.logout_view, name='logout'),

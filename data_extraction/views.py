@@ -370,6 +370,12 @@ def deleteFileBucket(request, id):
 def api(request):
 	return render(request, "data/api.html")
 
+def apiVc(request):
+	return render(request, "data/apiVc.html")
+
+def apiVb(request):
+	return render(request, "data/apiVb.html")
+
 # Profile.
 @login_required
 def Profile(request):
@@ -627,6 +633,11 @@ def Company(request):
 	}
 
 	return render(request, "data/company.html", context)
+
+# Help.
+@login_required
+def help(request):
+	return render(request, "data/help.html")
 
 # Well Details.
 @login_required
