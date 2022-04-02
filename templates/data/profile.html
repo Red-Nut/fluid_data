@@ -10,30 +10,52 @@ Fluid Data - Profile
 {% block main %}
 <div class="container-fluid">
     <div class="row">
-        <div class="col-xxl-3">
-            <h1>User Profile</h1>
-            <table class="m-2">
-                <tr>
-                    <th class="p-2">Username:</th>
-                    <td class="p-2">{{user.username}}</td>
-                </tr>
-                <tr>
-                    <th class="p-2">First Name:</th>
-                    <td class="p-2">{{user.first_name}}</td>
-                </tr>
-                <tr>
-                    <th class="p-2">Last Name:</th>
-                    <td class="p-2">{{user.last_name}}</td>
-                </tr>
-                <tr>
-                    <th class="p-2">Email:</th>
-                    <td class="p-2">{{user.email}}</td>
-                </tr>
-            </table>
-            <button class="btn btn-primary" onclick=EditProfile()>Edit Profile (unfinished)</button>
-            <button class="btn btn-primary" onclick=ChangePassword()>Change Password (unfinished)</button>
+        <div class="col-xxl-3 mt-4">
+            <div id="profile">
+                <h1>User Profile</h1>
+                <table class="m-2">
+                    <tr>
+                        <th class="p-2">Username:</th>
+                        <td class="p-2" id="updateUsername">{{userProfile.user.username}}</td>
+                    </tr>
+                    <tr>
+                        <th class="p-2">First Name:</th>
+                        <td class="p-2" id="updateFirstName">{{userProfile.user.first_name}}</td>
+                    </tr>
+                    <tr>
+                        <th class="p-2">Last Name:</th>
+                        <td class="p-2" id="updateLastName">{{userProfile.user.last_name}}</td>
+                    </tr>
+                    <tr>
+                        <th class="p-2">Email:</th>
+                        <td class="p-2" id="updateEmail">{{userProfile.user.email}}</td>
+                    </tr>
+                    <tr>
+                        <th class="p-2">Company Group:</th>
+                        <td class="p-2 id="updateUsername""><a href="{% url 'company' %}">{{userProfile.organisation.organisation_name}}</a></td>
+                    </tr>
+                </table>
+            </div>
+            <div id="editProfile" style="display:none;">
+                <h1>Edit Profile</h1>
+                <table class="mb-4">
+                    <tr><th class="p-2">Username:</th><td><input type="text" value="{{userProfile.user.username}}" id="username"></td></tr>
+                    <tr><th class="p-2">First Name:</th><td><input type="text" value="{{userProfile.user.first_name}}" id="first_name"></td></tr>
+                    <tr><th class="p-2">Last Name</th><td><input type="text" value="{{userProfile.user.last_name}}" id="last_name"></td></tr>
+                    <tr><th class="p-2">Email</th><td><input type="email" value="{{userProfile.user.email}}" id="email"></td></tr>
+                </table>
+                <button class="btn btn-primary mb-2" onclick=EditProfile()>Update</button>
+                <button class="btn btn-primary mb-2" onclick=ShowEditProfile()>Cancel</button>
+            </div>
+            <button class="btn btn-primary" id="showEditProfile" onclick=ShowEditProfile()>Edit Profile</button>
+            
+            <br><br>
+            
+            <a class="btn btn-primary" href="change_password">Change Password</a>
+            
         </div>
-        <div class="col-xxl-9">
+
+        <div class="col-xxl-9 mt-4">
             <h1>Saved File Buckets</h1>
             <table width=100% class="table table-striped">
                 <tr class="table-dark">
@@ -70,6 +92,79 @@ Fluid Data - Profile
     
 </div>
 
+<script>
+    function ShowEditProfile(){
+        elEditProfile = document.getElementById("editProfile");
+        elProfile = document.getElementById("profile");
+        elProfileButton = document.getElementById("showEditProfile");
+
+        if (elEditProfile.style.display == "none") {
+            elEditProfile.style.display = "block";
+            elProfileButton.style.display = "none";
+            elProfile.style.display = "none";
+        } else if (elEditProfile.style.display == "block") {
+            elEditProfile.style.display = "none";
+            elProfileButton.style.display = "block";
+            elProfile.style.display = "block";
+        }
+    }
+
+    function EditProfile(){
+        csrftoken = getCookie('csrftoken');
+
+        data = {
+            username: document.getElementById("username").value,
+            first_name: document.getElementById("first_name").value,
+            last_name: document.getElementById("last_name").value,
+            email: document.getElementById("email").value
+        };
+
+        json = JSON.stringify(data);
+
+        $.ajax({
+            type: "POST",
+            credentials: 'same-origin',
+            url: "{% url 'updateProfile' %}",
+            data: json,
+            headers: { 'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            "X-CSRFToken": csrftoken },
+            
+            // on success
+            success: function (response) {
+                responseObject = JSON.parse(response)
+                success = responseObject.success;
+                errors = responseObject.errors
+                if(success == false){
+                    for (i = 0; i < errors.length; i++){
+                        AddAlert("danger", "Failed to update profile: " + errors[i], true);
+                    }
+                    console.log("Profile Update Errors:")
+                    console.log(errors)
+                } else if(success == true) {
+                    AddAlert("info", "Profile Updated Succesfully.", true);             
+                          
+                    document.getElementById("updateUsername").innerHTML = responseObject.username;
+                    document.getElementById("updateFirstName").innerHTML = responseObject.first_name;
+                    document.getElementById("updateLastName").innerHTML = responseObject.last_name;
+                    document.getElementById("updateEmail").innerHTML = responseObject.email;
+                    
+                    ShowEditProfile()
+                } else {
+                    AddAlert("warning", "Something went wrong.", true);
+                }
+            },
+            // on error
+            error: function (response) {
+                // alert the error if any error occured
+                console.log(response.responseJSON.errors)
+                AddAlert("danger", "JSON Error: Check console.", true)
+            }
+        });
+    }
+
+</script>
 
 {% endblock %}
 
