@@ -197,7 +197,7 @@ def WellJson(well):
             'id' : document.id,
             'document_name' : document.document_name,
             'ext' : ext,
-            'status' :dict(Document.STATUS)[document.status],
+            'status' : document.status,
             'link' : link,
             'gov_url' : document.url,
         }
@@ -224,14 +224,13 @@ def WellJson(well):
                 'id' : document.id,
                 'document_name' : document.document_name,
                 'ext' : ext,
-                'status' : dict(Document.STATUS)[document.status],
+                'status' : document.status,
                 'link' : link,
                 'gov_url' : document.url,
             }
             reportDocuments.append(myDocument)
 
         myReport = {
-            'id' : report.id,
             'report_type' : str(report.report_type),
             'report_name' : report.report_name,
             'gov_name' : report.gov_report_name,
@@ -257,7 +256,7 @@ def WellJson(well):
         'modified' : str(well.modified),
         'date_modified' : str(well.date_modified),
         'date_created' : str(well.date_created),
-        'url' : well.url,
+        'url' : "https://geoscience.data.qld.gov.au/borehole/" + well.gov_id,
         'documents' : documents,
         'document_count' : documentCount,
         'reports' : reports,
