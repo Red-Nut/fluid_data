@@ -137,6 +137,9 @@ class Well(CreatedModifiedModel):
         str =str.format( self.id, self.well_name)
         return str
 
+    def url(self):
+        return "https://geoscience.data.qld.gov.au/borehole/" + self.gov_id,
+
 #  ***************************** Documents  ***************************** 
 
 class ReportType(CreatedModifiedModel):

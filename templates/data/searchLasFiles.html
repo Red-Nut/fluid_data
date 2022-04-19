@@ -8,7 +8,7 @@ Fluid Data - Search
 <div style="border-bottom: 1px solid black;" class="p-3">
     <button class="btn btn-primary" onclick=AddChecked() id="buttonAdd">Add Selected to Bucket</button>
     <p class="btn btn-primary" style="display:none" id="pleaseWait">Please wait ...</p>
-    <a id="bucketCount" class="btn btn-primary" href="{% url 'fileBucket' %}"id="bucketCount" >View Bucket ({{fileBucketFiles}})</a>
+    <a id="bucketCount" class="btn btn-primary" href="{% url 'fileBucket' %}" id="bucketCount" >View Bucket ({{fileBucketFiles}})</a>
     <button class="btn btn-primary" onclick=EmptyBucket() id="emptyBucket">Empty Bucket</button>
 </div>
 {% endblock %}
