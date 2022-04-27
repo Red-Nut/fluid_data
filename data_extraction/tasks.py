@@ -58,7 +58,8 @@ def saveFileBucket(userId):
     for document in documents:
         print("Document Name: " + document.document_name)
         if(document.status != 2):
-            print("Document Status: " + document.status)
+
+            print("Document Status: " + document.get_status_display())
             result = fileModule.downloadWellFile(document)
             if(result.code != "50000" and result.code != "50004"):
                 # Failed, notify users
@@ -75,14 +76,15 @@ def saveFileBucket(userId):
 
     # Copy Files
     for document in documents:
-        sPath = document.file.file_location + document.file.file_name + document.file.file_ext
-        
-        dfolder = destination + document.well.well_name + '/'
-        fileModule.makeDirectory(dfolder, False)
-        
-        dName = document.file.file_name + document.file.file_ext
+        if document.file is not None:
+            sPath = document.file.file_location + document.file.file_name + document.file.file_ext
+            
+            dfolder = destination + document.well.well_name + '/'
+            fileModule.makeDirectory(dfolder, False)
+            
+            dName = document.file.file_name + document.file.file_ext
 
-        result = fileModule.copyToTemp(sPath, dfolder, dName)
+            result = fileModule.copyToTemp(sPath, dfolder, dName)
 
     # Zip Folder
     result = fileModule.zipFiles('file_buckets/' + userFileBucket.name,destination)
