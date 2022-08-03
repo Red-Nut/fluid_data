@@ -12,7 +12,7 @@ Fluid Data - Company
     <div class="row">
         <div class="col">
             <h1>{{userProfile.organisation.organisation_name}} Profile</h1>
-            <p><strong>API Key</strong>: {{userProfile.organisation.api_key}}</p>
+            <p style="display:none"><strong>API Key</strong>: {{userProfile.organisation.api_key}}</p>
             <br>
             <p><strong>Current logged in User</strong>: {{userProfile.user.username}}</p>
             <p><strong>Current logged in User Access Privileges</strong>: {{privilege}}</p>
@@ -52,16 +52,16 @@ Fluid Data - Company
                     <td><input type="text" id="email{{user.id}}" value="{{user.email}}"></td>
                     <td>
                         <select id="status{{user.id}}">
-                            <option value="1">Active</option>
-                            <option value="2">Suspended</option>
-                            <option value="3">Requested</option>
-                            <option value="9">Deleted</option>
+                            <option value="1" {% if user.status == "Active" %}selected{% endif %}>Active</option>
+                            <option value="2" {% if user.status == "Suspended" %}selected{% endif %}>Suspended</option>
+                            <option value="3" {% if user.status == "Requested" %}selected{% endif %}>Requested</option>
+                            <option value="9" {% if user.status == "Deleted" %}selected{% endif %}>Deleted</option>
                         </select>
                     </td>
                     <td>
                         <select id="privilege{{user.id}}">
-                            <option value="0">Admin</option>
-                            <option value="1">Standard</option>
+                            <option value="0" {% if user.privilege == "Admin" %}selected{% endif %}>Admin</option>
+                            <option value="1" {% if user.privilege == "Standard" %}selected{% endif %}>Standard</option>
                         </select>
                     </td>
                     <td><button onclick="save({{user.id}})" class="btn btn-primary" >Save</button></td>

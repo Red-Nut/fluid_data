@@ -392,6 +392,8 @@ def Profile(request):
 	# File buckets.
 	fileBuckets = UserFileBucket.objects.filter(user=request.user).order_by("-id")
 	bucketCount = fileBuckets.count() - 1
+	if bucketCount < 0:
+		bucketCount = 0
 	fileBuckets = fileBuckets[:bucketCount]
 
 	buckets = []
