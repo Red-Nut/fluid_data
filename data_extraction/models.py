@@ -26,6 +26,17 @@ class File(CreatedModifiedModel):
         str =str.format( self.id, self.file_name + self.file_ext, self.file_location)
         return str
 
+# ***************************** Package ***************************** 
+class Package(CreatedModifiedModel):
+    gov_id = models.CharField(max_length=100, unique=True)
+    modified = models.DateTimeField(null=True, blank=True)
+    checked = models.DateTimeField(auto_now=True)
+    success = models.BooleanField(default=False)
+    errorCodes = models.CharField(max_length=100, null=True, blank=True)
+    error = models.CharField(max_length=1000, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.gov_id}"
 
 # ***************************** Wells ***************************** 
 
@@ -106,6 +117,8 @@ class Well(CreatedModifiedModel):
     )
     permit = models.ForeignKey(
         Permit, 
+        null=True,
+        blank=True,
         on_delete=models.RESTRICT
     )
     status = models.ForeignKey(
@@ -127,7 +140,12 @@ class Well(CreatedModifiedModel):
     latitude = models.FloatField(null=True, blank=True)
     longitude = models.FloatField(null=True, blank=True)
     rig_release = models.DateField(null=True, blank=True)
-    modified = models.DateTimeField(null=True, blank=True)
+    package = models.ForeignKey(
+        Package, 
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL
+    )
 
     def __str__(self):
         return f"{self.well_name}"
@@ -139,6 +157,7 @@ class Well(CreatedModifiedModel):
 
     def url(self):
         return "https://geoscience.data.qld.gov.au/borehole/" + self.gov_id,
+
 
 #  ***************************** Documents  ***************************** 
 
@@ -163,13 +182,36 @@ class Report(CreatedModifiedModel):
     )
     well = models.ForeignKey(
         Well,
+        null=True, 
+        blank=True,
         on_delete=models.CASCADE,
         related_name="reports"
     )
-    url = models.TextField(max_length=1000,null=True)
+    url = models.TextField(max_length=1000,null=True, blank=True)
 
     def __str__(self):
 	    return f"{self.report_name}"
+
+class DataType(CreatedModifiedModel):
+    type_name = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"{self.type_name}"
+
+class OtherData(CreatedModifiedModel):
+    gov_id = models.CharField(max_length=100) 
+    gov_report_name = models.CharField(max_length=255)
+    gov_creator = models.CharField(max_length=255) 
+    gov_created = models.DateTimeField(null=True, blank=True)
+    gov_modified = models.DateTimeField(null=True, blank=True)
+    gov_dataset_completion_date = models.DateField(null=True, blank=True)
+    gov_open_file_date = models.DateField(null=True, blank=True)
+    data_name = models.CharField(max_length=255)
+    data_type = models.ForeignKey(
+        DataType, 
+        on_delete=models.RESTRICT
+    )
+    url = models.TextField(max_length=1000,null=True, blank=True)
 
 class Document(CreatedModifiedModel):
     MISSING = 1
@@ -193,7 +235,9 @@ class Document(CreatedModifiedModel):
     well = models.ForeignKey(
         Well,
         on_delete=models.CASCADE,
-        related_name="documents"
+        related_name="documents", 
+        null=True,
+        blank=True
     )
     report = models.ForeignKey(
         Report,

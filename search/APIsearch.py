@@ -1,25 +1,56 @@
-# Third party imports.
-import requests
-import json
+from django.utils import timezone
+from django.http import JsonResponse
 
 # This module imports.
 from . import config_search
 
 # Other module imports.
 from data_extraction.functions import wellExists, IsNumber
-from data_extraction.models import Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
+from data_extraction.models import Company, CompanyNameCorrections, Data, DataType, Document, File, OtherData, Package, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
 
+# Third party imports.
+import requests
+import json
+from datetime import datetime, timedelta
+import pytz
 
-
-def Add(wellId,state):
+def Add(package,state):
+    pid=package.gov_id
     # Retrieve well government database and save to local database.
     if state == "QLD":
-        myRetrive = RetriveQLD(wellId)
+        myRetrive = RetriveQLD(pid)
         myRetrive.Retrive()
 
+        # Update the Package
+        package.error = None
+        package.success = myRetrive.success
+        if not myRetrive.success:
+            errors = ""
+            errorCodes = ""
+            for error in myRetrive.errors:
+                errors += "E" + error.code + ": " + error.consolLog + " "
+                errorCodes += error.code + ", "
+            
+            if len(errors) > 2:
+                errors = errors[:-1]
+            if len(errorCodes) > 2:
+                errorCodes = errorCodes[:-2]
+
+            package.errorCodes = errorCodes
+            package.error = errors
+
+        package.save()
+
         # Create the response object.
-        response = {'success':myRetrive.success,'wellName':myRetrive.wellName,'errors':ResultEncoder().encode(myRetrive.errors)}
+        response = {
+            'success':myRetrive.success,
+            'package':package.gov_id,
+            'title':myRetrive.title,
+            'well_name':myRetrive.wellName,
+            'errors':ResultEncoder().encode(myRetrive.errors)
+            }
+        #return JsonResponse(response, safe=False)
         return response
     else: 
         print("States other than Queensland are not yet implemented")
@@ -27,6 +58,8 @@ def Add(wellId,state):
         return response    
 
 def RetreiveAllQLD():
+    recheckDays = 0
+
     # Obtains a list of all objects in the Queensland government database and attempts to retrieve them all.
     responseList = []
 
@@ -72,9 +105,29 @@ def RetreiveAllQLD():
     else:
         # Iterate through each package.
         packages = json_response['result']
-        for package in packages:
-            response = Add(package,"QLD")
-            responseList.append(response)
+        count = 0
+        for pid in packages:
+            package = Package.objects.filter(gov_id=pid).first()
+            if package is None:
+                #print(f"Package: {pid}")
+                package = Package.objects.create(gov_id=pid)
+                response = Add(package,"QLD")
+                responseList.append(response)
+
+                count += 1
+            else:
+                #USE_TZ=True
+                if (package.checked + timedelta(days=recheckDays))  < timezone.now():
+                    #print(f"Package: {pid}")
+                    response = Add(package,"QLD")
+                    responseList.append(response)
+
+                    count += 1
+
+            
+
+            if count > 10000:
+                break
 
         return responseList
 
@@ -97,7 +150,7 @@ def UpdateId(wellName, gov_id):
         PrintResultLog(result)
         return result
 
-def UpdateValues(wellName, company, status, wellClass, purpose, permit, lat, long, rigRelease, modified):
+def UpdateValues(wellName, company, status, wellClass, purpose, permit, lat, long, rigRelease):
     well = Well.objects.filter(well_name=wellName).first()
     # Update values if modified date is greater.
     if(company is not None):
@@ -116,8 +169,6 @@ def UpdateValues(wellName, company, status, wellClass, purpose, permit, lat, lon
         well.longitude = long
     if(rigRelease is not None):
         well.rig_release = rigRelease
-                                
-    well.modified = modified
 
     # Save the updated records
     try:
@@ -168,7 +219,7 @@ def UpdateNullValues(wellName, company, status, wellClass, purpose, permit, lat,
         PrintResultLog(result)
         return result
 
-def CreateWell(gov_id, wellName, state, company, status, wellClass, purpose, permit, lat, long, rigRelease, modified):
+def CreateWell(gov_id, wellName, state, company, status, wellClass, purpose, permit, lat, long, rigRelease):
     try:
         well = Well.objects.create(
             gov_id = gov_id,
@@ -181,8 +232,7 @@ def CreateWell(gov_id, wellName, state, company, status, wellClass, purpose, per
             permit = permit,
             latitude = lat,
             longitude = long,
-            rig_release = rigRelease,
-            modified = modified
+            rig_release = rigRelease
         )
         result = GenerateResult(resultList,0)
         return result
@@ -197,7 +247,7 @@ def CreateWell(gov_id, wellName, state, company, status, wellClass, purpose, per
         PrintResultLog(result)
         return result
 
-def ProcessWellName(title,type, permitStr):
+def ProcessWellName(title,type, permitStr, alias):
     if(title is not None) and permitStr is not None:
         wellName = title
 
@@ -281,13 +331,19 @@ def ProcessWellName(title,type, permitStr):
     # Check for question marks
     x = wellName.find("?")
     if(x > -1):
-        result = GenerateResult(resultList,7)
-        result.consolLog = result.consolLog + ". Found ? in Well Name: " + wellName + ". Title: " + title + "Permit: " + permitStr
+        result = GenerateResult(resultList,8)
+        consoleLog = result.consolLog + ". Found ? in Well Name: "
+        if wellName is not None:
+            consoleLog += wellName
+        else:
+            consoleLog += "None"
+        result.consolLog = consoleLog
+
         PrintResultLog(result)
+
         return None
 
     if IsNumber(wellName):
-        alias = result.get('alias', None)
         if(alias is not None):
             wellName = alias
 
@@ -307,6 +363,7 @@ class RetriveQLD:
     def __init__(self, id):
         self.id = id
         self.wellName = ""
+        self.title = ""
         self.state = State.objects.filter(name_short="QLD").first()
         self.result = None
         self.resources = None
@@ -355,135 +412,59 @@ class RetriveQLD:
             self.result = json_response['result']
             self.resources = self.result['resources']
 
-            # Process well metadata.
-            result = self.ProcessWellResult()
-            if(result.code != "10000"):
-                self.success = False
-                self.errors.append(result)
-                return
+            reportType = self.CheckReportType()
 
-            result = self.ProcessResources()
-            if(result.code != "10000"):
-                self.success = False
-                self.errors.append(result)
-                return
+            if reportType == "WellReport":
+                # Process well metadata.
+                result = self.ProcessWellResult()            
+                if(result.code != "00000"):
+                    self.success = False
+                    self.errors.append(result)
+                    return
+                
+                result = self.ProcessResources() 
+                if(result.code != "00000"):
+                    self.success = False
+                    self.errors.append(result)
+                    return
+
+            if reportType == "OtherReport":
+                result = self.ProcessOtherReport()
+                if(result.code != "00000"):
+                    self.success = False
+                    self.errors.append(result)
+                    return
+
+                result = self.ProcessResources() 
+                if(result.code != "00000"):
+                    self.success = False
+                    self.errors.append(result)
+                    return
+
+            if reportType == "OtherData":
+                result = self.ProcessOtherData()
+                if(result.code != "00000"):
+                    self.success = False
+                    self.errors.append(result)
+                    return
+                    
+                result = self.ProcessResources() 
+                if(result.code != "00000"):
+                    self.success = False
+                    self.errors.append(result)
+                    return
+            
 
             # Confirm the success or failure of adding the well.
+            print(self.success)
             if(self.success is None):
-                if len(self.errors) == 0:
-                    self.success = True
-                else: 
-                    self.success = False
+                self.success = True
 
-    def ProcessWellResult(self):
-        # Data Checks
-        if not self.CheckValidReportType:
-            return False
+    def CheckReportType(self):
+        dataTypeStr = self.ProcessType()
+        if dataTypeStr == "borehole":
+            return "WellReport"
 
-        if not self.CheckValidPermit:
-            return False
-
-        # Get variables.
-        title = self.ProcessTitle()
-        type = self.ProcessType()
-        reportType = self.ProcessReportType()
-        govId = self.ProcessGovId()
-        permitStr = self.result.get('resource_authority_permit', None)
-        permit = self.ProcessPermit()
-
-        # Data Checks
-        if title is None | type is None | govId is None:
-            return False
-
-        # Get variables.
-        wellName = ProcessWellName(title, type, permitStr)
-        self.wellName = wellName
-        operator = self.ProcessOperator()
-        status = self.ProcessStatus()
-        wellClass = self.ProcessClass()
-        purpose = self.ProcessPurpose()
-        GeoJSONextent = self.ProcessGEOData() # Geodata (Not used yet).
-        coords = self.ProcessLatLong(GeoJSONextent)
-        rigRelease = self.ProcessRigRelease()
-        modified = self.ProcessModified()
-
-        # Data Checks
-        if wellName is None:
-            # Handle Error
-            result = GenerateResult(resultList,8)
-            result.consolLog = result.consolLog + ". Error processing Well Name. Title: " + title + " Permit: " + permitStr
-            PrintResultLog(result)
-            return False
-        self.wellName = wellName
-
-        # Finalise
-        if (wellExists(wellName)):
-            well = Well.objects.filter(well_name=wellName).first()
-            if(type == "borehole"):
-                # Update id if object is the borehole
-                result = UpdateId(wellName,govId)
-                return result
-
-            if(modified > well.modified):
-                # Update all values.
-                result = UpdateValues(wellName, operator, status, wellClass, purpose, permit, coords["lat"], coords["long"], rigRelease, modified)
-                return result
-            else:
-                # Update any null values.
-                result = UpdateNullValues(wellName, operator, status, wellClass, purpose, permit, coords["lat"], coords["long"], rigRelease)
-                return result
-        else:
-            # Create new well.
-            result = CreateWell(govId, wellName, self.state, operator, status, wellClass, purpose, permit, coords["lat"], coords["long"], rigRelease, modified)
-            return result
-
-    def ProcessTitle(self):
-        title = self.result.get('title', None)
-        self.wellName = title
-
-        if title is None:
-            # Handle Error
-            self.success = False
-            result = GenerateResult(resultList,8)
-            result.consolLog = result.consolLog + ". Title: " + title
-            PrintResultLog(result)
-            self.errors.append(result)
-
-        return title
-
-    def ProcessType(self):
-        type = self.result.get('type', None)
-
-        if(type == 'magnetic' or 
-            type == 'radiometric' or
-            type == 'seismic' or 
-            type == 'map-collection' or 
-            type == 'spectral' or 
-            type == 'electromagnetic' or 
-            type == 'gravity' or 
-            type == 'gravity-gradiometry' or  
-            type == 'magnetotelluric' or 
-            type == 'geochemistry'):
-            
-            # Handle Error
-            self.success = False
-            result = GenerateResult(resultList,5)
-            result.consolLog = result.consolLog + ". Type: " + type
-            result.description = result.description + ". Type: " + type
-            self.errors.append(result)
-            return None
-
-        if type is None:
-            # Handle Error
-            self.success = False
-            result = GenerateResult(resultList,8)
-            result.consolLog = result.consolLog + ". Type: " + type
-            PrintResultLog(result)
-            self.errors.append(result)
-
-        return type
-
-    def CheckValidReportType(self):
         reportTypeStr = RemoveLink(self.result.get('georesource_report_type', None),'georesource-report/')
 
         if(reportTypeStr is not None):
@@ -533,23 +514,333 @@ class RetriveQLD:
             reportTypeStr == "Permit Report Final" or 
             reportTypeStr == "Petroleum Report Field Information" or 
             reportTypeStr == "Any Other Report"):
-                # Handle Error
-                self.success = False
-                result = GenerateResult(resultList,5)
-                result.consolLog = result.consolLog + ". Report Type: " + reportTypeStr
-                result.description = result.description + ". Report Type: " + reportTypeStr
-                self.errors.append(result)
-                return False
+                
+                return "OtherReport"
             else:
-                return True
+                return "WellReport"
         else:
-            return True
+            return "OtherData"
+
+
+    def ProcessWellResult(self):
+        # Check Valid Permit
+        result = self.CheckValidPermit()
+        if(result != GenerateResult(resultList,0) and result != GenerateResult(resultList,7)):
+            self.success = False
+            self.errors.append(result)
+            return result
+
+        # Get variables.
+        title = self.ProcessTitle()
+        alias = self.result.get('alias', None)
+        type = self.ProcessType()
+        #reportType = self.ProcessReportType()
+        govId = self.ProcessGovId()
+        permitStr = self.result.get('resource_authority_permit', None)
+        permit = self.ProcessPermit()
+
+        # Data Checks
+        if title is None or type is None or govId is None:
+            # Handle Error
+            self.success = False
+            result = GenerateResult(resultList,8)
+            return result
+
+        if(type == 'magnetic' or 
+            type == 'radiometric' or
+            type == 'seismic' or 
+            type == 'map-collection' or 
+            type == 'spectral' or 
+            type == 'electromagnetic' or 
+            type == 'gravity' or 
+            type == 'gravity-gradiometry' or  
+            type == 'magnetotelluric' or 
+            type == 'geochemistry'):
+            
+            # Handle Error
+            self.success = False
+            result = GenerateResult(resultList,5)
+            result.consolLog = result.consolLog + ". Type: " + type
+            result.description = result.description + ". Type: " + type
+            self.errors.append(result)
+            return result
+
+        # Get variables.
+        wellName = ProcessWellName(title, type, permitStr,alias)
+        self.wellName = wellName
+        operator = self.ProcessOperator()
+        status = self.ProcessStatus()
+        wellClass = self.ProcessClass()
+        purpose = self.ProcessPurpose()
+        GeoJSONextent = self.ProcessGEOData() # Geodata (Not used yet).
+        coords = self.ProcessLatLong(GeoJSONextent)
+        rigRelease = self.ProcessRigRelease()
+        modified = self.ProcessModified()
+
+        # Data Checks
+        if wellName is None:
+            # Handle Error
+            result = GenerateResult(resultList,9)
+            consoleLog = result.consolLog
+            consoleLog += f" Title: {title} Permit: {permitStr}"
+            result.consolLog = consoleLog
+            PrintResultLog(result)
+            return result
+
+        # Finalise
+        if (wellExists(wellName)):
+            well = Well.objects.filter(well_name=wellName).first()
+            if(type == "borehole"):
+                # Update id if object is the borehole
+                result = UpdateId(wellName,govId)
+                return result
+
+            if(modified > well.modified):
+                # Update all values.
+                result = UpdateValues(wellName, operator, status, wellClass, purpose, permit, coords["lat"], coords["long"], rigRelease)
+                return result
+            else:
+                # Update any null values.
+                result = UpdateNullValues(wellName, operator, status, wellClass, purpose, permit, coords["lat"], coords["long"], rigRelease)
+                return result
+        else:
+            # Create new well.
+            result = CreateWell(govId, wellName, self.state, operator, status, wellClass, purpose, permit, coords["lat"], coords["long"], rigRelease)
+            return result
+
+    def CheckValidPermit(self):
+        # Permit.
+        permitStr = RemoveLink(self.result.get('resource_authority_permit', None),'qld-resource-permit/')
+
+        # Create the permit object.
+        if(permitStr is not None):
+            x = permitStr.find(",")
+            if(x > -1):
+                result = GenerateResult(resultList,26)
+                result.consolLog = result.consolLog + ". Permit: " + permitStr
+                return result
+            else:
+                result = GenerateResult(resultList,0)
+                return result 
+        else:
+            result = GenerateResult(resultList,7)
+            #PrintResultLog(result)
+            return result            
+
+
+    def ProcessOtherReport(self, reportTypeStr):
+        self.wellName = None
+
+        reportType = self.ProcessReportType()
+        if (reportType is None):
+            # Handle Error
+            self.success = False
+            result = GenerateResult(resultList,28)
+            PrintResultLog(result)
+            self.errors.append(result)
+        
+        # Get variables.
+        title = self.ProcessTitle()
+        url = self.result.get('url', None)
+        govId = self.ProcessGovId()
+        creator = self.result.get('creator', None)
+
+        metadata_modified_str = self.result.get('metadata_modified', None)
+        metadata_modified = config_search.ConvertQLDDateTime(metadata_modified_str)
+
+        metadata_created_str = self.result.get('metadata_created', None)
+        metadata_created = config_search.ConvertQLDDateTime(metadata_created_str)
+
+        dataset_completion_date_str = self.result.get('dataset_completion_date', None)
+        dataset_completion_date = config_search.ConvertQLDDate(dataset_completion_date_str)
+
+        open_file_date_str = self.result.get('open_file_date', None)
+        open_file_date = config_search.ConvertQLDDate(open_file_date_str)
+
+        # Data Checks
+        if title is None or govId is None:
+            result = GenerateResult(resultList,8)
+            return result
+
+        try:
+            otherReport = OtherReport.objects.create( 
+                    url=url,
+                    gov_id = govId,
+                    gov_report_name=title,
+                    gov_creator=creator,
+                    gov_created=metadata_modified,
+                    gov_modified=metadata_created,
+                    gov_dataset_completion_date=dataset_completion_date,
+                    gov_open_file_date=open_file_date,
+                    report_name=title,
+                    report_type = reportType,
+                )
+            result = GenerateResult(resultList,0)
+            return result
+        except Exception as e:
+            result = GenerateResult(resultList,29)
+            if hasattr(e, 'message'):
+                #print(e.message)
+                result.consolLog = result.consolLog + e.message
+            else:
+                print(e)
+            # Handle Error
+            PrintResultLog(result)
+            return result
+
+
+    def ProcessOtherReportResources(self, otherReport):
+        for resource in self.resources:
+            # Check if resource is active.
+            if (resource['state'] == "active"):
+
+                # Document Name.
+                documentName = resource['name']
+                
+                # URL.
+                url = resource['url']
+
+                # Check if document exists.
+                document = Document.objects.filter(document_name=documentName).first()
+                if(document is None):
+                    try:
+                        document = Document.objects.create(
+                            document_name = documentName,
+                            well=well,
+                            url = url,
+                            report=report
+                        )
+                    except:
+                        # Handle Error
+                        self.success = False
+                        result = GenerateResult(resultList,14)
+                        result.consolLog = result.consolLog + " Well: " + well.well_name + " Document: " + documentName
+                        PrintResultLog(result)
+                        self.errors.append(result)
+                        return result
+                else:
+                    # Add to report (if duplicate already added without)
+                    if(otherReport is not None):
+                        try:
+                            document.other_report = otherReport
+                            document.save()
+                        except Exception as e:
+                            result = GenerateResult(resultList,30)
+                            if hasattr(e, 'message'):
+                                #print(e.message)
+                                result.consolLog = result.consolLog + e.message
+                            else:
+                                print(e)
+                            PrintResultLog(result)
+                            return result
+                    
+                    # Handle Error
+                    self.success = False
+                    result = GenerateResult(resultList,15)
+                    result.consolLog = result.consolLog + " Well: " + well.well_name + " Document: " + documentName
+                    PrintResultLog(result)
+                    self.errors.append(result)
+                    return result
+
+    def ProcessOtherData(self):
+        self.wellName = None
+
+        dataTypeStr = self.ProcessType()
+
+        if (dataTypeStr is None):
+            # Handle Error
+            self.success = False
+            result = GenerateResult(resultList,25)
+            PrintResultLog(result)
+            self.errors.append(result)
+
+        dataType = DataType.objects.filter(type_name=dataTypeStr).first()
+        if dataType == None:
+            dataType = DataType.objects.create(type_name=dataTypeStr)
+        
+        # Get variables.
+        title = self.ProcessTitle()
+        url = self.result.get('url', None)
+        govId = self.ProcessGovId()
+        creator = self.result.get('creator', None)
+
+        metadata_modified_str = self.result.get('metadata_modified', None)
+        metadata_modified = config_search.ConvertQLDDateTime(metadata_modified_str)
+
+        metadata_created_str = self.result.get('metadata_created', None)
+        metadata_created = config_search.ConvertQLDDateTime(metadata_created_str)
+
+        dataset_completion_date_str = self.result.get('dataset_completion_date', None)
+        dataset_completion_date = config_search.ConvertQLDDate(dataset_completion_date_str)
+
+        open_file_date_str = self.result.get('open_file_date', None)
+        open_file_date = config_search.ConvertQLDDate(open_file_date_str)
+
+        # Data Checks
+        if title is None or govId is None:
+            result = GenerateResult(resultList,8)
+            return result
+
+        try:
+            otherData = OtherData.objects.create( 
+                    url=url,
+                    gov_id = govId,
+                    gov_report_name=title,
+                    gov_creator=creator,
+                    gov_created=metadata_modified,
+                    gov_modified=metadata_created,
+                    gov_dataset_completion_date=dataset_completion_date,
+                    gov_open_file_date=open_file_date,
+                    data_name=title,
+                    data_type = dataType,
+                )
+            result = GenerateResult(resultList,0)
+            return result
+        except Exception as e:
+            result = GenerateResult(resultList,29)
+            if hasattr(e, 'message'):
+                #print(e.message)
+                result.consolLog = result.consolLog + e.message
+            else:
+                print(e)
+            # Handle Error
+            PrintResultLog(result)
+            return result
+
+        return
+
+
+
+
+    def ProcessTitle(self):
+        title = self.result.get('title', None)
+        self.title = title
+
+        if title is None:
+            # Handle Error
+            self.success = False
+            result = GenerateResult(resultList,8)
+            result.consolLog = result.consolLog + ". Title: None"
+            PrintResultLog(result)
+            self.errors.append(result)
+
+        return title
+
+    def ProcessType(self):
+        type = self.result.get('type', None)
+
+        if type is None:
+            # Handle Error
+            self.success = False
+            result = GenerateResult(resultList,8)
+            result.consolLog = result.consolLog + ". Type: None"
+            PrintResultLog(result)
+            self.errors.append(result)
+
+        return type
 
     def ProcessReportType(self):
         reportTypeStr = RemoveLink(self.result.get('georesource_report_type', None),'georesource-report/')
-
-        if not self.CheckValidReportType():
-            return None
 
         # Create the Report Type object.
         if(reportTypeStr is not None):
@@ -571,7 +862,7 @@ class RetriveQLD:
             return None
 
     def ProcessGovId(self):
-        gov_id = result.get('name', None)
+        gov_id = self.result.get('name', None)
         if(gov_id is None):
             # Handle Error
             self.success = False
@@ -582,66 +873,52 @@ class RetriveQLD:
         return gov_id
 
     def ProcessPermit(self):
-        # Permit.
-        permitStr = RemoveLink(self.result.get('resource_authority_permit', None),'qld-resource-permit/')
+        if self.CheckValidPermit() == GenerateResult(resultList,0):
+            # Permit.
+            permitStr = RemoveLink(self.result.get('resource_authority_permit', None),'qld-resource-permit/')
 
-        # Create the permit object.
-        if(permitStr is not None):
-            permitStr = permitStr.upper()
-            permitStr = permitStr.replace(" ", "")
-            permitStr = permitStr.replace("PETROLEUMLEASE", "PL")
-            permitStr = permitStr.replace("AUTHORITYTOPROSPECT", "ATP")
-            permitStr = permitStr.replace("EXPLORATIONPERMITMINERAL", "EPM")
+            # Create the permit object.
+            if(permitStr is not None):
+                permitStr = permitStr.upper()
+                permitStr = permitStr.replace(" ", "")
+                permitStr = permitStr.replace("PETROLEUMLEASE", "PL")
+                permitStr = permitStr.replace("AUTHORITYTOPROSPECT", "ATP")
+                permitStr = permitStr.replace("EXPLORATIONPERMITMINERAL", "EPM")
 
-            if not self.CheckValidPermit():
-                return None
+                
+                permit = Permit.objects.filter(permit_number=permitStr).first()
+                if (permit is None):
+                    try:
+                        permit = Permit.objects.create(permit_number = permitStr)
+                    except Exception as e:
+                        # Handle Error
+                        self.success = False
+                        result = GenerateResult(resultList,21)
+                        result.consolLog = result.consolLog + " Permit: " + permitStr
+                        PrintResultLog(result)
+                        self.errors.append(result)
+                        return
 
-            permit = Permit.objects.filter(permit_number=permitStr).first()
-            if (permit is None):
-                try:
-                    permit = Permit.objects.create(permit_number = permitStr)
-                except Exception as e:
-                    # Handle Error
-                    self.success = False
-                    result = GenerateResult(resultList,21)
-                    result.consolLog = result.consolLog + " Permit: " + permitStr
-                    PrintResultLog(result)
-                    self.errors.append(result)
-                    return
-
-            return permit
+                return permit
+            else:
+                return None                
         else:
-            permit = None
-
-    def CheckValidPermit(self):
-        # Permit.
-        permitStr = RemoveLink(self.result.get('resource_authority_permit', None),'qld-resource-permit/')
-
-        # Create the permit object.
-        if(permitStr is not None):
-            x = permitStr.find(",")
-            if(x > -1):
-                self.success = False
-                result = GenerateResult(resultList,6)
-                result.consolLog = result.consolLog + ". Permit: " + permitStr
-                self.errors.append(result)
-                return False
-        return True
+            return None
 
     def ProcessOperator(self):
         operator = self.result.get('owner', 'None').title()
         if(operator == 'None'):
             operator = self.result.get('operator', 'None').title()
 
+        if(operator == 'None'):
+            return None
+
         # Operator corrections
         correction = CompanyNameCorrections.objects.filter(alternateName=operator).first()
         if(correction is not None):
             company = Company.objects.filter(company_name=correction.correctName).first()
-            if (company is None):
+            if (company is not None):
                 operator = company.company_name
-
-        if(operator == 'None'):
-            return None
 
         # Create the company object.
         company = Company.objects.filter(company_name=operator).first()
@@ -706,7 +983,7 @@ class RetriveQLD:
 
     def ProcessPurpose(self):
         # Well Class.
-        wellPurposeStr = RemoveLink(result.get('borehole_purpose', None),"borehole-purpose/")
+        wellPurposeStr = RemoveLink(self.result.get('borehole_purpose', None),"borehole-purpose/")
         
         # Create the well class object.
         if(wellPurposeStr is not None):
@@ -781,12 +1058,16 @@ class RetriveQLD:
 
     def ProcessResources(self):
         # Process well resource data
-        well = Well.objects.filter(well_name=self.wellName).first()
+        if self.wellName != None:
+            well = Well.objects.filter(well_name=self.wellName).first()
+        else: 
+            well = None
+
         type = self.ProcessType()
         govId = self.ProcessGovId()
         reportType = self.ProcessReportType()
         title = self.ProcessTitle()
-
+        
         if(type == "borehole"):
             for resource in self.resources:
                 # Check if resource is active.
@@ -807,27 +1088,32 @@ class RetriveQLD:
                                 well=well,
                                 url = url
                             )
-                            result = GenerateResult(resultList,0)
-                            return result
                         except:
                             # Handle Error
                             self.success = False
                             result = GenerateResult(resultList,14)
-                            result.consolLog = result.consolLog + " Well: " + well.well_name + " Document: " + documentName
+                            if well is None:
+                                result.consolLog = result.consolLog + " Well: " +"None" + " Document: " + documentName
+                            else:
+                                result.consolLog = result.consolLog + " Well: " + well.well_name + " Document: " + documentName
                             PrintResultLog(result)
                             self.errors.append(result)
                             return result
                     else:
                         # Handle Error
-                        self.success = False
                         result = GenerateResult(resultList,15)
-                        result.consolLog = result.consolLog + " Well: " + well.well_name + " Document: " + documentName
+                        if well is None:
+                            result.consolLog = result.consolLog + " Well: " +"None" + " Document: " + documentName
+                        else:
+                            result.consolLog = result.consolLog + " Well: " + well.well_name + " Document: " + documentName
                         PrintResultLog(result)
                         self.errors.append(result)
-                        return result
+
+            result = GenerateResult(resultList,0)
+            return result
                         
 
-        elif (type == "report"):
+        elif (type == "report" and reportType is not None):
             # Create the report object.
             creator = self.result.get('creator', None)
 
@@ -855,7 +1141,7 @@ class RetriveQLD:
                 reportTitle = title
 
             # Check if report exists.
-            report = Report.objects.filter(well=well,gov_id=govId).first()
+            report = Report.objects.filter(gov_id=govId).first()
             if(report is None):
                 report = Report.objects.create(
                     well=well, 
@@ -891,13 +1177,14 @@ class RetriveQLD:
                                 url = url,
                                 report=report
                             )
-                            result = GenerateResult(resultList,0)
-                            return result
                         except:
                             # Handle Error
                             self.success = False
                             result = GenerateResult(resultList,14)
-                            result.consolLog = result.consolLog + " Well: " + well.well_name + " Document: " + documentName
+                            wellName = "None"
+                            if well is not None:
+                                wellName = well.well_name
+                            result.consolLog = result.consolLog + " Well: " + well_name + " Document: " + documentName
                             PrintResultLog(result)
                             self.errors.append(result)
                             return result
@@ -907,8 +1194,6 @@ class RetriveQLD:
                             try:
                                 document.report = report
                                 document.save()
-                                result = GenerateResult(resultList,0)
-                                return result
                             except Exception as e:
                                 result = GenerateResult(resultList,22)
                                 if hasattr(e, 'message'):
@@ -926,8 +1211,45 @@ class RetriveQLD:
                         PrintResultLog(result)
                         self.errors.append(result)
                         return result
+
+            result = GenerateResult(resultList,0)
+            return result                                        
         else:
-            pass
+            for resource in self.resources:
+                # Check if resource is active.
+                if (resource['state'] == "active"):
+
+                    # Document Name.
+                    documentName = resource['name']
+                    
+                    # URL.
+                    url = resource['url']
+
+                    # Check if document exists.
+                    document = Document.objects.filter(well=well,document_name=documentName).first()
+                    if(document is None):
+                        try:
+                            document = Document.objects.create(
+                                document_name = documentName,
+                                url = url,
+                            )
+                        except Exception as e:
+                            # Handle Error
+                            self.success = False
+                            result = GenerateResult(resultList,14)
+                            result.consolLog = result.consolLog + " Document: " + documentName
+                            if hasattr(e, 'message'):
+                                result.consolLog = result.consolLog + " Error: " + e.message
+                            else:
+                                result.consolLog = result.consolLog + " Error: " + str(e)
+                                print(e)
+                            PrintResultLog(result)
+                            self.errors.append(result)
+                            return result
+
+            result = GenerateResult(resultList,0)
+            return result                   
+
 
 class SearchQLD:
     def __init__(self, searchString, attachmentsOnly, WCRonly, includeExisting):
@@ -982,7 +1304,7 @@ class APISearchQLD(SearchQLD):
             for result in json_response['result']['results']:
                 myID = result.get('id', 'None')
                 if(myID != 'None'):
-                    myResult = Package(myID)
+                    myResult = DataPackage(myID)
                     
                     # Get the number of resources.
                     myResult.num_resources = int(result.get('num_resources', 0))
@@ -995,12 +1317,13 @@ class APISearchQLD(SearchQLD):
 
                         # Get general data.
                         myResult.name = result.get('name', 'None')
+                        myResult.alias = result.get('alias', None)
                         myResult.title = result.get('title', 'None')
                         myResult.type = georesource_report_type.replace('-'," ").title()
                         myResult.owner = result.get('owner', 'None').title()
                         myResult.permit = RemoveLink(result.get('resource_authority_permit', 'None'),'qld-resource-permit/')
                         myResult.GeoJSONextent = result.get('GeoJSONextent', 'None')
-                        myResult.wellName = ProcessWellName(myResult.title,myResult.type, myResult.permit)
+                        myResult.wellName = ProcessWellName(myResult.title,myResult.type, myResult.permit, myResult.alias)
                         myResult.state = "QLD"
 
                         # Get data about the record
@@ -1036,7 +1359,7 @@ class APISearchQLD(SearchQLD):
         str =str.format( self.searchString)
         return str
 
-class Package:
+class DataPackage:
     def __init__(self,id):
         self.id = id
         self.num_resources = 0

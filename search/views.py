@@ -55,6 +55,13 @@ def AddDatabase(request):
     # Convert to Json and return the response.
     return JsonResponse(response)
 
+def ManualAdd(request,id):
+
+    response = Add(id,"QLD")
+
+    # Convert to Json and return the response.
+    return JsonResponse(response)
+
 def AddMany(request):
     data = json.loads(request.body.decode("utf-8"))
 
@@ -72,9 +79,12 @@ def AddMany(request):
     
 def UpdateAllQLD(request):
     responseList = RetreiveAllQLD()
-    response = {'results':ResultEncoder().encode(responseList)}
+    print(responseList)
+    
+    return JsonResponse(responseList, safe=False)
 
-    return JsonResponse(response)
+    #response = {'results':ResultEncoder().encode(responseList)}
+    #return JsonResponse(response, safe=False)
 
 
 
