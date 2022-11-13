@@ -1,7 +1,9 @@
+# Django imports.
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models.deletion import CASCADE
 from django.utils.translation import ugettext_lazy  as _
+from django.conf import settings
 
 class CreatedModifiedModel(models.Model):
     date_created = models.DateTimeField(auto_now_add=True)
@@ -155,8 +157,9 @@ class Well(CreatedModifiedModel):
         str =str.format( self.id, self.well_name)
         return str
 
+    @property
     def url(self):
-        return "https://geoscience.data.qld.gov.au/borehole/" + self.gov_id,
+        return f"https://geoscience.data.qld.gov.au/borehole/{self.gov_id}"
 
 
 #  ***************************** Documents  ***************************** 
@@ -212,6 +215,13 @@ class OtherData(CreatedModifiedModel):
         on_delete=models.RESTRICT
     )
     url = models.TextField(max_length=1000,null=True, blank=True)
+    package = models.ForeignKey(
+        Package,
+        null=True,
+        blank=True,
+        on_delete=models.CASCADE,
+        related_name="documents"
+    )
 
 class Document(CreatedModifiedModel):
     MISSING = 1
@@ -271,6 +281,15 @@ class Document(CreatedModifiedModel):
         str =str.format( self.id, self.well.id, self.document_name, self.file)
         return str
 
+    @property
+    def link(self):
+        if(self.file is None):
+            link = None
+        else:
+            link = settings.MEDIA_URL + 'well_data/' + self.file.file_location + self.file.file_name + '.' + self.file.file_ext.replace(".","")
+
+        return link
+
 # ***************************** Page Text  ***************************** 
 
 class Page(CreatedModifiedModel):
@@ -318,6 +337,9 @@ class BoundingPoly(models.Model):
     )
     x = models.IntegerField()
     y = models.IntegerField()
+
+    class Meta:
+        ordering = ('x','y')
 
     def __str__(self):
 	    return f"({self.x},{self.y}) {self.text.text}"

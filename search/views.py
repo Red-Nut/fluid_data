@@ -7,8 +7,11 @@ import json
 # This module imports.
 from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, RetreiveAllQLD, ResultEncoder
 
+
 # Other module imports.
+from data_extraction.models import *
 from data_extraction.functions import ConvertToTrueFalse
+from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
 
 # Create your views here.
 def SearchGov(request):
@@ -42,18 +45,27 @@ def SearchGov(request):
     # Convert to Json and return the response.
     return JsonResponse(response)
 
-def AddDatabase(request):
-    # Load request variables.
-    data = json.loads(request.body.decode("utf-8"))
+def AddDatabase(request, state, pid):
+    package = Package.objects.filter(gov_id=pid).first()
+    if package is None:
+        check = False
+        try:
+            package = Package.objects.create(gov_id=pid)
+            check=True
+        except Exception as e:
+            result = GenerateResult(resultList,36)
+            PrintResultLog(result)
+        
+        if check:
+            response = Add(package,state)
+            return JsonResponse(response)
+    else:
+        response = Add(package,state)
+        return JsonResponse(response)
 
-    wellId = data['id']
-    state = data['state']
-
-    # Run the add well function. 
-    response = Add(wellId,state)
-
-    # Convert to Json and return the response.
+    response = None
     return JsonResponse(response)
+    
 
 def ManualAdd(request,id):
 

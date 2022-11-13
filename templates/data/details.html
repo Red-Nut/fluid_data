@@ -9,13 +9,13 @@
         <h2 class="card-title">{{well.well_name}}</h2>
         <div class="row align-items-start" style="border-bottom: 1px lightgrey solid; margin-bottom: 12px;">
             <div class="col-auto">
-                <p><strong>Owner</strong>: {{well.operator}}</p>
-                <p><strong>State</strong>: {{well.state}}</p>
+                <p><strong>Owner</strong>: {{well.owner}}</p>
+                <p><strong>State</strong>: {{well.state.name_long}}</p>
                 <p><strong>Permit</strong>: {{well.permit}}</p>
             </div>
             <div class="col-auto">
                 <p><strong>Status</strong>: {{well.status}}</p>
-                <p><strong>Class</strong>: {{well.class}}</p>
+                <p><strong>Class</strong>: {{well.well_class}}</p>
                 <p><strong>Purpose</strong>: {{well.purpose}}</p>
             </div>
         </div>
@@ -27,28 +27,28 @@
 <div class="card">
     <div class="card-body">
         <h3 class="card-title">Files</h3>
-        {% if well.document_count == 0 %}
-        <p>No files.</p>
-        {% else %}
+        {% if well.documents %}
             <table class="table table-striped table-bordered"> 
                 <tr>
                     <th>File Name</th>
                     <th style="text-align:center; border-right:none;">Download</th>
                     <th style="border-left:none;"></th>
                 </tr>
-                {% for document in well.documents %}
+                {% for document in well.documents.all %}
                     <tr>
                         <td>{{document.document_name}}{{document.ext}}</td>
-                        {% if document.status == "DOWNLOADED" %}
-                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.gov_url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                        {% if document.status == document.DOWNLOADED %}
+                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
                             <td style="text-align:center;"><a class="btn btn-primary" href="{{document.link}}">Mirror</a></td>
                         {% else %}
-                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.gov_url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
                             <td></td>
                         {% endif %}
                     </tr>
                 {% endfor %}
             </table>
+        {% else %}
+            <p>No files.</p>
         {% endif %}
         <button class="btn btn-primary" id="downloadAllDocuments" onclick="downloadAllDocuments()">Download All (Add to file bucket)</button>
         <p class="btn btn-primary" style="display:none" id="pleaseWaitAllDocuments">Please wait ...</p>
@@ -59,40 +59,37 @@
 <div class="card">
     <div class="card-body">
         <h3 class="card-title">Reports</h3>
-
-        {% if well.report_count == 0 %}
-        <p>No reports</p>
-        {% else %}
-            {% for report in well.reports %}
+        {% if well.reports %}
+            {% for report in well.reports.all %}
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title"><strong>{{report.report_name}}</strong></h5>
                     <div class="row align-items-start" style="border-bottom: 1px lightgrey solid; margin-bottom: 12px;">
                         <p><strong>Type</strong>: {{report.report_type}}</p>
-                        <p><strong>Government Name</strong>: {{report.gov_name}}</p>
+                        <p><strong>Government Name</strong>: {{report.gov_report_name}}</p>
                         <!-- Report Files -->
-                        {% if report.document_count == 0 %}
-                        <p>No files</p>
-                        {% else %}
+                        {% if report.documents %}
                             <table class="table table-striped table-bordered"> 
                                 <tr>
                                     <th>File Name</th>
                                     <th style="text-align:center; border-right:none;">Download</th>
                                     <th style="border-left:none;"></th>
                                 </tr>
-                                {% for document in report.documents %}
+                                {% for document in report.documents.all %}
                                     <tr>
                                         <td>{{document.document_name}}{{document.ext}}</td>
                                         {% if document.status == "DOWNLOADED" %}
-                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.gov_url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
                                             <td style="text-align:center;"><a class="btn btn-primary" href="{{document.link}}">Mirror</a></td>
                                         {% else %}
-                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.gov_url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
                                             <td></td>
                                         {% endif %}
                                     </tr>
                                 {% endfor %}
                             </table>
+                        {% else %}
+                            <p>No files</p>
                         {% endif %}
                     </div>
                     <!-- Link -->
@@ -101,9 +98,10 @@
                     <a class="btn btn-primary" style="display:none" id="completeAllReport{{report.id}}" href="{% url 'fileBucket' %}">View File Bucket</a>
                     <a class="btn btn-primary" href={{report.url}} target="_blank">View on Geoscience Portal</a>
                 </div>
-                
             </div>
             {% endfor %}
+        {% else %}
+            <p>No reports</p>
         {% endif %}
     </div>
 </div>
@@ -127,7 +125,7 @@
         document.getElementById("downloadAllDocuments").style.display = "none";
         document.getElementById("pleaseWaitAllDocuments").style.display = "inline-block";
         data = []
-        {% for document in well.documents %} 
+        {% for document in well.documents.all %} 
             data.push({{document.id}})
         {% endfor %}
 
@@ -168,12 +166,12 @@
         });
     }
 
-    {% for report in well.reports %}
+    {% for report in well.reports.all %}
     function downloadAllReport{{report.id}}(){
         document.getElementById("downloadAllReport{{report.id}}").style.display = "none";
         document.getElementById("pleaseWaitAllReport{{report.id}}").style.display = "inline-block";
         data = []
-        {% for document in report.documents %} 
+        {% for document in report.documents.all %} 
             data.push({{document.id}})
         {% endfor %}
 
