@@ -253,7 +253,6 @@ def WellJson(well):
         'latitude' : str(well.latitude),
         'longitude' : str(well.longitude),
         'rig_release_date' : well.rig_release,
-        'modified' : str(well.modified),
         'date_modified' : str(well.date_modified),
         'date_created' : str(well.date_created),
         'url' : "https://geoscience.data.qld.gov.au/borehole/" + well.gov_id,
