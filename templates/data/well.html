@@ -1,0 +1,229 @@
+{% extends 'data/base.html' %}
+{% block title %}
+{{well.well_name}}
+{% endblock %}
+
+{% block main %}
+<div class="card">
+    <div class="card-body">
+        <h2 class="card-title">{{well.well_name}}</h2>
+        <div class="row align-items-start" style="border-bottom: 1px lightgrey solid; margin-bottom: 12px;">
+            <div class="col-auto">
+                <p><strong>Owner</strong>: {{well.owner}}</p>
+                <p><strong>State</strong>: {{well.state.name_long}}</p>
+                <p><strong>Permit</strong>: {{well.permit}}</p>
+            </div>
+            <div class="col-auto">
+                <p><strong>Status</strong>: {{well.status}}</p>
+                <p><strong>Class</strong>: {{well.well_class}}</p>
+                <p><strong>Purpose</strong>: {{well.purpose}}</p>
+            </div>
+        </div>
+        <!-- Link -->
+        <a class="btn btn-primary" href={{well.url}} target="_blank">View on Geoscience Portal</a>
+    </div>
+</div>
+<!-- Files -->
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title">Files</h3>
+        {% if well.documents %}
+            <table class="table table-striped table-bordered"> 
+                <tr>
+                    <th>File Name</th>
+                    <th style="text-align:center; border-right:none;">Download</th>
+                    <th style="border-left:none;"></th>
+                </tr>
+                {% for document in well.documents.all %}
+                    <tr>
+                        <td class="link" onclick="window.location.href = '/document/{{document.id}}';">{{document.document_name_title_case}}{{document.ext}}</td>
+                        {% if document.status == document.DOWNLOADED %}
+                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                            <td style="text-align:center;"><a class="btn btn-primary" href="{{document.link}}">Mirror</a></td>
+                        {% else %}
+                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                            <td></td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+            </table>
+        {% else %}
+            <p>No files.</p>
+        {% endif %}
+        <button class="btn btn-primary" id="downloadAllDocuments" onclick="downloadAllDocuments()">Download All (Add to file bucket)</button>
+        <p class="btn btn-primary" style="display:none" id="pleaseWaitAllDocuments">Please wait ...</p>
+        <a class="btn btn-primary" style="display:none" id="completeAllDocuments" href="{% url 'fileBucket' %}">View File Bucket</a>
+    </div>
+</div>
+<!-- Reports -->
+<div class="card">
+    <div class="card-body">
+        <h3 class="card-title">Reports</h3>
+        {% if well.reports %}
+            {% for report in well.reports.all %}
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title"><strong>{{report.report_name}}</strong></h5>
+                    <div class="row align-items-start" style="border-bottom: 1px lightgrey solid; margin-bottom: 12px;">
+                        <p><strong>Type</strong>: {{report.report_type}}</p>
+                        <p><strong>Government Name</strong>: {{report.gov_report_name}}</p>
+                        <!-- Report Files -->
+                        {% if report.documents %}
+                            <table class="table table-striped table-bordered"> 
+                                <tr>
+                                    <th>File Name</th>
+                                    <th style="text-align:center; border-right:none;">Download</th>
+                                    <th style="border-left:none;"></th>
+                                </tr>
+                                {% for document in report.documents.all %}
+                                    <tr>
+                                        <td class="link" onclick="window.location.href = '/document/{{document.id}}';">{{document.document_name_title_case}}{{document.ext}}</td>
+                                        {% if document.status == "DOWNLOADED" %}
+                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                                            <td style="text-align:center;"><a class="btn btn-primary" href="{{document.link}}">Mirror</a></td>
+                                        {% else %}
+                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                                            <td></td>
+                                        {% endif %}
+                                    </tr>
+                                {% endfor %}
+                            </table>
+                        {% else %}
+                            <p>No files</p>
+                        {% endif %}
+                    </div>
+                    <!-- Link -->
+                    <button class="btn btn-primary" id="downloadAllReport{{report.id}}" onclick="downloadAllReport{{report.id}}()">Download All (Add to file bucket)</button>
+                    <p class="btn btn-primary" style="display:none" id="pleaseWaitAllReport{{report.id}}">Please wait ...</p>
+                    <a class="btn btn-primary" style="display:none" id="completeAllReport{{report.id}}" href="{% url 'fileBucket' %}">View File Bucket</a>
+                    <a class="btn btn-primary" href={{report.url}} target="_blank">View on Geoscience Portal</a>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <p>No reports</p>
+        {% endif %}
+    </div>
+</div>
+<!-- Data -->
+<div class="card p-2">
+    <h2 class="card-title">Data</h2>
+    <div class="card-body">
+        <table class="table table-striped" style="width:auto;">
+            <tr>
+                <th>Government Identifier</th>
+                <td>{{well.gov_id}}</td>
+            </tr>
+            <tr>
+                <th>Well Type</th>
+                <td>{{well.purpose}}</td>
+            </tr>
+            <tr>
+                <th>Well Status</th>
+                <td>{{well.status}}</td>
+            </tr>
+            {% for data in datas %}
+            <tr>
+                <th>{{data.DISPLAY}}</th>
+                <td>{{data.value}}{{data.unit.name}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>    
+
+<script>
+    function downloadAllDocuments(){
+        document.getElementById("downloadAllDocuments").style.display = "none";
+        document.getElementById("pleaseWaitAllDocuments").style.display = "inline-block";
+        data = []
+        {% for document in well.documents.all %} 
+            data.push({{document.id}})
+        {% endfor %}
+
+        csrftoken = getCookie('csrftoken');
+
+        json = JSON.stringify(data);
+        console.log(data)
+        $.ajax({
+            type: "POST",
+            credentials: 'same-origin',
+            url: "{% url 'saveToFileBucket' %}",
+            data: json,
+            headers: { 'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            "X-CSRFToken": csrftoken },
+            // on success
+            success: function (response) {
+                
+
+                count = response.count;
+                console.log("Count: " + count);
+                if(count == -1){
+                    AddAlert("warning", "Failed to add files to bucket.", true);
+                } else {
+                    AddAlert("info", "Files added to bucket.", true);
+
+                    document.getElementById("pleaseWaitAllDocuments").style.display = "none";
+                    document.getElementById("completeAllDocuments").style.display = "inline-block";
+                }
+            },
+            // on error
+            error: function (response) {
+                // alert the error if any error occured
+                console.log(response.responseJSON.errors)
+                AddAlert("danger", "JSON Error: Check console.", true)
+            }
+        });
+    }
+
+    {% for report in well.reports.all %}
+    function downloadAllReport{{report.id}}(){
+        document.getElementById("downloadAllReport{{report.id}}").style.display = "none";
+        document.getElementById("pleaseWaitAllReport{{report.id}}").style.display = "inline-block";
+        data = []
+        {% for document in report.documents.all %} 
+            data.push({{document.id}})
+        {% endfor %}
+
+        csrftoken = getCookie('csrftoken');
+
+        json = JSON.stringify(data);
+        console.log(data)
+        $.ajax({
+            type: "POST",
+            credentials: 'same-origin',
+            url: "{% url 'saveToFileBucket' %}",
+            data: json,
+            headers: { 'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/json',
+            "X-CSRFToken": csrftoken },
+            // on success
+            success: function (response) {
+                
+
+                count = response.count;
+                console.log("Count: " + count);
+                if(count == -1){
+                    AddAlert("warning", "Failed to add files to bucket.", true);
+                } else {
+                    AddAlert("info", "Files added to bucket.", true);
+
+                    document.getElementById("pleaseWaitAllReport{{report.id}}").style.display = "none";
+                    document.getElementById("completeAllReport{{report.id}}").style.display = "inline-block";
+                }
+            },
+            // on error
+            error: function (response) {
+                // alert the error if any error occured
+                console.log(response.responseJSON.errors)
+                AddAlert("danger", "JSON Error: Check console.", true)
+            }
+        });
+    }
+    {% endfor %}
+
+</script>
+{% endblock %}

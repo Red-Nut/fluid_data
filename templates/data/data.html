@@ -1,0 +1,76 @@
+{% extends 'data/base.html' %}
+{% block title %}
+{{document.document_name_title_case}}
+{% endblock %}
+
+{% block main %}
+<!-- Data -->
+<div class="card">
+    <h2 class="card-title">Extracted Data</h2>
+    <div class="card-body">
+        <table class="table table-striped">
+            <tr>
+                <th>Well</th>
+                <th>Operator</th>
+                <th>Government Borehole Id</th>
+                <th>Spud Date</th>
+                <th>Rig Release Date</th>
+                <th>Well Type</th>
+                <th>Well Status</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+                <th>Ground Elevation</th>
+                <th>Total Depth<br>(Driller)</th>
+                <th>Rotary Table<br>(Kelly Bushing)</th>
+            </tr>
+            {% for well in wells %}
+            <tr>
+                <th><a href="{% url 'details' well.id %}">{{well.well_name}}</a></th>
+                <td>{{well.owner}}</td>
+                <td>{{well.gov_id}}</td>
+                <td> - </td>
+                <td>{{well.rig_release}}</td>
+                <td>{{well.purpose}}</td>
+                <td>{{well.status}}</td>
+                <td>{{well.latitude}}</td>
+                <td>{{well.longitude}}</td>
+                <td>
+                    {% for document in well.documents.all %}
+                    {% for page in document.pages.all %}
+                    {% for data in page.datas.all %}
+                    {% if data.data_groundelevation %}
+                    {{data.data_groundelevation.metric}}
+                    {% endif %}
+                    {% endfor %}
+                    {% endfor %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for document in well.documents.all %}
+                    {% for page in document.pages.all %}
+                    {% for data in page.datas.all %}
+                    {% if data.data_totaldepth %}
+                    {{data.data_totaldepth.metric}}
+                    {% endif %}
+                    {% endfor %}
+                    {% endfor %}
+                    {% endfor %}
+                </td>
+                <td>
+                    {% for document in well.documents.all %}
+                    {% for page in document.pages.all %}
+                    {% for data in page.datas.all %}
+                    {% if data.data_rotarytable %}
+                    {{data.data_rotarytable.metric}}
+                    {% endif %}
+                    {% endfor %}
+                    {% endfor %}
+                    {% endfor %}
+                </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>    
+
+{% endblock %}
