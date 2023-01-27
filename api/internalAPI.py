@@ -45,7 +45,7 @@ def wellListID(orderBy):
 def Search(name, owner, state, permit, status, wellClass, purpose, 
         lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
         orderBy):
-    wellsQuery = Well.objects.all().order_by('well_name')
+    wellsQuery = Well.objects.all()
 
     # Filter: Name.
     if (name != None and name != ''):
@@ -122,17 +122,18 @@ def WellSearch(name, owner, state, permit, status, wellClass, purpose,
         wellsQuery = wellsQuery[start:end]
 
     # Get well data.
-    wells = []
-    for well in wellsQuery:
-        wellObject = WellJson(well)
-        wells.append(wellObject)
+    #wells = []
+    #for well in wellsQuery:
+    #    wellObject = WellJson(well)
+    #    wells.append(wellObject)
 
     # Response
-    response = {
-        'wells' : wells
-    }
+    #response = {
+    #    'wells' : wells
+    #}
 
-    return response
+    #return response
+    return wellsQuery
 
 def LASsearch(name, owner, state, permit, status, wellClass, purpose, 
         lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 

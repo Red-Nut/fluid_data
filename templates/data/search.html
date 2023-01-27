@@ -304,17 +304,17 @@ Data Extraction - Home
 
         <!-- Table Body -->
         <tbody id="tbody">
-            {% for well in wells%}
+            {% for well in wells %}
             <tr>
                 <td>{{well.well_name}}</td>
-                <td class="table-centre">{{well.operator}}</td>
+                <td class="table-centre">{{well.owner}}</td>
                 <td class="table-centre">{{well.state}}</td>
                 <td class="table-centre">{{well.permit}}</td>
-                <td class="table-centre">{{well.class}}</td>
+                <td class="table-centre">{{well.well_class}}</td>
                 <td class="table-centre">{{well.purpose}}</td>
-                <td class="table-centre">{{well.rig_release_date|date:"d/m/Y"}}</td>
+                <td class="table-centre">{{well.rig_release|date:"d/m/Y"}}</td>
                 <td class="table-centre">
-                    <a class="btn btn-primary" style="display:block;" href="{% url 'details' well.id %}" >View</a>
+                    <a class="btn btn-primary" style="display:block;" href="{% url 'details' id=well.id %}" >View</a>
                 </td>
             </tr>
             {% endfor %}
