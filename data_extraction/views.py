@@ -96,21 +96,25 @@ def search(request):
 			#print("Start: " + str(start))
 			#print("End: " + str(end))
 
-			wellData = internalAPI.WellSearch(wellName, owner, stateName, permit, statusName, className, purposeName,
+			wells = internalAPI.WellSearch(wellName, owner, stateName, permit, statusName, className, purposeName,
 				lat_min, lat_max, long_min, long_max, rig_release_start, rig_release_end, 
 				orderBy, start, end)
 	else:
-		wellData = internalAPI.WellSearch(None, None, None, None, None, None, None,
+		wells = internalAPI.WellSearch(None, None, None, None, None, None, None,
 				None, None, None, None, None, None, 
 				None, 0, 20)
 		form = WellFilter()
+
+		
 		
 		page = 0
 		show_qty = 20
 		orderBy = "id"
 
+	print(wells)
+	
 	context = {
-		"wellData" :  wellData,
+		"wells" : wells,
 		"form" : form,
 		"page" : page,
 		"show_qty" : show_qty,
@@ -644,10 +648,10 @@ def help(request):
 # Well Details.
 @login_required
 def details(request, id):
-	wellData = internalAPI.retrieveId(id)
+	well = Well.objects.filter(id=id).first()
 
 	context = {
-		"well" :  wellData,
+		"well" :  well,
 	}
 	return render(request, "data/details.html", context)
 
