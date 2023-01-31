@@ -345,6 +345,80 @@ class BoundingPoly(models.Model):
 	    return f"({self.x},{self.y}) {self.text.text}"
 
  # ***************************** Data  ***************************** 
+class Unit(CreatedModifiedModel):
+    name = models.CharField(max_length=20)
+    metric_units = models.CharField(max_length=20)
+    metric_conversion = models.FloatField()
+    imperial_units = models.CharField(max_length=20)
+    imperial_conversion = models.FloatField()
+
+    def __str__(self):
+	    return f"{self.name}"
+
+class DataType(CreatedModifiedModel):
+    name = models.CharField(max_length=255)
+
+    def __str__(self):
+	    return f"{self.name}"
+
+class ExtractionMethod(CreatedModifiedModel):
+    name = models.CharField(max_length=255)
+    unit = models.ForeignKey(
+        Unit,
+        null=False,
+        on_delete=models.RESTRICT
+    ) 
+    data_type = models.ForeignKey(
+        Unit,
+        null=False,
+        on_delete=models.RESTRICT
+    ) 
+
+    def __str__(self):
+	    return f"{self.name}"
+
+class ExtractionAction(CreatedModifiedModel):
+    INITIAL = 0
+    NEXT=2
+    SEARCH=2
+    TYPE = (
+        (INITIAL, _('Initial Action')),
+        (NEXT, _('Immediately Next Text')),
+        (SEARCH, _('Find Text')),
+    )
+
+    LEFT=1
+    RIGHT=2
+    UP=3
+    DOWN=4
+    DIRECTION = (
+        (LEFT, _('Left')),
+        (RIGHT, _('Right')),
+        (UP, _('Up')),
+        (DOWN, _('Down')),
+    )
+
+    type = models.PositiveSmallIntegerField(
+        choices=TYPE,
+    )
+    direction = models.PositiveSmallIntegerField(
+        choices=DIRECTION,
+    )
+
+class ExtractionActions(CreatedModifiedModel):
+    method = models.ForeignKey(
+        ExtractionMethod,
+        null=False,
+        on_delete=models.CASCADE,
+        related_name="actions"
+    ) 
+    action = models.ForeignKey(
+        ExtractionAction,
+        null=False,
+        on_delete=models.CASCADE
+    ) 
+    
+    order = models.IntegerField()
 
 class Data(CreatedModifiedModel):
     page = models.ForeignKey(
