@@ -190,6 +190,14 @@ class Report(CreatedModifiedModel):
         on_delete=models.CASCADE,
         related_name="reports"
     )
+    report_owner = models.ForeignKey(
+        Company,
+        null=True, 
+        blank=True,
+        on_delete=models.RESTRICT,
+        related_name="reports"
+    )
+
     url = models.TextField(max_length=1000,null=True, blank=True)
 
     def __str__(self):
@@ -355,21 +363,15 @@ class Unit(CreatedModifiedModel):
     def __str__(self):
 	    return f"{self.name}"
 
-class DataType(CreatedModifiedModel):
-    name = models.CharField(max_length=255)
-
-    def __str__(self):
-	    return f"{self.name}"
-
 class ExtractionMethod(CreatedModifiedModel):
-    name = models.CharField(max_length=255)
+    name = models.CharField(max_length=100)
     unit = models.ForeignKey(
         Unit,
         null=False,
         on_delete=models.RESTRICT
     ) 
     data_type = models.ForeignKey(
-        Unit,
+        DataType,
         null=False,
         on_delete=models.RESTRICT
     ) 
@@ -427,7 +429,13 @@ class Data(CreatedModifiedModel):
         on_delete=models.CASCADE,
         related_name="datas"
     ) 
-    extraction_method = models.IntegerField()
+    extraction_method = models.ForeignKey(
+        ExtractionMethod,
+        null=False,
+        on_delete=models.RESTRICT,
+        related_name="datas"
+    ) 
+    value = models.DecimalField(max_digits=10, decimal_places=2) 
 
     def __str__(self):
         return f"{self.page}"
