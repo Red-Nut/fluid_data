@@ -77,6 +77,9 @@ a:hover{
     padding-right: 24px;
 }
 .nav-item{
+    color: var(--light-color) !important;
+}
+.nav-item:hover{
     color: var(--base-color) !important;
 }
 
