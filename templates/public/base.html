@@ -6,7 +6,11 @@
     <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>{% block title %}{% endblock %}</title>
-    <link rel="shortcut icon" type="image/jpg" href="{% static 'img/fav_icon.png' %}"/>
+    <link rel="apple-touch-icon" sizes="120x120" href="{% static 'img/fav_icon/apple-touch-icon.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'img/fav_icon/favicon-32x32.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'img/fav_icon/favicon-16x16.png' %}">
+    <link rel="manifest" href="{% static 'img/fav_icon/site.webmanifest' %}">
+    <link rel="mask-icon" href="{% static 'img/fav_icon/safari-pinned-tab.svg' %}" color="#5bbad5">
     <meta name="description" content="Data Extraction">
 
     <!-- Stylesheets -->
@@ -45,9 +49,9 @@
             <a href="{% url 'index' %}" class="navbar-brand text-light p-0">
                 <div class="p-3 pe-5" style="background-color: #212529;">
                     <!-- Logo Image -->
-                    <img src="{% static 'img/fluid_logo.png' %}" height="45" alt="" class="d-inline-block align-middle mr-2">
+                    <img src="{% static 'img/fluid_logo.png' %}" height="45" alt="Fluid Data" class="d-inline-block align-middle mr-2">
                     <!-- Logo Text -->
-                    <span class="font-weight-bold c-base" style="font-size: larger;">Fluid Data</span>
+                    <span class="font-weight-bold c-base" style="font-size: larger;"></span>
                 </div>
             </a>
 
