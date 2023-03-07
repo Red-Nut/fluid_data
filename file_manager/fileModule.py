@@ -424,7 +424,7 @@ def SaveFileToDatabase(document, file_name, file_ext, file_location, file_size):
             # If file already exists - Handle Error.
             result = GenerateResult(resultList,5)
             PrintResultLog(result)
-            return result
+            #return result
             
         # Save the new file entry.
         document.file = file

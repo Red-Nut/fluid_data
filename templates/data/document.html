@@ -37,9 +37,6 @@
                     {% if document.conversion_status != document.CONVERTED %}
                     <a class="btn btn-primary" href="{% url 'convert_document_pages' document.id %}">Run Conversion</a>
                     {% endif %}
-                    <a class="btn btn-primary" href="{% url 'extract_document_data' document.id 1 %}">Get Kelling Bushing</a>
-                    <a class="btn btn-primary" href="{% url 'extract_document_data' document.id 3 %}">Get Ground Elevation</a>
-                    <a class="btn btn-primary" href="{% url 'extract_document_data' document.id 2 %}">Get Total Depth</a>
                 {% endif %}
             </div>
         </div>
@@ -47,12 +44,65 @@
         <div class="card p-2">
             <h2 class="card-title">Extracted Data</h2>
             <div class="card-body">
-                <table class="table table-striped">
-                    {% for data in datas %}
+                <table class="table">
+                    {% for type in dataTypes %}
+                    <tr><td colspan="5"></td></tr>
                     <tr>
-                        <th>{{data.DISPLAY}}</th>
-                        <td>{{data.value}}{{data.unit.name}}</td>
+                        <th colspan=4>{{type}}</th>
+                        <th><a class="btn btn-primary" href="{% url 'extract_document_data' document.id type.id %}">Search</a></th>
                     </tr>
+                    {% for data in datas %}
+                        {% if forloop.first %}
+                        <tr>
+                            <th>Page</th>
+                            {% if type.value1 %}
+                                <th>{{type.value1}}</th>
+                                {% if type.value2 %}
+                                <th>{{type.value2}}</th>
+                                {% else %}
+                                <th></th>
+                                {% endif %}
+                                {% if type.value3 %}
+                                <th>{{type.value3}}</th>
+                                {% else %}
+                                <th></th>
+                                {% endif %}
+                                {% if type.value4 %}
+                                <th>{{type.value4}}</th>
+                                {% else %}
+                                <th></th>
+                                {% endif %}
+                            {% else %}
+                            <th colspan="4">Data</th>
+                            {% endif %}
+                        </tr>
+                        {% endif %}
+                        {% if data.extraction_method.data_type == type %}
+                        <tr>
+                            <td>{{data.page.get_page}}</td>
+                            <td>
+                                {% if data.get_value1 is not None %}
+                                {{data.get_value1}}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if data.get_value2 is not None %}
+                                {{data.get_value2}}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if data.get_value3 is not None %}
+                                {{data.get_value3}}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if data.get_value4 is not None %}
+                                {{data.get_value4}}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
                     {% endfor %}
                 </table>
             </div>

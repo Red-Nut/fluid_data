@@ -10,6 +10,7 @@ from django.contrib.auth import views as auth_views
 # This module imports.
 from . import views
 from . import viewsPublic
+from interpretation import views as interpretationViews
 
 # Other module imports.
 
@@ -56,6 +57,13 @@ urlpatterns = [
         # Well Details Page
     path('well/<int:id>/', views.details, name='details'),
 
+        # Document Page
+    path('document/<int:id>/', views.document, name='document'),
+
+    # Data Extraction Methods Page
+    path('data_extraction', interpretationViews.DataExtractionList, name='data_extraction_list'),
+    path('data_extraction/<int:id>/', interpretationViews.DataExtractionView, name='data_extraction'),
+
         # Help Page.
     path('help', views.help, name='help'),
 
@@ -71,6 +79,9 @@ urlpatterns = [
 
     # API
     path('api/', include('api.urls')),
+
+    # Interpretation
+    path('interpretation/', include('interpretation.urls')),
 ]
 
 urlpatterns += static(settings.STATIC_URL, document_root = settings.STATIC_ROOT)

@@ -650,14 +650,30 @@ def help(request):
 def details(request, id):
 	well = Well.objects.filter(id=id).first()
 
+	datas = Data.objects.filter(page__document__well=well).order_by('extraction_method__data_type').all()
+
 	context = {
 		"well" :  well,
+		"datas" : datas,
 	}
 	return render(request, "data/details.html", context)
 
 
+# Document.
+@login_required
+def document(request, id):
+	document = Document.objects.filter(id=id).first()
 
+	datas = Data.objects.filter(page__document=document).order_by('extraction_method__data_type').all()
 
+	dataTypes = ExtractedDataTypes.objects.order_by("name").all()
+
+	context = {
+		"document" :  document,
+		"datas" : datas,
+		"dataTypes" : dataTypes,
+	}
+	return render(request, "data/document.html", context)
 
 
 
