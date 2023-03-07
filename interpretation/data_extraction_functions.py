@@ -28,12 +28,19 @@ def ExtractPages(document, firstPage, lastPage, delete):
         for page in document.pages.all():
             page.file.delete()
             page.delete()
+        document.conversion_status = document.NOTCONVERTED
+        document.save()
+
+    document.conversion_status = document.NOTCONVERTED
+    document.status = document.MISSING
 
     if ext == "tiff" or ext == ".tif" or ext == ".pdf":
         if document.conversion_status == document.NOTCONVERTED:
+            print('here2')
             if(document.status != document.DOWNLOADED):
+                print('here3')
                 #print("Document Status: " + document.get_status_display())
-                result = fileModule.downloadDocument(document)
+                result = fileModule.downloadWellFile(document)
                 if(result.code != "00000" and result.code != "50005"):
                     # Failed, notify users
                     #print("file not downloaded")
@@ -221,8 +228,777 @@ def getTextArray(path):
 
     return texts
 
-
 def ExtractData(document,method):
+    pages = document.pages.all()
+    actions = method.actions.all()
+    
+    for page in pages:
+        texts = page.texts.all()
+        for text in texts:
+            actionResults = []
+    
+            partialSuccess = False
+            for i, a in enumerate(actions):
+                action = a.action
+                # Initial Action
+                if action.type == action.INITIAL:
+                    actionResult = InitialAction(text,action)
+
+                # Next Action
+                elif action.type == action.NEXT:
+                    try:
+                        previousAction = actionResults[action.start-1]
+                    except:
+                        print(f"Start action out of range. Method {method.id}, Action: {action.id}")
+                        break
+
+                    previousText = previousAction.text
+                    
+
+                    # Check if it was on the end of the previous action
+                    success = False
+                    chkStr = strCorrections(action.string, action.remove_chars, True)
+                    if len(previousText) > len(chkStr):
+                        if previousText[-1*len(chkStr):] == chkStr:
+                            success = True
+
+                            # adjust previous text
+                            endCut = -1*len(chkStr)
+                            previousText = previousText[:endCut]
+
+                            # save results
+                            actionResults[action.start-1].text = previousText
+                            actionResult = Action(previousAction.texts,chkStr,True,action)
+                    if not success:
+                        actionResult = NextAction(action, actionResults[action.start-1], page)
+
+                # Search Action
+                #if action.type == action.SEARCH:
+                    #actionResult = SearchAction(action, actionResults[action.start-1], page)
+                
+                # Value Action
+                elif action.type == action.VALUE:
+                    actionResult = ValueAction(action, actionResults[action.start-1], page)
+                    if actionResult.success:
+                        valueText = actionResult.text
+
+                        if valueText is not None:
+                            if not IsNumber(valueText):
+                                if len(actions) > i + 1:
+                                    nextAction = actions[i+1].action
+                                    if nextAction.start == i+1:
+                                        if nextAction.string is not None:
+                                            chkStr = strCorrections(nextAction.string, action.remove_chars, True)
+                                            if valueText[-1*len(chkStr):] == chkStr:
+                                                endCut = -1*len(chkStr)
+                                                valueText = valueText[:endCut]
+
+                                if len(valueText) > 4:
+                                    if valueText[-3] == ',':
+                                        valueText = valueText[:-3] + '.' + valueText[-2:]
+
+                            if IsNumber(valueText):
+                                try:
+                                    value = Decimal(valueText)
+                                    actionResult.value = value
+                                except Exception as e:
+                                    actionResult = Action(actionResult.texts,actionResult.text, False, action)
+                            else:
+                                actionResult = Action(actionResult.texts,actionResult.text, False, action)
+                        else:
+                            actionResult = Action(actionResult.texts,actionResult.text, False, action)
+
+
+                # Text Value Action
+                elif action.type == action.TEXTVALUE:
+                    actionResult = ValueAction(action, actionResults[action.start-1], page)
+
+                # Save Action
+                elif action.type == action.SAVE:
+                    actionResult = Action(None,None, True, action)
+                    partialSuccess = True
+
+                # Next Data Row
+                elif action.type == action.NEXTDATA:
+                    actionResult = Action(None,None, True, action)
+
+                # No action type
+                else:
+                    actionResult = Action(None,None,False,action)
+
+                if not actionResult.success:
+                    if action.type != action.INITIAL:
+                        #pass
+                        print(actionResult)
+                    if actionResult.action.can_fail:
+                        actionResult.value=None
+                        actionResults.append(actionResult)
+                    else:
+                        break
+                else:
+                    print(actionResult)
+                    actionResults.append(actionResult)
+
+                
+                
+            # Check Success
+            if len(actions) != 0 and len(actions) == len(actionResults) or partialSuccess:
+                # Get Values
+                values = []
+                texts = []
+                units = []
+                success = True
+                j = 0
+                k = 0
+                for i in range(len(actionResults)):
+                    action = actions[i].action
+                    actionResult = actionResults[i]
+
+                    # VALUES
+                    if action.type == action.VALUE:
+                        value = actionResult.value
+                            
+                        values.append(value)
+                        texts.append(None)
+                        units.append(action.unit)
+                        k += 1
+                        
+                    # TEXT
+                    if action.type == action.TEXTVALUE:
+                        valueText = actionResult.text
+                        unit = Unit.objects.filter(name="text").first()
+                    
+                        values.append(0)
+                        texts.append(valueText)
+                        units.append(unit)
+                        k += 1
+
+                    # SAVE ROW
+                    if action.type == action.SAVE:
+                        fvalues = [None, None, None, None]
+                        ftexts = [None, None, None, None]
+                        funits = [None, None, None, None]
+                        print("SAVING VALUES ####################") 
+                        for i in range(len(values)-j):
+                            fvalues[i] = values[i+j]
+                            ftexts[i] = texts[i+j]
+                            funits[i] = units[i+j]
+                        print(fvalues)
+
+                        data = Data.objects.filter(
+                            page = page,
+                            extraction_method = method,
+                            value = fvalues[0],
+                            text = ftexts[0],
+                            unit = funits[0],
+                            value2 = fvalues[1],
+                            text2 = ftexts[1],
+                            unit2 = funits[1],
+                            value3 = fvalues[2],
+                            text3 = ftexts[2],
+                            unit3 = funits[2],
+                            value4 = fvalues[3],
+                            text4 = ftexts[3],
+                            unit4 = funits[3]
+                            ).first()
+                        if data is None:
+                            try:
+                                data = Data.objects.create(
+                                    page = page,
+                                    extraction_method = method,
+                                    value = fvalues[0],
+                                    text = ftexts[0],
+                                    unit = funits[0],
+                                    value2 = fvalues[1],
+                                    text2 = ftexts[1],
+                                    unit2 = funits[1],
+                                    value3 = fvalues[2],
+                                    text3 = ftexts[2],
+                                    unit3 = funits[2],
+                                    value4 = fvalues[3],
+                                    text4 = ftexts[3],
+                                    unit4 = funits[3]
+                                )
+                            except Exception as e:
+                                print(e)
+                                success = False
+                        j = k
+
+                # SAVE LAST ROW
+                if success and not partialSuccess:  
+                    fvalues = [None, None, None, None]
+                    ftexts = [None, None, None, None]
+                    funits = [None, None, None, None]
+                    print("SAVING VALUES ####################") 
+                    for i in range(len(values)-j):
+                        fvalues[i] = values[i+j]
+                        ftexts[i] = texts[i+j]
+                        funits[i] = units[i+j]
+                    print(fvalues)
+
+                    data = Data.objects.filter(
+                        page = page,
+                        extraction_method = method,
+                        value = fvalues[0],
+                        text = ftexts[0],
+                        unit = funits[0],
+                        value2 = fvalues[1],
+                        text2 = ftexts[1],
+                        unit2 = funits[1],
+                        value3 = fvalues[2],
+                        text3 = ftexts[2],
+                        unit3 = funits[2],
+                        value4 = fvalues[3],
+                        text4 = ftexts[3],
+                        unit4 = funits[3]
+                        ).first()
+                    if data is None:
+                        try:
+                            data = Data.objects.create(
+                                page = page,
+                                extraction_method = method,
+                                value = fvalues[0],
+                                text = ftexts[0],
+                                unit = funits[0],
+                                value2 = fvalues[1],
+                                text2 = ftexts[1],
+                                unit2 = funits[1],
+                                value3 = fvalues[2],
+                                text3 = ftexts[2],
+                                unit3 = funits[2],
+                                value4 = fvalues[3],
+                                text4 = ftexts[3],
+                                unit4 = funits[3]
+                            )
+                        except Exception as e:
+                            print(e)
+
+    return True
+
+def strCorrections(str, remove_chars, lower):
+    if str is None:
+        return None
+    else:
+        if remove_chars:
+            ignoreList = remove_chars.split('#')
+            for ignore in ignoreList:
+                str = str.replace(ignore,"")
+
+        if lower:
+            str = str.lower()
+        
+        return str
+
+def InitialAction(text,action):
+    chkStr = strCorrections(action.string, action.remove_chars, True)
+    foundStr = strCorrections(text.text, action.remove_chars, True)
+    if (chkStr in foundStr):
+        texts = []
+        texts.append(text)
+        result = Action(texts,foundStr,True,action)
+    else:
+        result = Action(None,None,False,action)
+    
+    return result
+
+def NextAction(action, startAction, page):
+    chkStr = strCorrections(action.string, action.remove_chars, True) 
+    if action.remove_chars:
+        ignoreList = action.remove_chars.split('#')
+    else:
+        ignoreList = None
+
+    # Starting Text
+    # Right or Down
+    if(action.direction == action.RIGHT or action.direction == action.DOWN):
+        startText = startAction.texts[-1]
+    # Left or Up
+    if(action.direction == action.LEFT or action.direction == action.UP):
+        startText = startAction.texts[0]
+
+    foundStr = ""
+    aTexts = []
+
+    for i in range(10):
+        result = processPoly(startText)
+        if result.code != "00000":
+            result.text = None
+            return result
+        else:
+            poly = result.poly
+
+
+        texts = Text.objects.filter(
+            page = page)
+        
+        # Right 
+        if(action.direction == action.RIGHT):
+            texts = texts.filter(BoundingPolys__x__gte = poly['x2'])
+            lowerBound = poly['y1']-poly['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+            upperBound = poly['y2']+poly['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            texts = texts.filter(BoundingPolys__y__lte = upperBound)
+
+            x = 9999999
+        # LEFT
+        elif(action.direction == action.LEFT):
+            texts = texts.filter(BoundingPolys__x__lte = poly['x1'])
+            lowerBound = poly['y1']-poly['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+            upperBound = poly['y2']+poly['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            texts = texts.filter(BoundingPolys__y__lte = upperBound)
+
+            x = -9999999
+        # Up
+        elif(action.direction == action.UP):
+            texts = texts.filter(BoundingPolys__y__lte = poly['y1'])
+            lowerBound = poly['x1']-poly['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+            upperBound = poly['x2']+poly['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            texts = texts.filter(BoundingPolys__x__lte = upperBound)
+
+            y = -9999999
+        # Down
+        elif(action.direction == action.DOWN):
+            texts = texts.filter(BoundingPolys__y__gte = poly['y2'])
+            lowerBound = poly['x1']-poly['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+            upperBound = poly['x2']+poly['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            texts = texts.filter(BoundingPolys__x__lte = upperBound)
+
+            y = 9999999
+        
+        # Ignore List
+        if ignoreList:
+            for ignore in ignoreList:
+                texts = texts.exclude(text=ignore)
+        
+        # Distinct
+        texts = texts.distinct()
+
+        
+        fText = None
+
+        for t in texts:
+            if t != startText:
+                result = processPoly(t)
+                if result.code == "00000":
+                    testPoly = result.poly
+
+                    if(action.direction == action.RIGHT):
+                        if testPoly['xave'] > poly['x2'] and testPoly['xave'] < x:
+                            if testPoly['yave'] > poly['y1'] and testPoly['yave'] < poly['y2']:
+                                x = testPoly['xave']
+                                fText = t
+                    elif(action.direction == action.LEFT):
+                        if testPoly['xave'] < poly['x2'] and testPoly['xave'] > x:
+                            if testPoly['yave'] > poly['y1'] and testPoly['yave'] < poly['y2']:
+                                x = testPoly['xave']
+                                fText = t
+
+                    elif(action.direction == action.UP):
+                        if testPoly['yave'] < poly['y2'] and testPoly['yave'] > y:
+                            if testPoly['xave'] > poly['x1'] and testPoly['xave'] < poly['x2']:
+                                y = testPoly['yave']
+                                fText = t
+
+                    elif(action.direction == action.DOWN):
+                        if testPoly['yave'] > poly['y2'] and testPoly['yave'] < y:
+                            if testPoly['xave'] > poly['x1'] and testPoly['xave'] < poly['x2']:
+                                y = testPoly['yave']
+                                fText = t
+
+
+
+        if fText is not None:
+            foundStr += strCorrections(fText.text, action.remove_chars, True)
+            aTexts.append(fText)
+            startText = fText
+
+            #print(foundStr)
+
+            if foundStr == chkStr:
+                result = Action(aTexts,foundStr,True,action)
+                return result
+
+
+    result = Action(None,None,False,action)
+    return result
+
+def SearchAction():
+    pass
+
+def ValueAction(action, startAction, page):
+    if startAction.texts is None:
+        result = Action(None,None,False,action)
+        return result
+    if action.remove_chars:
+        ignoreList = action.remove_chars.split('#')
+    else:
+        ignoreList = None
+
+    # Right
+    if(action.direction == action.RIGHT):
+        # Right
+        if startAction.action.direction == action.RIGHT:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[-1]
+        # Left
+        elif startAction.action.direction == action.LEFT:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[0]
+        # Up
+        elif startAction.action.direction == action.UP:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[0]
+        # Down
+        else:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[-1]
+
+    # Left
+    if(action.direction == action.LEFT):
+        # Right
+        if startAction.action.direction == action.RIGHT:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[0]
+        # Left
+        elif startAction.action.direction == action.LEFT:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[-1]
+        # Up
+        elif startAction.action.direction == action.UP:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[0]
+        # Down
+        else:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[-1]
+
+    # Up
+    if(action.direction == action.UP):
+        # Right
+        if startAction.action.direction == action.RIGHT:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[-1]
+        # Left
+        elif startAction.action.direction == action.LEFT:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[0]
+        # Up
+        elif startAction.action.direction == action.UP:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[-1]
+        # Down
+        else:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[0]
+
+    # Down
+    if(action.direction == action.DOWN):
+        # Right
+        if startAction.action.direction == action.RIGHT:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[-1]
+        # Left
+        elif startAction.action.direction == action.LEFT:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[0]
+        # Up
+        elif startAction.action.direction == action.UP:
+            lowerBoundText = startAction.texts[0]
+            upperBoundText = startAction.texts[0]
+        # Down
+        else:
+            lowerBoundText = startAction.texts[-1]
+            upperBoundText = startAction.texts[-1]
+
+    # poly1
+    result = processPoly(lowerBoundText)
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        poly1 = result.poly
+
+    # poly2
+    result = processPoly(upperBoundText)
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        poly2 = result.poly
+
+    # Combined Poly
+    result = combinePolys(poly1, poly2)
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        poly = result.poly
+
+    texts = Text.objects.filter(
+        page = page)
+    
+    # Offsets
+    if action.lower_offset_percent:
+        lPercent = action.lower_offset_percent
+    else:
+        lPercent = 0
+    
+    if action.upper_offset_percent:
+        hPercent = action.upper_offset_percent
+    else:
+        hPercent = 0
+
+    if action.lower_offset_pixels:
+        lPixel = action.lower_offset_pixels
+    else:
+        lPixel = 0
+
+    if action.upper_offset_pixels:
+        hPixel = action.upper_offset_pixels
+    else:
+        hPixel = 0
+
+    # Right 
+    if(action.direction == action.RIGHT):
+        texts = texts.filter(BoundingPolys__x__gte = poly['x2'])
+        
+        # Lower Bound
+        if action.lower_bound == action.START:
+            lowerStart = poly['y1']
+        elif action.lower_bound == action.MID:
+            lowerStart = poly['y1']+poly['ydif']/2
+        else:
+            lowerStart = poly['y2']
+
+        lowerBound = lowerStart + poly['ydif']*(lPercent/100) + lPixel
+        texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+        
+        # Upper Bound
+        if action.lower_bound == action.START:
+            upperStart = poly['y2']
+        elif action.lower_bound == action.MID:
+            upperStart = poly['y2']-poly['ydif']/2
+        else:
+            upperStart = poly['y1']
+            
+        upperBound = upperStart + poly['ydif']*(hPercent/100) + hPixel
+        texts = texts.filter(BoundingPolys__y__lte = upperBound)
+
+        x = 9999999
+    # LEFT
+    elif(action.direction == action.LEFT):
+        texts = texts.filter(BoundingPolys__x__lte = poly['x1'])
+
+        # Lower Bound
+        if action.lower_bound == action.START:
+            lowerStart = poly['y1']
+        elif action.lower_bound == action.MID:
+            lowerStart = poly['y1']+poly['ydif']/2
+        else:
+            lowerStart = poly['y2']
+
+        lowerBound = lowerStart + poly['ydif']*(lPercent/100) + lPixel
+        texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+        
+        # Upper Bound
+        if action.lower_bound == action.START:
+            upperStart = poly['y2']
+        elif action.lower_bound == action.MID:
+            upperStart = poly['y2']-poly['ydif']/2
+        else:
+            upperStart = poly['y1']
+
+        upperBound = upperStart + poly['ydif']*(hPercent/100) + hPixel
+        texts = texts.filter(BoundingPolys__y__lte = upperBound)
+
+        x = -9999999
+    # Up
+    elif(action.direction == action.UP):
+        texts = texts.filter(BoundingPolys__y__lte = poly['y1'])
+
+        # Lower Bound
+        if action.lower_bound == action.START:
+            lowerStart = poly['x1']
+        elif action.lower_bound == action.MID:
+            lowerStart = poly['x1']+poly['xdif']/2
+        else:
+            lowerStart = poly['x2']
+
+        lowerBound = lowerStart + poly['xdif']*(lPercent/100) + lPixel
+        texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+        
+        # Upper Bound
+        if action.lower_bound == action.START:
+            upperStart = poly['x2']
+        elif action.lower_bound == action.MID:
+            upperStart = poly['x2']-poly['xdif']/2
+        else:
+            upperStart = poly['x1']
+
+        upperBound = upperStart + poly['xdif']*(hPercent/100) + hPixel
+        texts = texts.filter(BoundingPolys__x__lte = upperBound)
+
+        y = -9999999
+        x = 9999999
+        
+    # Down
+    elif(action.direction == action.DOWN):
+        texts = texts.filter(BoundingPolys__y__gte = poly['y2']-4)
+
+        # Lower Bound
+        if action.lower_bound == action.START:
+            lowerStart = poly['x1']
+        elif action.lower_bound == action.MID:
+            lowerStart = poly['x1']+poly['xdif']/2
+        else:
+            lowerStart = poly['x2']
+
+        lowerBound = lowerStart + poly['xdif']*(lPercent/100) + lPixel
+        texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+        
+        # Upper Bound
+        if action.lower_bound == action.START:
+            upperStart = poly['x2']
+        elif action.lower_bound == action.MID:
+            upperStart = poly['x2']-poly['xdif']/2
+        else:
+            upperStart = poly['x1']
+
+        upperBound = upperStart + poly['xdif']*(hPercent/100) + hPixel
+        texts = texts.filter(BoundingPolys__x__lte = upperBound)
+
+        y = 9999999
+        x = 9999999
+    
+    # Ignore List
+    if ignoreList:
+        for ignore in ignoreList:
+            texts = texts.exclude(text=ignore)
+    
+    # Distinct
+    texts = texts.distinct()
+
+    # Get first value
+    fText = None
+    for t in texts:
+        if t != lowerBoundText and t != upperBoundText:
+            result = processPoly(t)
+            if result.code == "00000":
+                testPoly = result.poly
+
+                if(action.direction == action.RIGHT):
+                    if testPoly['xave'] > poly['x2'] and testPoly['xave'] < x:
+                        if testPoly['yave'] > lowerBound and testPoly['yave'] < upperBound:
+                            x = testPoly['xave']
+                            fText = t
+                elif(action.direction == action.LEFT):
+                    if testPoly['xave'] < poly['x2'] and testPoly['xave'] > x:
+                        if testPoly['yave'] > lowerBound and testPoly['yave'] < upperBound:
+                            x = testPoly['xave']
+                            fText = t
+
+                elif(action.direction == action.UP):
+                    test = False
+                    if testPoly['yave'] < poly['y2'] and testPoly['yave'] > (y - 4) and testPoly['xave'] < x:
+                        test = True
+                    elif testPoly['yave'] < poly['y2'] and testPoly['yave'] > (y + 4):
+                        test = True
+                    if test:
+                        if testPoly['xave'] > lowerBound and testPoly['xave'] < upperBound:
+                            y = testPoly['yave']
+                            x = testPoly['xave']
+                            fText = t
+
+                elif(action.direction == action.DOWN):
+                    test = False
+                    if testPoly['yave'] > poly['y2'] and testPoly['yave'] < (y + 4) and testPoly['xave'] < x:
+                        test = True
+                    elif testPoly['yave'] > poly['y2'] and testPoly['yave'] < (y - 4):
+                        test = True
+                    if test:
+                        if testPoly['xave'] > lowerBound and testPoly['xave'] < upperBound:
+                            y = testPoly['yave']
+                            x = testPoly['xave']
+                            fText = t
+
+
+    if fText is not None:
+        foundStr = strCorrections(fText.text, action.remove_chars, False)
+        #print(foundStr)
+ 
+        aTexts = []
+        aTexts.append(fText)
+
+        # VALUE Only
+        if action.type == action.VALUE:
+            #TODO: check that whole number was found
+            pass
+
+        # TEXTVALUE Only
+        if action.type == action.TEXTVALUE:
+            # Get rest of text string
+            startText = fText
+            # poly
+            result = processPoly(startText)
+            if result.code != "00000":
+                result.text = None
+                return result
+            else:
+                poly = result.poly
+                
+            texts = Text.objects.filter(
+                page = page)
+            texts = texts.filter(BoundingPolys__x__gte = poly['x2'])
+        
+            # Lower Bound
+            lowerStart = poly['y1']
+            lowerBound = lowerStart - 2
+            texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+            
+            # Upper Bound
+            upperStart = poly['y2']
+            upperBound = upperStart + 2
+            texts = texts.filter(BoundingPolys__y__lte = upperBound)
+
+            # Distinct
+            texts = texts.distinct()
+            for i in range(10):
+                for t in texts:
+                    if t != startText:
+                        result = processPoly(t)
+                        if result.code == "00000":
+                            testPoly = result.poly
+
+                            if testPoly['xave'] > poly['x2'] and testPoly['x1'] < (poly['x2']+10):
+                                if testPoly['yave'] > lowerBound and testPoly['yave'] < upperBound:
+                                    fText = t
+
+
+
+                if fText is not None:
+                    foundStr += " " + strCorrections(fText.text, action.remove_chars, False)
+                    aTexts.append(fText)
+                    # poly
+                    result = processPoly(fText)
+                    if result.code != "00000":
+                        result.text = None
+                        return result
+                    else:
+                        poly = result.poly
+                    
+                    startText = fText
+                    fText = None
+
+        result = Action(aTexts,foundStr,True,action)
+        return result
+
+    result = Action(None,None,False,action)
+    return result
+
+def ExtractDataBackup(document,method):
     pages = document.pages.all()
 
     for page in pages:
@@ -474,6 +1250,8 @@ def belowText(text, page):
     return result
 
 def processPoly(text):
+    # Returns a poly object from a text object
+
     polys = text.BoundingPolys.all()
     if polys.count() != 4:
         result = GenerateResult(resultList,15)
@@ -532,6 +1310,35 @@ def processPoly(text):
         'ydif' : ydif,
         'xave' : xave,
         'yave' : yave,
+    }
+
+    result = GenerateResult(resultList,0)
+    result.poly = poly
+    return result
+
+def combinePolys(poly1, poly2):
+    # Combines 2 polys into one big poly.
+
+    x1 = min(poly1['x1'],poly2['x1'])
+    x2 = max(poly1['x2'],poly2['x2'])
+    y1 = min(poly1['y1'],poly2['y1'])
+    y2 = max(poly1['y2'],poly2['y2'])
+
+    poly = {
+        'BL' : None,
+        'BR' : None,
+        'TL' : None,
+        'TR' : None,
+        'x1' : x1,
+        'x2' : x2,
+        'y1' : y1,
+        'y2' : y2,
+        'xdif' : x2 - x1,
+        'ydif' : y2 - y1,
+        'xave' : (x1+x2)/2,
+        'yave' : (y1+y2)/2,
+        'xmax' : max(x1,x2),
+        'ymax' : max(y1,y2),
     }
 
     result = GenerateResult(resultList,0)
@@ -650,3 +1457,16 @@ def getValue(text, method, page):
             except Exception as e:
                 print(e)
 
+class Action:
+    def __init__(self, texts, text, success, action):
+        self.texts = texts
+        self.text = text
+        self.value = None
+        self.success = success
+        self.action = action
+
+    def __str__(self):
+        if self.success:
+            return f"Action: Success, {self.action.get_type_display()}: {self.text}"
+        else:
+            return f"Action: Fail, {self.action.get_type_display()}: {self.action.string}"

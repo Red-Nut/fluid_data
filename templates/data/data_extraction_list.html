@@ -1,0 +1,27 @@
+{% extends 'data/base.html' %}
+{% block title %}
+Data Extraction
+{% endblock %}
+
+{% block main %}
+<div class="card">
+    <div class="card-body">
+        <table class="table">
+            <tr>
+                <th>Name</th>
+                <th>Data Type</th>
+                <th>Company</th>
+            </tr>
+            {% for method in methods %}
+            <tr onclick="window.location.href='{% url 'data_extraction' id=method.id %}'">
+                <td>{{method.name}}</td>
+                <td>{{method.data_type}}</td>
+                <td>{{method.get_company}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+
+{% endblock %}

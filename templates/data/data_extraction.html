@@ -1,0 +1,70 @@
+{% extends 'data/base.html' %}
+{% block title %}
+Data Extraction
+{% endblock %}
+
+{% block main %}
+<div class="card">
+    <div class="card-body">
+        <table class="table table-borderless" style="width:auto;">
+            <tr>
+                <th>Name</th>
+                <td>{{method.name}}</td>
+            </tr>
+            <tr>
+                <th>Data Extracted</th>
+                <td>{{method.data_type}}</td>
+            </tr>
+        </table>
+        
+        <br>
+        
+        <h4>Actions</h4>
+        <table class="table table-bordered">
+            <tr>
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">ID</th>
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">Action Type</th>
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">Search String</th>
+
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">Start From Result</th>
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">Action Direction</th>
+
+                <th colspan=3 style="text-align: center;">Lower Bound</th>
+                <th colspan=3 style="text-align: center;">Upper Bound</th>
+
+                <th rowspan="2" style="text-align: center; vertical-align: middle;">Ignored Characters</th>
+            </tr>
+            <tr>
+                <th style="text-align: center;">Origin</th>
+                <th colspan=2 style="text-align: center;">Offset</th>
+
+                <th style="text-align: center;">Origin</th>
+                <th colspan=2 style="text-align: center;">Offset</th>
+            </tr>
+
+            {% for ma in method.actions.all %} 
+            <tr>
+                <td style="text-align: center;">{{forloop.counter}}</td>
+                <td>{{ma.action.get_type_display}}</td>
+                <td>{{ma.action.string_display}}</td>
+
+                <td style="text-align: center;">{{ma.action.start_display}}</td>
+                <td style="text-align: center;">{{ma.action.direction_display}}</td>
+
+                <td style="text-align: center;">{{ma.action.lower_bound_display}}</td>
+                <td style="text-align: center;">{{ma.action.lower_offset_percent_display}}</td>
+                <td style="text-align: center;">{{ma.action.lower_offset_pixels_display}}</td>
+
+                <td style="text-align: center;">{{ma.action.upper_bound_display}}</td>
+                <td style="text-align: center;">{{ma.action.upper_offset_percent_display}}</td>
+                <td style="text-align: center;">{{ma.action.upper_offset_pixels_display}}</td>
+
+                <td style="text-align: center;">{{ma.action.remove_chars_display}}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
+
+
+{% endblock %}
