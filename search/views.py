@@ -103,7 +103,7 @@ def UpdateNewQLD(request):
     print(responseList)
 
     for response in responseList:
-        well = Well.objects.filter(well_name=response['well_name'])
+        well = Well.objects.filter(well_name=response['well_name']).first()
         if well is not None:
             print(f"Well Name: {well.well_name}")
             for document in well.documents.all():
