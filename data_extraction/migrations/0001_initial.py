@@ -406,7 +406,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='document',
             name='well',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='documents', to='data_extraction.well'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='documents', to='data_extraction.well'),
         ),
         migrations.CreateModel(
             name='Data',
