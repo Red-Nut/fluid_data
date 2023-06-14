@@ -1379,7 +1379,7 @@ class RetriveQLD:
                             # Handle Error
                             self.success = False
                             result = GenerateResult(resultList,14)
-                            result.consolLog = result.consolLog + " Well: " + well_name + " Document: " + documentName
+                            result.consolLog = result.consolLog + " Well: " + str(well) + " Document: " + documentName
                             PrintResultLog(result)
                             self.errors.append(result)
                             return result
