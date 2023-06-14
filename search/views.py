@@ -5,7 +5,7 @@ from django.http import JsonResponse
 import json
 
 # This module imports.
-from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, RetreiveAllQLD, ResultEncoder
+from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, UpdateQLD, RetreiveAllQLD, ResultEncoder
 
 
 # Other module imports.
@@ -13,7 +13,6 @@ from data_extraction.models import *
 from data_extraction.functions import ConvertToTrueFalse
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
 
-# Create your views here.
 def SearchGov(request):
     # Load request variables.
     data = json.loads(request.body.decode("utf-8"))
@@ -97,6 +96,12 @@ def UpdateAllQLD(request):
 
     #response = {'results':ResultEncoder().encode(responseList)}
     #return JsonResponse(response, safe=False)
+
+def UpdateNewQLD(request):
+    responseList = UpdateQLD()
+    print(responseList)
+    
+    return JsonResponse(responseList, safe=False)
 
 
 

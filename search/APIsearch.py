@@ -80,6 +80,124 @@ def Add(package,state):
 
     return response    
 
+def UpdateQLD():
+    # Obtains a list of all updated objects in the Queensland government database and attempts to retrieve them all.
+    responseList = []
+
+    # Construct the query.
+    query = config_search.api + 'recently_changed_packages_activity_list'
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+    # Make the get request and store it in the response object.
+    APIresponse = requests.get(query, headers=headers)
+
+    try:
+        json_response = json.loads(APIresponse.content.decode("utf-8"))
+    except Exception as e:
+        if hasattr(e, 'message'):
+            # Handle Error
+            result = GenerateResult(resultList,4)
+            result.consolLog = result.consolLog + ". Query: " + query + " Message: " + e.message
+            PrintResultLog(result)
+            responseList.append(result)
+            return responseList
+        else:
+            # Handle Error
+            result = GenerateResult(resultList,4)
+            result.consolLog = result.consolLog + ". Query: " + query
+            PrintResultLog(result)
+            print(e)
+            responseList.append(result)
+            return responseList
+
+    print("********** JSON RESPONSE ***********")    
+    print(json_response)
+    print("************************************")  
+
+    # Check for API success.
+    success = json_response["success"]
+    if(success != True):
+        # Handle Error
+        result = GenerateResult(resultList,1)
+        result.consolLog = result.consolLog + ". Query: " + query
+        PrintResultLog(result)
+        responseList.append(result)
+        return responseList
+    else:
+        # Iterate through each package.
+        packages = json_response['result']
+        count = 0
+        for packageObject in packages:
+            objectId = packageObject['object_id']
+            # Construct the query.
+            query = config_search.api + "package_show?id=" + objectId
+            # Make the get request and store it in the response object.
+            APIresponse = requests.get(query, headers=headers)
+
+            chk = False
+            try:
+                json_response2 = json.loads(APIresponse.content.decode("utf-8"))
+                success2 = json_response2["success"]
+                if(success2 != True):
+                    # Handle Error
+                    result = GenerateResult(resultList,1)
+                    result.consolLog = result.consolLog + ". Query: " + query
+                    PrintResultLog(result)
+                    responseList.append(result)
+
+                else:
+                    # Iterate through each package.
+                    pid = json_response2['result']["name"]
+                    chk = True
+
+            except Exception as e:
+                if hasattr(e, 'message'):
+                    # Handle Error
+                    result = GenerateResult(resultList,4)
+                    result.consolLog = result.consolLog + ". Query: " + query + " Message: " + e.message
+                    PrintResultLog(result)
+                    responseList.append(result)
+                else:
+                    # Handle Error
+                    result = GenerateResult(resultList,4)
+                    result.consolLog = result.consolLog + ". Query: " + query
+                    PrintResultLog(result)
+                    print(e)
+                    responseList.append(result)
+
+            if chk:
+                package = Package.objects.filter(gov_id=pid).first()
+                if package is None:
+                    print(f"New Package: {pid}")
+                    check = False
+                    try:
+                        package = Package.objects.create(gov_id=pid)
+                        check=True
+                    except Exception as e:
+                        result = GenerateResult(resultList,36)
+                        PrintResultLog(result)
+                    
+                    if check:
+                        response = Add(package,"QLD")
+                        responseList.append(response)
+                        
+                        count += 1
+                else:
+                    package.error = None
+                    package.errorCodes = None
+                
+                    response = Add(package,"QLD")
+                    responseList.append(response)
+
+                    count += 1
+
+            
+
+            if count > 400000:
+                break
+
+        return responseList
+
+
 def RetreiveAllQLD():
     recheckDays = 30
 
@@ -398,10 +516,10 @@ def ProcessWellName(title,type, permitStr, alias):
 
 def RemoveLink(mstr, subFolder):
     if(mstr is not None):
-        mstr = mstr.lower()
-        x = mstr.find("http://linked.data.gov.au/def/" + subFolder)
+        tstr = mstr.lower()
+        x = tstr.find("http://linked.data.gov.au/def/" + subFolder)
         if(x > -1):
-            mstr = mstr[x+30 + len(subFolder):]
+            mstr = tstr[x+30 + len(subFolder):]
     
     return mstr
 
@@ -700,7 +818,6 @@ class RetriveQLD:
     def CheckValidPermit(self):
         # Permit.
         permitStr = RemoveLink(self.result.get('resource_authority_permit', None),'qld-resource-permit/')
-
         # Create the permit object.
         if permitStr is not None:
             x = permitStr.find(",")
@@ -713,7 +830,7 @@ class RetriveQLD:
                 return result 
         else:
             result = GenerateResult(resultList,7)
-            #PrintResultLog(result)
+            PrintResultLog(result)
             return result            
 
 
@@ -960,10 +1077,16 @@ class RetriveQLD:
         return gov_id
 
     def ProcessPermit(self):
-        if self.CheckValidPermit() == GenerateResult(resultList,0):
+        result = self.CheckValidPermit()
+        if(result.code == "10007"):
+            return None
+        elif(result.code != "00000" and result.code != "10007"):
+            self.success = False
+            self.errors.append(result)
+            return result
+        else:
             # Permit.
             permitStr = RemoveLink(self.result.get('resource_authority_permit', None),'qld-resource-permit/')
-
             # Create the permit object.
             if(permitStr is not None):
                 permitStr = permitStr.upper()
@@ -989,8 +1112,6 @@ class RetriveQLD:
                 return permit
             else:
                 return None                
-        else:
-            return None
 
     def ProcessOperator(self):
         operator = self.result.get('owner', 'None').title()
