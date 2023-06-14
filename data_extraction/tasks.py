@@ -12,12 +12,36 @@ from django.contrib.auth import get_user_model
 from .celery import app
 
 # This module imports.
-from .models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
+from data_extraction.models import *
 
 # Other module imports.
 from file_manager import fileModule, convertToJPEG, fileBuckets
 from administration import views as admin_views
+from interpretation.views import ExtractTextFromDocument, RunPageTextAutomation
  
+@app.task
+def ProcessDocument(documentId):
+    document = Document.objects.get(id=documentId)
+     # Download Document
+    if(document.status != 2):
+        #print("Document Status: " + document.get_status_display())
+        result = fileModule.downloadWellFile(document)
+        if(result.code != "50000" and result.code != "50004"):
+            # Failed, notify users
+            print("file not downloaded")
+            print(result.code)
+
+            return
+
+    # Extract Text from document
+    result = ExtractTextFromDocument(documentId, 1, 99)
+
+    # Extract Data from text
+    dataTypes = DataType.objects.all()
+
+    for dataType in dataTypes:
+        result = RunPageTextAutomation(documentId, dataType)
+
 @app.task
 def saveFileBucket(userId):
     user = User.objects.get(pk=userId)

@@ -12,6 +12,7 @@ from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, UpdateQLD, Retreiv
 from data_extraction.models import *
 from data_extraction.functions import ConvertToTrueFalse
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
+from data_extraction import tasks
 
 def SearchGov(request):
     # Load request variables.
@@ -100,6 +101,16 @@ def UpdateAllQLD(request):
 def UpdateNewQLD(request):
     responseList = UpdateQLD()
     print(responseList)
+
+    for response in responseList:
+        well = Well.objects.filter(well_name=response['well_name'])
+        if well is not None:
+            print(f"Well Name: {well.well_name}")
+            for document in well.documents.all():
+                if document.report is not None:
+                    if document.report.report_type.type_name == "Well Completion Report":
+                        print(f"    Document sent for processing. ID: {document.id}, Name: {document.document_name}")
+                        tasks.ProcessDocument.delay(document.id)
     
     return JsonResponse(responseList, safe=False)
 

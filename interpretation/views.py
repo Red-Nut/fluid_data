@@ -30,21 +30,30 @@ def DataExtractionView(request, id):
 
     return render(request, "data/data_extraction.html", context)
 
-def ExtractTextFromDocument(request, did):
-    document = Document.objects.get(id=did)
-
-    # Convert file to images
-    result = ExtractPages(document, 1,10, False)
-    if result.code == "00000":
-        # Extract Text from images
-        result = getDocumentText(document)
+def ExtractTextFromDocumentView(request, did):
     
+    result = ExtractTextFromDocument(did, 1, 10)
 
     # Convert to Json and return the response.
     #return JsonResponse(result.description, safe=False)
     return redirect('document', did)
 
-def RunPageTextAutomation(request, did, data_type):
+def ExtractTextFromDocument(did, start, end):
+    document = Document.objects.get(id=did)
+
+    # Convert file to images
+    result = ExtractPages(document, start, end, False)
+    if result.code == "00000":
+        # Extract Text from images
+        result = getDocumentText(document)
+    return result
+
+def RunPageTextAutomationView(request, did, data_type):
+    result = RunPageTextAutomation(did, data_type)
+
+    return redirect('document', did)
+
+def RunPageTextAutomation(did, data_type):
     document = Document.objects.get(id=did)
 
     methods = ExtractionMethod.objects.filter(data_type=data_type)
@@ -52,7 +61,7 @@ def RunPageTextAutomation(request, did, data_type):
     for method in methods:
         result = ExtractData(document,method)
 
-    return redirect('document', did)
+    return True
 
 def MyFunction(request):
     wells = [
