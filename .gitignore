@@ -4,7 +4,6 @@ data_extraction.sock
 QLD API Structure (1).docx
 QLD API Structure.docx
 __pycache__/
-migrations/
 static/admin/
 data-extraction-276505-639e33986ebe.json
 data_extraction/wsgi.py
