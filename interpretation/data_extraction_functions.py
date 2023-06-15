@@ -31,14 +31,9 @@ def ExtractPages(document, firstPage, lastPage, delete):
         document.conversion_status = document.NOTCONVERTED
         document.save()
 
-    document.conversion_status = document.NOTCONVERTED
-    document.status = document.MISSING
-
     if ext == "tiff" or ext == ".tif" or ext == ".pdf":
         if document.conversion_status == document.NOTCONVERTED:
-            print('here2')
             if(document.status != document.DOWNLOADED):
-                print('here3')
                 #print("Document Status: " + document.get_status_display())
                 result = fileModule.downloadWellFile(document)
                 if(result.code != "00000" and result.code != "50005"):
@@ -51,20 +46,23 @@ def ExtractPages(document, firstPage, lastPage, delete):
                     document.status = document.DOWNLOADED
                     document.save()
 
-            documentPath = settings.MEDIA_ROOT + document.file.file_location + document.file.file_name + document.file.file_ext
+            documentLocation = document.file.file_location
+            fileName = document.file.file_name + document.file.file_ext
+            documentPath = document.file.file_location + document.file.file_name + document.file.file_ext
+            tempFolder = document.file.file_location
 
-            # Document Folder
-            documentFolder = document.file.file_location + document.file.file_name + '/'
-            result = fileModule.makeDirectory(documentFolder, settings.USE_S3)
+            # Copy to temp folder
+            result = fileModule.copyToTemp(documentPath, tempFolder, fileName)
             if result.code != "00000":
                 return result
 
             # Images Folder
-            imageFolder = document.file.file_location + document.file.file_name + '/images/'
-            result = fileModule.makeDirectory(imageFolder, settings.USE_S3)
+            imageFolder = tempFolder + 'images/'
+            result = fileModule.makeDirectory(imageFolder, False)
             if result.code != "00000":
                 return result
 
+            documentPath = settings.MEDIA_ROOT + documentPath
             imagePath = settings.MEDIA_ROOT + imageFolder
 
             # PARSE TIF FILES
@@ -128,22 +126,37 @@ def ExtractPages(document, firstPage, lastPage, delete):
                         print(e)
                         success = False
 
+                    i = 1
                     if(success):
-                        #save pages
-                        i = 1
+                        # image folder
+                        imageLocation = document.file.file_location + document.file.file_name + "/"
+                        x = imageLocation.find("/")
+                        imageLocation = "file_images" + imageLocation[x:]
+                        result = fileModule.makeDirectory(imageLocation, settings.USE_S3)
+
+                        # save pages
                         for page in pages:
-                            filename = imagePath + 'page' + str(i) + ".jpg"
-                            page.save(filename, 'JPEG')
+                            filePath = imagePath + 'page' + str(i) + ".jpg"
+                            page.save(filePath, 'JPEG')
+
+                            try:
+                                fileSize = os.path.getsize(imagePath)
+                            except Exception as e:
+                                print(e)
+                                success = False
+
+                            # Copy to permanent location
+                            fileModule.uploadFileS3(filePath, imageLocation + 'page' + str(i) + ".jpg")
+                            fileModule.deleteFile(imageFolder + 'page' + str(i) + ".jpg",False)
 
                             # Create page object
                             oPage = Page.objects.filter(document=document, page_no=i).first()
                             if oPage is None:
                                 try:
-                                    fileSize = os.path.getsize(imagePath)
                                     file = File.objects.create(
                                         file_name = 'page' + str(i),
                                         file_ext =  ".jpg",
-                                        file_location = imageFolder,
+                                        file_location = imageLocation,
                                         file_size = fileSize
                                     )
                                     oPage = Page.objects.create(
@@ -154,12 +167,25 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                     )
                                 except Exception as e:
                                     print(e)     
-                                    success = False                   
+                                    success = False
+                            else:
+                                try:
+                                    file = oPage.file
+                                     
+                                    file.file_name = 'page' + str(i)
+                                    file.file_ext =  ".jpg"
+                                    file.file_location = imageLocation
+                                    file.file_size = fileSize
 
+                                    file.save()  
+
+                                except Exception as e:
+                                    print(e)     
+                                    success = False              
                             i = i + 1
 
                     if(success):
-                        if firstPage is None and lastPage is None:
+                        if i < lastPage:
                             document.conversion_status = document.CONVERTED
                             document.save()        
 
@@ -176,6 +202,17 @@ def getDocumentText(document):
     for page in pages:
         if not page.extracted:
             file = page.file
+            
+            fileName = file.file_name + file.file_ext
+            filePath = file.file_location + file.file_name + file.file_ext
+            tempFolder = file.file_location
+
+            # Copy to temp folder
+            print(filePath)
+            result = fileModule.copyToTemp(filePath, tempFolder, fileName)
+            if result.code != "00000":
+                return result
+
             path = file.path()
 
             pageTexts = getTextArray(path)

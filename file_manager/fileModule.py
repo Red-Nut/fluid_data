@@ -261,6 +261,8 @@ def copyToTemp(filePath, tempFolder, fileName):
     if tempFolder[-1] != '/':
         tempFolder = tempFolder + "/"
 
+    folders = tempFolder.split("/")
+
     if settings.USE_S3:
         # Copy file from AWS Server
         # filePath is the S3 key (like a file path)
@@ -269,7 +271,7 @@ def copyToTemp(filePath, tempFolder, fileName):
         s3 = boto3.resource('s3')
         bucket_name = settings.AWS_STORAGE_BUCKET_NAME
 
-        #Check if file exists
+        # Check if file exists
         try:
             s3.Object(bucket_name, filePath).load()
         except botocore.exceptions.ClientError as e:
@@ -286,17 +288,26 @@ def copyToTemp(filePath, tempFolder, fileName):
                 PrintResultLog(result)
                 return result
         
-        #Download File
-        dir = makeDirectory(tempFolder, False)
-        if dir.code == "00000":
-            destination = settings.MEDIA_ROOT + tempPath
-            s3.Bucket(bucket_name).download_file(filePath, destination)
-            result = GenerateResult(resultList,0)
-            return result
-        else:
+        # Make Folders
+        folderPath = ""
+        for folder in folders:
+            folderPath += folder + '/'
+            result = makeDirectory(folderPath, False)
+            if result.code != "00000":
+                PrintResultLog(result)
+                return result
+
+        # Download File
+        #dir = makeDirectory(tempFolder, False)
+        #if dir.code == "00000":
+        destination = settings.MEDIA_ROOT + tempPath
+        s3.Bucket(bucket_name).download_file(filePath, destination)
+        result = GenerateResult(resultList,0)
+        return result
+        #else:
             # Handle Error.
-            result = dir
-            return result
+            #result = dir
+            #return result
 
     else:
         # Copy file from local server

@@ -9,4 +9,6 @@ urlpatterns = [
     path('addMany', views.AddMany, name='API_SearchAddMany'),
     path('updateAllQld/', views.UpdateAllQLD),
     path('updateQld/', views.UpdateNewQLD), 
+
+    path('myFun/', views.MyFunction)
 ]

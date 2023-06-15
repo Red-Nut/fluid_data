@@ -1,5 +1,6 @@
 # Django imports.
 from django.http import JsonResponse
+from django.shortcuts import HttpResponse
 
 # Third party imports.
 import json
@@ -13,6 +14,7 @@ from data_extraction.models import *
 from data_extraction.functions import ConvertToTrueFalse
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
 from data_extraction import tasks
+from interpretation.views import ExtractTextFromDocument, RunPageTextAutomation
 
 def SearchGov(request):
     # Load request variables.
@@ -114,7 +116,58 @@ def UpdateNewQLD(request):
     
     return JsonResponse(responseList, safe=False)
 
+def MyFunction(request):
+    wells = [
+        "BURUNGA 2",
+        "BURUNGA 2A",
+        "BURUNGA LANE 4",
+        "BURUNGA LANE 5",
+        "BURUNGA LANE 6",
+        "PEAT 1",
+        "PEAT 10",
+        "PEAT 15",
+        "PEAT 16",
+        "PEAT 444",
+        "PEAT 45",
+        "PEAT 46",
+        "PEAT 47",
+        "SCOTIA 34",
+        "SCOTIA 35",
+        "SCOTIA 44",
+        "SCOTIA 45",
+        "SOUTH BURUNGA 2",
+        "POLARIS 140",
+        "POLARIS 142",
+        "POLARIS 150",
+        "ACRUX 144",
+        "ACRUX 145",
+        "ACRUX 146",
+    ]
 
+    results = []
+
+    for well_name in wells:
+        well = Well.objects.filter(well_name=well_name).first()
+        if well is None:
+            results.append(f"New Well Added: {well.well_name}")
+        else: 
+            results.append(f"Processing Well: {well.well_name}")
+
+        print(f"Well Name: {well.well_name}")
+        for document in well.documents.all():
+            if document.report is not None:
+                if document.report.report_type.type_name == "Well Completion Report":
+                    print(f"    Document sent for processing. ID: {document.id}, Name: {document.document_name}")
+                    tasks.ProcessDocument.delay(document.id)
+
+
+
+    response = {
+		'results' : results,
+	}
+
+    json_resonse = json.dumps(response)
+    return HttpResponse(json_resonse)
 
 
 
