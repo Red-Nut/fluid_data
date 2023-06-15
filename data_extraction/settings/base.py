@@ -119,7 +119,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 LOGIN_REDIRECT_URL = '/home/'
 
-os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "interpretation/data-extraction-276505-e59abccd808d.json"
+os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "interpretation/data-extraction-276505-c6b99822c08c.json"
 
 
 
