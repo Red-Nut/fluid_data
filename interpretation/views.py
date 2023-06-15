@@ -42,18 +42,14 @@ def ExtractTextFromDocumentView(request, did):
 
 def ExtractTextFromDocument(did, start, end):
     document = Document.objects.get(id=did)
-    print(f"Document: {document.document_name}")
 
     # Convert file to images
-    print("extract pages")
     result = ExtractPages(document, start, end, False)
     if result.code == "00000":
         # Extract Text from images
-        print("extract text")
         result = getDocumentText(document)
 
     # Cleanup Temporary Files
-    print("file cleanup")
     if settings.USE_S3:
         tempFolder = document.file.file_location
         fileModule.deleteDirectory(tempFolder,False)

@@ -107,18 +107,17 @@ def UpdateQLD():
             PrintResultLog(result)
             print(e)
             responseList.append(result)
-            return responseList
-
-    print("********** JSON RESPONSE ***********")    
-    print(json_response)
-    print("************************************")  
+            return responseList 
 
     # Check for API success.
     success = json_response["success"]
     if(success != True):
+        errMsg = ""
+        if "error" in json_response2:
+            errMsg = f", Error Type: {json_response2['error']['__type']}, Error Msg: {json_response2['error']['message']}"
         # Handle Error
         result = GenerateResult(resultList,1)
-        result.consolLog = result.consolLog + ". Query: " + query
+        result.consolLog = result.consolLog + ". Query: " + query + errMsg
         PrintResultLog(result)
         responseList.append(result)
         return responseList
@@ -127,6 +126,18 @@ def UpdateQLD():
         packages = json_response['result']
         count = 0
         for packageObject in packages:
+            if packageObject['activity_type'] == "deleted package":
+                print("Deleted Package")
+                response = {
+                    'success':True,
+                    'package':"Deleted",
+                    'title':None,
+                    'well_name':None,
+                    'errors':None,
+                }
+                responseList.append(response)
+                continue
+            
             objectId = packageObject['object_id']
             # Construct the query.
             query = config_search.api + "package_show?id=" + objectId
@@ -138,9 +149,12 @@ def UpdateQLD():
                 json_response2 = json.loads(APIresponse.content.decode("utf-8"))
                 success2 = json_response2["success"]
                 if(success2 != True):
+                    errMsg = ""
+                    if "error" in json_response2:
+                        errMsg = f", Error Type: {json_response2['error']['__type']}, Error Msg: {json_response2['error']['message']}"
                     # Handle Error
                     result = GenerateResult(resultList,1)
-                    result.consolLog = result.consolLog + ". Query: " + query
+                    result.consolLog = result.consolLog + ". Query: " + query + errMsg
                     PrintResultLog(result)
                     responseList.append(result)
 

@@ -105,14 +105,13 @@ def UpdateNewQLD(request):
     print(responseList)
 
     for response in responseList:
-        well = Well.objects.filter(well_name=response['well_name']).first()
-        if well is not None:
-            print(f"Well Name: {well.well_name}")
-            for document in well.documents.all():
-                if document.report is not None:
-                    if document.report.report_type.type_name == "Well Completion Report":
-                        print(f"    Document sent for processing. ID: {document.id}, Name: {document.document_name}")
-                        tasks.ProcessDocument.delay(document.id)
+        if response['package'] != "Deleted":
+            well = Well.objects.filter(well_name=response['well_name']).first()
+            if well is not None:
+                for document in well.documents.all():
+                    if document.report is not None:
+                        if document.report.report_type.type_name == "Well Completion Report":
+                            tasks.ProcessDocument.delay(document.id)
     
     return JsonResponse(responseList, safe=False)
 
@@ -153,11 +152,9 @@ def MyFunction(request):
         else: 
             results.append(f"Processing Well: {well.well_name}")
 
-        print(f"Well Name: {well.well_name}")
         for document in well.documents.all():
             if document.report is not None:
                 if document.report.report_type.type_name == "Well Completion Report":
-                    print(f"    Document sent for processing. ID: {document.id}, Name: {document.document_name}")
                     tasks.ProcessDocument.delay(document.id)
 
 
