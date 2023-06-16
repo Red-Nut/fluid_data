@@ -275,6 +275,7 @@ class Document(CreatedModifiedModel):
         on_delete=models.SET_NULL
     )
     url = models.TextField(max_length=1000,null=True)
+    gov_id = models.CharField(max_length=100, unique=True, null=True)
     status = models.PositiveSmallIntegerField(
         choices=STATUS,
         default=1,
@@ -305,6 +306,27 @@ class Document(CreatedModifiedModel):
     @property
     def document_name_title_case(self):
         return self.document_name.title()
+    
+    @property
+    def document_type(self):
+        if self.file is not None:
+            return self.file.file_ext[1:].lower()
+        elif self.url is not None:
+            x = len(self.url) - self.url.rfind('.')
+            ext = self.url[-x:].lower()
+            return ext
+        else:
+            return 'Unknown'
+    
+    def file_ext(self):
+        if self.file is not None:
+            return self.file.file_ext.lower()
+        elif self.url is not None:
+            x = len(self.url) - self.url.rfind('.')
+            ext = self.url[-x:].lower()
+            return ext
+        else:
+            return '.Unknown'
 
 # ***************************** Page Text  ***************************** 
 

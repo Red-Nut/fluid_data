@@ -36,7 +36,7 @@
                 </tr>
                 {% for document in well.documents.all %}
                     <tr>
-                        <td class="link" onclick="window.location.href = '/document/{{document.id}}';">{{document.document_name_title_case}}{{document.ext}}</td>
+                        <td class="link" onclick="window.location.href = '/document/{{document.id}}';">{{document.document_name_title_case}}{{document.file_ext}}</td>
                         {% if document.status == document.DOWNLOADED %}
                             <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
                             <td style="text-align:center;"><a class="btn btn-primary" href="{{document.link}}">Mirror</a></td>

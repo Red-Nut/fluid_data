@@ -6,7 +6,7 @@ from django.shortcuts import HttpResponse
 import json
 
 # This module imports.
-from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, UpdateQLD, RetreiveAllQLD, ResultEncoder
+from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, UpdateQLD, RetreiveAllQLD, SearchStrQLD, ResultEncoder
 
 
 # Other module imports.
@@ -151,6 +151,11 @@ def MyFunction(request):
             results.append(f"New Well Added: {well.well_name}")
         else: 
             results.append(f"Processing Well: {well.well_name}")
+        searchResults = SearchStrQLD(well_name)
+        for result in searchResults:
+            if 'errors' in result:
+                result['errors'] = json.loads(result['errors'])
+            results.append(result)
 
         for document in well.documents.all():
             if document.report is not None:

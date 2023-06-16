@@ -50,7 +50,7 @@ searchList = [
     Result(codeBase + '034','Unreachable State.','Unreachable State.'), 
     Result(codeBase + '035','Database error - Failed to commit other data to database.','Failed to commit other data to database.'),
     Result(codeBase + '036','Database error - Failed to commit package to database.','Failed to commit package to database.'),
-    Result(codeBase + '037','',''), 
+    Result(codeBase + '037','Package has no name field','Package has no name field'), 
     Result(codeBase + '038','',''), 
     Result(codeBase + '039','',''), 
     Result(codeBase + '040','',''),  

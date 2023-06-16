@@ -211,7 +211,6 @@ def UpdateQLD():
 
         return responseList
 
-
 def RetreiveAllQLD():
     recheckDays = 30
 
@@ -296,6 +295,76 @@ def RetreiveAllQLD():
                 break
 
         return responseList
+
+def SearchStrQLD(searchStr):
+    # Obtains a list of all updated objects in the Queensland government database and attempts to retrieve them all.
+    responseList = []
+
+    # Construct the query.
+    query = config_search.api + 'package_search?q=' + searchStr
+    headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/50.0.2661.102 Safari/537.36'}
+    # Make the get request and store it in the response object.
+    APIresponse = requests.get(query, headers=headers)
+
+    try:
+        json_response = json.loads(APIresponse.content.decode("utf-8"))
+    except Exception as e:
+        if hasattr(e, 'message'):
+            # Handle Error
+            result = GenerateResult(resultList,4)
+            result.consolLog = result.consolLog + ". Query: " + query + " Message: " + e.message
+            PrintResultLog(result)
+            responseList.append(result)
+            return responseList
+        else:
+            # Handle Error
+            result = GenerateResult(resultList,4)
+            result.consolLog = result.consolLog + ". Query: " + query
+            PrintResultLog(result)
+            print(e)
+            responseList.append(result)
+            return responseList 
+
+    # Check for API success.
+    success = json_response["success"]
+    if(success != True):
+        errMsg = ""
+        if "error" in json_response2:
+            errMsg = f", Error Type: {json_response2['error']['__type']}, Error Msg: {json_response2['error']['message']}"
+        # Handle Error
+        result = GenerateResult(resultList,1)
+        result.consolLog = result.consolLog + ". Query: " + query + errMsg
+        PrintResultLog(result)
+        responseList.append(result)
+        return responseList
+    else:
+        # Iterate through each package.
+        packages = json_response['result']['results']
+        for packageObject in packages:
+            if "name" in packageObject:
+                pid = packageObject['name']
+                package = Package.objects.filter(gov_id=pid).first()
+                if package is None:
+                    check = False
+                    try:
+                        package = Package.objects.create(gov_id=pid)
+                        check=True
+                    except Exception as e:
+                        result = GenerateResult(resultList,36)
+                        PrintResultLog(result)
+                    
+                    if check:
+                        response = Add(package,"QLD")
+                        responseList.append(response)
+                else:
+                    response = Add(package,"QLD")
+                    responseList.append(response)
+            else:
+                result = GenerateResult(resultList,36)
+                PrintResultLog(result)
+                responseList.append(result)
+        return responseList
+
 
 def UpdateId(wellName, gov_id):
     well = Well.objects.filter(well_name=wellName).first()
@@ -1370,23 +1439,26 @@ class RetriveQLD:
                 # Check if resource is active.
                 if (resource['state'] == "active"):
 
-                    # Document Name.
+                    # Document properties
                     documentName = resource['name']
-                    
-                    # URL.
                     url = resource['url']
+                    docId = resource['id']
 
                     # Check if document exists.
-                    if well is not None:
-                        document = Document.objects.filter(well=well,document_name=documentName).first()
-                    else:
-                        document = Document.objects.filter(report=report,document_name=documentName).first()
-                    if(document is None):
+                    document = Document.objects.filter(gov_id=docId).first()
+                    if document is None:
+                        document = Document.objects.filter(url=url).first()
+                        if document is not None:
+                            document.gov_id = docId
+                            document.save()
+
+                    if document is None:
                         try:
                             document = Document.objects.create(
                                 document_name = documentName,
                                 well=well,
                                 url = url,
+                                gov_id = docId,
                                 report=report
                             )
                         except:
@@ -1399,7 +1471,7 @@ class RetriveQLD:
                             return result
                     else:
                         # Add to report (if duplicate already added without)
-                        if(report is not None):
+                        if document.report is None and report is not None:
                             try:
                                 document.report = report
                                 document.save()
@@ -1419,7 +1491,6 @@ class RetriveQLD:
                         result.consolLog = result.consolLog + " Duplicate Document. Well: " + wellName + " Document: " + documentName
                         PrintResultLog(result)
                         self.errors.append(result)
-                        return result
             
             result = GenerateResult(resultList,0)
             return result    
