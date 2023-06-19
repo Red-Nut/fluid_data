@@ -312,7 +312,7 @@ class Document(CreatedModifiedModel):
         if self.file is not None:
             return self.file.file_ext[1:].lower()
         elif self.url is not None:
-            x = len(self.url) - self.url.rfind('.')
+            x = len(self.url) - self.url.rfind('.') -1
             ext = self.url[-x:].lower()
             return ext
         else:
