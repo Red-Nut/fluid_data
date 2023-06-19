@@ -1,14 +1,18 @@
 .env
 venv/
+__pycache__/
+files/
+static/admin/
+logs/
+temp/
+documentation/superseded/
+
 data_extraction.sock
 QLD API Structure (1).docx
 QLD API Structure.docx
-__pycache__/
-static/admin/
 data-extraction-276505-639e33986ebe.json
 data_extraction/wsgi.py
 data_extraction/settings/dev1.py
-temp/
 data_extraction/settings/.env.bak
 data_extraction/settings/base.py
 pymp-devf67c9/.fuse_hidden000133d900000257
@@ -17,7 +21,5 @@ example2.txt
 example3.txt
 example4.txt
 documentation/Data Structure.xlsx
-documentation/superseded/
-files/
 interpretation/data-extraction-276505-e59abccd808d.json
 interpretation/data-extraction-276505-c6b99822c08c.json

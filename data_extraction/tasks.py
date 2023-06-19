@@ -19,24 +19,31 @@ from file_manager import fileModule, convertToJPEG, fileBuckets
 from administration import views as admin_views
 from interpretation.views import ExtractTextFromDocument, RunPageTextAutomation
  
+# Logging
+import logging
+log = logging.getLogger("celery_tasks")
+
 @app.task
 def ProcessDocument(documentId):
     document = Document.objects.get(id=documentId)
+
+    log.debug(f"Begin processing document. Well: {{document.well.well_name}} ({{document.well.id}}), Document: {{document.document_name}} (document.id)")
+
      # Download Document
-    if(document.status != 2):
-        #print("Document Status: " + document.get_status_display())
+    if(document.status != document.DOWNLOADED and document.status != document.IGNORED):
+        log.debug(f"Downloading document. Document: {document.id}, Status: {document.get_status_display()}")
         result = fileModule.downloadWellFile(document)
         if(result.code != "50000" and result.code != "50004"):
             # Failed, notify users
-            print("file not downloaded")
-            print(result.code)
-
+            log.error(f"Document not downloaded. Document: {document.id}, Error {result.code}: {result.description}")
             return
 
     # Extract Text from document
+    log.debug(f"Extract Text from document. Well: {{document.well.well_name}} ({{document.well.id}}), Document: {{document.document_name}} (document.id)")
     result = ExtractTextFromDocument(documentId, 1, 99)
 
     # Extract Data from text
+    log.debug(f"Extract Data from document. Well: {{document.well.well_name}} ({{document.well.id}}), Document: {{document.document_name}} (document.id)")
     dataTypes = DataType.objects.all()
 
     for dataType in dataTypes:

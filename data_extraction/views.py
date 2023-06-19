@@ -24,16 +24,20 @@ from api import internalAPI
 from file_manager import fileModule, convertToJPEG, fileBuckets
 from interpretation import googleText
 
-
+# Logging
+import logging
+log = logging.getLogger("data_extraction")
 
 # Logout.
 def logout_view(request):
 	logout(request)
+	log.debug(f"Logging out user: {request.user.username}.")
 	return render(request, "public/logout.html")
 
 # Index.
 @login_required
 def index(request):
+	log.debug("Loading index page.")
 	return render(request, "data/index.html")
 
 # Well Search.
@@ -121,7 +125,7 @@ def search(request):
 		"orderBy" : orderBy,
 	}
 
-	
+	log.debug("Loading search view.")
 	return render(request, "data/search.html", context)
 
 # File Search.
@@ -228,6 +232,7 @@ def fileBucketNone(request):
 	context["name"] = "Unsaved File Bucket"
 	context["saved"] = False
 
+	log.debug(f"Loading filebucket view. Bucket id: {fileBucket.id}")
 	return render(request, "data/fileBucket.html", context)
 
 @login_required
@@ -239,9 +244,9 @@ def fileBucketID(request, id):
 	context["saved"] = True
 	context["link"] = settings.MEDIA_URL + "file_buckets/" + fileBucket.name + ".zip"
 
+	log.debug(f"Loading filebucket view. Bucket id: {fileBucket.id}")
 	return render(request, "data/fileBucket.html", context)
 
-@login_required
 def FileBucket(fileBucket):
 	fileBucketFiles = FileBucketFiles.objects.filter(bucket=fileBucket).all()
 
@@ -299,6 +304,8 @@ def FileBucket(fileBucket):
 # File Bucket - Add to.
 @login_required
 def saveToFileBucket(request):
+	log.debug(f"Saving filebuck of user {request.user.username}.")
+
 	data = json.loads(request.body.decode("utf-8"))
 
 	fileBucket = UserFileBucket.objects.filter(user=request.user).first()
@@ -338,6 +345,7 @@ def emptyFileBucketRequest(request):
 		return JsonResponse(response)		
 
 def emptyFileBucket(user):
+	log.debug(f"Deleting filebuck of user {request.user.username}.")
 	fileBucket = UserFileBucket.objects.filter(user=user).first()
 
 	if(fileBucket is not None):
@@ -351,6 +359,7 @@ def emptyFileBucket(user):
 @login_required
 def saveFileBucket(request):
 	userId = request.user.id
+	log.debug(f"Sending task to celery to saving file bucket of user {request.user.username}.")
 	tasks.saveFileBucket.delay(userId)
 
 	response = {'success':True}
@@ -367,6 +376,7 @@ def deleteFileBucket(request, id):
 
 	fileBucket.delete()
 
+	log.debug("Redirecting to profile view after deleting file bucket.")
 	return redirect('profile')
 
 # API.
@@ -438,8 +448,6 @@ def Profile(request):
 		}
 		buckets.append(bucket)
 
-	
-	# Response Data.
 	context={
 		"userProfile" : userProfile,
 		"privilege" : privilege,
@@ -449,7 +457,7 @@ def Profile(request):
 		"bucketCount" : bucketCount,
 	}
 
-	# Return Response.
+	log.debug("Loading profile view")
 	return render(request, "data/profile.html", context)
 
 @login_required
@@ -597,6 +605,7 @@ def UpdateProfile(request):
 	}
 
 	json_resonse = json.dumps(response)
+	log.debug("Profile Update HTTP Response")
 	return HttpResponse(json_resonse)
 
 
@@ -637,12 +646,13 @@ def Company(request):
 		"privilege" : privilege,
 		"organisationUsers" : organisationUsers,
 	}
-
+	log.debug("Loading company view")
 	return render(request, "data/company.html", context)
 
 # Help.
 @login_required
 def help(request):
+	log.debug("Loading help view")
 	return render(request, "data/help.html")
 
 # Well Details.
@@ -656,6 +666,7 @@ def details(request, id):
 		"well" :  well,
 		"datas" : datas,
 	}
+	log.debug("Loading well view")
 	return render(request, "data/details.html", context)
 
 
@@ -673,6 +684,7 @@ def document(request, id):
 		"datas" : datas,
 		"dataTypes" : dataTypes,
 	}
+	log.debug("Loading document view")
 	return render(request, "data/document.html", context)
 
 

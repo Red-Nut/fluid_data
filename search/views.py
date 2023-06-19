@@ -8,13 +8,16 @@ import json
 # This module imports.
 from .APIsearch import APISearchQLD, WebScrapeSearchQLD, Add, UpdateQLD, RetreiveAllQLD, SearchStrQLD, ResultEncoder
 
-
 # Other module imports.
 from data_extraction.models import *
 from data_extraction.functions import ConvertToTrueFalse
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
 from data_extraction import tasks
 from interpretation.views import ExtractTextFromDocument, RunPageTextAutomation
+
+# Logging
+import logging
+log = logging.getLogger("search")
 
 def SearchGov(request):
     # Load request variables.
@@ -101,8 +104,10 @@ def UpdateAllQLD(request):
     #return JsonResponse(response, safe=False)
 
 def UpdateNewQLD(request):
+    log.info("Running daily QLD update function.")
+
     responseList = UpdateQLD()
-    print(responseList)
+    log.debug(responseList)
 
     for response in responseList:
         if response['package'] != "Deleted":
@@ -111,7 +116,10 @@ def UpdateNewQLD(request):
                 for document in well.documents.all():
                     if document.report is not None:
                         if document.report.report_type.type_name == "Well Completion Report":
+                            log.debug(f"Document sent to celery for processing. Well: {well.well_name} ({well.id}), Document: {document.document_name} ({document.id})")
                             tasks.ProcessDocument.delay(document.id)
+            else:
+                log.warning(f"Well not processed as does not exist in the system. Well: {response['well_name']}")
     
     return JsonResponse(responseList, safe=False)
 
@@ -149,17 +157,21 @@ def MyFunction(request):
         well = Well.objects.filter(well_name=well_name).first()
         if well is None:
             results.append(f"New Well Added: {well.well_name}")
+            log.debug(f"New Well Added: {well.well_name}")
         else: 
             results.append(f"Processing Well: {well.well_name}")
+            log.debug(f"Processing Well: {well.well_name}")
         searchResults = SearchStrQLD(well_name)
         for result in searchResults:
             if 'errors' in result:
                 result['errors'] = json.loads(result['errors'])
+                log.error(json.loads(result['errors']))
             results.append(result)
 
         for document in well.documents.all():
             if document.report is not None:
                 if document.report.report_type.type_name == "Well Completion Report":
+                    log.debug(f"Document sent to celery for processing. Well: {well_name} ({well.id}), Document: {document.document_name} ({document.id})")
                     tasks.ProcessDocument.delay(document.id)
 
 
