@@ -299,7 +299,7 @@ class Document(CreatedModifiedModel):
         if(self.file is None):
             link = None
         else:
-            link = settings.MEDIA_URL + 'well_data/' + self.file.file_location + self.file.file_name + '.' + self.file.file_ext.replace(".","")
+            link = settings.MEDIA_URL + self.file.file_location + self.file.file_name + '.' + self.file.file_ext.replace(".","")
 
         return link
     

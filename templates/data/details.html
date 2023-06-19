@@ -38,10 +38,10 @@
                     <tr>
                         <td class="link" onclick="window.location.href='{% url 'document' id=document.id %}'">{{document.document_name}}{{document.file_ext}}</td>
                         {% if document.status == document.DOWNLOADED %}
-                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
-                            <td style="text-align:center;"><a class="btn btn-primary" href="{{document.link}}">Mirror</a></td>
+                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.link}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                            <td style="text-align:center;"><a class="btn btn-primary" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}" target="_blank">Mirror</a></td>
                         {% else %}
-                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}" target="_blank">Download</a></td>
                             <td></td>
                         {% endif %}
                     </tr>
@@ -79,10 +79,10 @@
                                     <tr>
                                         <td class="link" onclick="window.location.href='{% url 'document' id=document.id %}'">{{document.document_name}}{{document.file_ext}}</td>
                                         {% if document.status == "DOWNLOADED" %}
-                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
-                                            <td style="text-align:center;"><a class="btn btn-primary" href="{{document.link}}">Mirror</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.link}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                                            <td style="text-align:center;"><a class="btn btn-primary" href="{{document.url}}" target="_blank">Mirror</a></td>
                                         {% else %}
-                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
+                                            <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}" target="_blank">Download</a></td>
                                             <td></td>
                                         {% endif %}
                                     </tr>

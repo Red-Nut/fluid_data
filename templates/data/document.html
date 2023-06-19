@@ -25,10 +25,10 @@
                 </table>
                 <br>
                 {% if document.status == document.DOWNLOADED %}
-                    <a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download File</a>
-                    <a class="btn btn-primary" href="{{document.link}}">Mirror</a>
+                    <a  class="btn btn-primary document" href="{{document.link}}" download="{{document.document_name}}{{document.ext}}">Download File</a>
+                    <a class="btn btn-primary" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}" target="_blank">Mirror</a>
                 {% else %}
-                    <a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}">Download File</a>
+                    <a  class="btn btn-primary document" href="{{document.url}}" download="{{document.document_name}}{{document.ext}}" target="_blank">Download File</a>
                 {% endif %}
                 <br>
                 <br>
