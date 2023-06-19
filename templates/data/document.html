@@ -112,30 +112,82 @@
         <!-- Preview -->
         <div class="card mb-0" style="height:100%; min-height: 700px;">
             <div class="card-body">
-                {% if document.file %}
-                <p class="link" style="text-align:right; position: absolute; right: 30px; top:30px;"><i class="fas fa-expand-arrows-alt fa-2x"></i></p>
-                <iframe src="{{document.file.url}}#toolbar=0&navpanes=0" width="100%" height="100%"></iframe>
-                {% else %}
-                    <p>No file available for preview</p>
-                {% endif %}
+                <div>
+                    {% for page in document.pages.all %}
+                    {% if forloop.first %}
+                    <img id="{{page.get_page}}" src="{{page.link}}" alt="{{page.get_page}}" width="100%" height="auto">
+                    {% else %}
+                    <img id="{{page.get_page}}" src="{{page.link}}" alt="{{page.get_page}}" width="100%" height="auto" style="display:None">
+                    {% endif %}
+                    {% endfor %}
+                    <!-- Full Screen -->
+                    <p class="link" style="text-align:right; position: absolute; right: 30px; top:30px;"><i class="fas fa-expand-arrows-alt fa-2x"></i></p>
+                </div>
+                <div id="controls" style="display: flex; justify-content: center; width: 100%; padding-top: 6px; margin-top: 6px; border-top: 1px solid darkgray;">
+                    <!-- Previous -->
+                    <p class="link" style="padding:0px; margin-right:20px;" onclick="FirstPage()"><i class="fas fa-chevron-circle-left fa-2x"></i></p>
+                    <p class="link" style="padding:0px; margin-right:20px;" onclick="PreviousPage()"><i class="fas fa-chevron-left fa-2x"></i></p>
+                    <!-- Jump to Page -->
+                    <p id="currentPage" style="padding:0px;">1 of {{document.pages.count}}</p>
+                    <!-- Next -->
+                    <p class="link" style="padding:0px; margin-left:20px;" onclick="NextPage()"><i class="fas fa-chevron-right fa-2x"></i></p>
+                    <p class="link" style="padding:0px; margin-left:20px;" onclick="LastPage()"><i class="fas fa-chevron-circle-right fa-2x"></i></p>
+                </div>
+                
             </div>
         </div>
     </div>
 </div>
 
-<!-- Data -->
-<div style="display:none;" class="card">
-    <div class="card-body">
-        <h3 class="card-title">Data</h3>
-        <table class="table">
-            <tr><th>Gas Content</th><td>Not Available</td></tr>
-            <tr></tr><th>Isotherm</th><td>Not Available</td></tr>
-            <tr></tr><th>Maceral Analysis</th><td>Not Available</td></tr>
-            <tr></tr><th>Frac Data</th><td>Not Available</td></tr>
-            <tr></tr><th>Production Data</th><td>Not Available</td></tr>
-            <tr></tr><th>DHG Pressure Data</th><td>Not Available</td></tr>
-        </table>
-    </div>
-</div>
+<script>
+    currentPage = 0
+    pages = [
+        {% for page in document.pages.all %}
+        {% if forloop.last %}
+        "{{page.get_page}}"
+        {% else %}
+        "{{page.get_page}}",
+        {% endif %}
+        {% endfor %}
+    ]
+
+    function NextPage(){
+        currentPage += 1
+        if (currentPage >= pages.length){
+            currentPage = pages.length - 1;
+        }
+        GoToPage(currentPage);
+    }
+
+    function PreviousPage(){
+        currentPage -= 1
+        if (currentPage < 0){
+            currentPage = 0;
+        }
+        GoToPage(currentPage);
+    }
+
+    function FirstPage(){
+        currentPage = 0
+        GoToPage(currentPage);
+    }
+
+    function LastPage(){
+        currentPage =pages.length - 1
+        GoToPage(currentPage);
+    }
+
+    function GoToPage(pageNo){
+        for (let i = 0; i < pages.length; i++) {
+            page = pages[i];
+            if (i == pageNo){
+                document.getElementById(page).style.display = "Inline";
+                document.getElementById("currentPage").innerText = (i+1) + " of {{document.pages.count}}";
+            } else {
+                document.getElementById(page).style.display = "None";
+            }
+        }
+    }
+</script>
 
 {% endblock %}

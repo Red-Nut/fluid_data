@@ -359,6 +359,15 @@ class Page(CreatedModifiedModel):
     @property
     def get_page(self):
         return f"Page {self.page_no}"
+    
+    @property
+    def link(self):
+        if(self.file is None):
+            link = None
+        else:
+            link = settings.MEDIA_URL + self.file.file_location + self.file.file_name + '.' + self.file.file_ext.replace(".","")
+
+        return link
 
 class Text(models.Model):
     page = models.ForeignKey(
