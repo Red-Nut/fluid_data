@@ -164,15 +164,18 @@ def MyFunction(request):
         searchResults = SearchStrQLD(well_name)
         for result in searchResults:
             if 'errors' in result:
-                result['errors'] = json.loads(result['errors'])
-                log.error(json.loads(result['errors']))
+                if 'success' in result:
+                    if result['success'] == False:
+                        result['errors'] = json.loads(result['errors'])
+                        for error in result['errors']:
+                            log.error(error)
             results.append(result)
 
         for document in well.documents.all():
             if document.report is not None:
                 if document.report.report_type.type_name == "Well Completion Report":
                     log.debug(f"Document sent to celery for processing. Well: {well_name} ({well.id}), Document: {document.document_name} ({document.id})")
-                    tasks.ProcessDocument.delay(document.id)
+                    #tasks.ProcessDocument.delay(document.id)
 
 
 
