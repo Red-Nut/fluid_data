@@ -104,7 +104,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Australia/Brisbane'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
@@ -120,67 +120,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/home/'
 
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "interpretation/data-extraction-276505-c6b99822c08c.json"
-
-# LOGGING
-# DEBUG, INFO, WARNING, ERROR, CRITICAL
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "verbose": {
-            "format": "{levelname} {asctime} {module} {name}:{message}",
-            "style": "{",
-        },
-        "simple": {
-            "format": "{levelname} {name}:{message}",
-            "style": "{",
-        },
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "simple",
-        },
-        "file": {
-            "class": "logging.FileHandler",
-            "filename": env('LOG_PATH') + "/fluid_data.log",
-            "formatter": "verbose",
-        },
-    },
-    'loggers': {
-       # notice the blank '', Usually you would put built in loggers like django or root here based on your needs
-       # '': {
-       #     'handlers': ['console','file'], 
-       #     'level': 'WARNING',
-       #     'propagate': True,
-       # },
-        'data_extraction': {
-            'handlers': ['console','file'], 
-            'level': 'WARNING',
-            'propagate': True,
-        },
-        'celery_tasks': {
-            'handlers': ['console','file'], 
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'file_manager': {
-            'handlers': ['console','file'], 
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'search': {
-            'handlers': ['console','file'], 
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-        'interpretation': {
-            'handlers': ['console','file'], 
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-    },
-}
 
 
 
@@ -207,3 +146,7 @@ REDIS_PORT = '6379'
 BROKER_URL = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
 BROKER_TRANSPORT_OPTIONS = {'visibility_timeout':3600}
 CELERY_RESULT_BACKEND = 'redis://' + REDIS_HOST + ':' + REDIS_PORT + '/0'
+CELERY_WORKER_CONCURRENCY = 1
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+
+
