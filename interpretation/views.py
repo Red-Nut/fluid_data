@@ -10,6 +10,10 @@ from .data_extraction_functions import ExtractPages, getDocumentText, ExtractDat
 from data_extraction.models import *
 from file_manager import fileModule
 
+# Logging
+import logging
+log = logging.getLogger("interpretation")
+
 def DataExtractionList(request):
     methods = ExtractionMethod.objects.order_by("name").all()
 
@@ -42,6 +46,7 @@ def ExtractTextFromDocumentView(request, did):
 
 def ExtractTextFromDocument(did, start, end):
     document = Document.objects.get(id=did)
+    log.debug(f"Extracting Text from document: {document.document_name} ({document.id})")
 
     # Convert file to images
     result = ExtractPages(document, start, end, False)
@@ -54,6 +59,7 @@ def ExtractTextFromDocument(did, start, end):
         tempFolder = document.file.file_location
         fileModule.deleteDirectory(tempFolder,False)
 
+    log.debug(f"Extraction complete. Result: {result.description} ({result.code})")
     return result
 
 def RunPageTextAutomationView(request, did, data_type):

@@ -15,6 +15,10 @@ from data_extraction.functions import CleanStr, CleanURL, GetExtFromFileNameOrPa
 from data_extraction.models import Company, Data, Document, File, Page, Permit, Report, ReportType, State, Well, WellClass, WellStatus, WellPurpose
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, downloadList as resultList
 
+# Logging
+import logging
+log = logging.getLogger("file_manager")
+
 def makeDirectory(newFolder, S3):
     # Make a new folder on local drive or key on AWS.
     # newFolder: the new folder or key to be create.
@@ -444,11 +448,17 @@ def SaveFileToDatabase(document, file_name, file_ext, file_location, file_size):
         document.save()
 
     except Exception as e:
-        # Handle Error.
-        result = GenerateResult(resultList,3)
-        PrintResultLog(result)
-        print(e)
-        return result
+        if hasattr(e, 'message'):
+            # Handle Error
+            result = GenerateResult(resultList,3)
+            result.consolLog = result.consolLog + ". Message: " + e.message
+            log.error(result.consolLog)
+            return result
+        else:
+            # Handle Error
+            result = GenerateResult(resultList,3)
+            log.error(result.consolLog)
+            return result
 
     # Success.
     result = GenerateResult(resultList,0)
