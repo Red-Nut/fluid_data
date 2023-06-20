@@ -124,6 +124,8 @@ def UpdateNewQLD(request):
     return JsonResponse(responseList, safe=False)
 
 def MyFunction(request):
+    log.debug("Running my function")
+    
     wells = [
         "BURUNGA 2",
         #"BURUNGA 2A",
