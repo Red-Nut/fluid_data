@@ -149,23 +149,33 @@ LOGGING = {
     },
     'loggers': {
        # notice the blank '', Usually you would put built in loggers like django or root here based on your needs
-        '': {
-            'handlers': ['console','file'], #notice how file variable is called in handler which has been defined above
-            'level': 'WARNING',
-            'propagate': True,
-        },
+       # '': {
+       #     'handlers': ['console','file'], 
+       #     'level': 'WARNING',
+       #     'propagate': True,
+       # },
         'data_extraction': {
-            'handlers': ['console','file'], #notice how file variable is called in handler which has been defined above
+            'handlers': ['console','file'], 
             'level': 'WARNING',
             'propagate': True,
         },
         'celery_tasks': {
-            'handlers': ['console','file'], #notice how file variable is called in handler which has been defined above
+            'handlers': ['console','file'], 
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'file_manager': {
+            'handlers': ['console','file'], 
             'level': 'DEBUG',
             'propagate': True,
         },
         'search': {
-            'handlers': ['console','file'], #notice how file variable is called in handler which has been defined above
+            'handlers': ['console','file'], 
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'interpretation': {
+            'handlers': ['console','file'], 
             'level': 'DEBUG',
             'propagate': True,
         },

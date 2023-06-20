@@ -3,7 +3,7 @@ from data_extraction.settings.base import *
 ALLOWED_HOSTS = ['localhost', '10.10.10.10','13.54.13.187','fluiddata.com.au','www.fluiddata.com.au']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 DATABASES = {
     'default': {
