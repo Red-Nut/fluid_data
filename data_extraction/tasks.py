@@ -42,7 +42,7 @@ def ProcessDocument(documentId):
     #log.debug(f"({document.id}) Extract Text from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
     result = ExtractTextFromDocument(documentId, 1, 99)
     if(result.code != "00000"):
-        log.error(f"({document.id}) Error {result.code}: {result.description}. While extracting text from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        log.error(f"({document.id}) Error {result.code}: {result.description}. While extracting images/text from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
 
     # Extract Data from text
     #log.debug(f"({document.id}) Extract Data from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")

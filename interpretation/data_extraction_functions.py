@@ -41,9 +41,7 @@ def ExtractPages(document, firstPage, lastPage, delete):
                 #print("Document Status: " + document.get_status_display())
                 result = fileModule.downloadWellFile(document)
                 if(result.code != "00000" and result.code != "50005"):
-                    # Failed, notify users
-                    #print("file not downloaded")
-                    print(result.code)
+                    log.error('File not downloaded Error %s: %s. Document: %i', result.code, result.consolLog, document.id)
                     return result
                 else:
                     # Success
@@ -149,13 +147,13 @@ def ExtractPages(document, firstPage, lastPage, delete):
                         except EOFError:
                             # Not enough frames in img
                             result = GenerateResult(resultList,10)
-                            result.consolLog =  result.consolLog + ". Not enough frames in img."
+                            result.consolLog =  result.consolLog + "Not enough frames in img. Document: " + document.id + " Page: " + (i+1)
                             log.error(result.consolLog)
                             success = False
                             break
                 except Exception as e:
                     result = GenerateResult(resultList,10)
-                    result.consolLog =  result.consolLog + ". Failed to open: " + imagePath + ". Image is probably too large."
+                    result.consolLog =  result.consolLog + ". Failed to open: " + imagePath + ". Image is probably too large. Document: " + document.id + " Page: " + (i+1)
                     log.error(result.consolLog)
                     return result
                 
