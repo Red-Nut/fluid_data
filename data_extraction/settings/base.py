@@ -153,27 +153,27 @@ LOGGING = {
        # },
         'data_extraction': {
             'handlers': ['console','file'], 
-            'level': 'WARNING',
+            'level': env('LOG_LEVEL_DATA_EXTRACTION'),
             'propagate': True,
         },
         'celery_tasks': {
             'handlers': ['console','file'], 
-            'level': 'DEBUG',
+            'level': env('LOG_LEVEL_CELERY_TASKS'),
             'propagate': True,
         },
         'file_manager': {
             'handlers': ['console','file'], 
-            'level': 'DEBUG',
+            'level': env('LOG_LEVEL_FILE_MANAGER'),
             'propagate': True,
         },
         'search': {
             'handlers': ['console','file'], 
-            'level': 'DEBUG',
+            'level': env('LOG_LEVEL_SEARCH'),
             'propagate': True,
         },
         'interpretation': {
             'handlers': ['console','file'], 
-            'level': 'DEBUG',
+            'level': env('LOG_LEVEL_INTERPRETATION'),
             'propagate': True,
         },
     },
