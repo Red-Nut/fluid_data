@@ -86,7 +86,7 @@ convertList = [
     Result(codeBase + "005", "Unable to create page object in database.", "Unable to create page object in database."),
     Result(codeBase + "006", "Unable to create file object in database.", "Unable to create file object in database."),
     Result(codeBase + "007", "Error saving PDF page.", "Error saving PDF page."),
-    Result(codeBase + "008", "", ""),
+    Result(codeBase + "008", "There were errors during the conversion", "There were errors during the conversion"),
     Result(codeBase + "009", "", ""),
     Result(codeBase + "010", "TIFF error: ", "TIFF error: "),
     Result(codeBase + "011", "JPEG error: ", "JPEG error: "),

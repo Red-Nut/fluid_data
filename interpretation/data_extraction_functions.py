@@ -21,6 +21,10 @@ from decimal import Decimal
 from google.cloud import vision
 from google.protobuf.json_format import MessageToJson
 
+# Logging
+import logging
+log = logging.getLogger("interpretation")
+
 def ExtractPages(document, firstPage, lastPage, delete):
     ext = GetDocumentExt(document)
 
@@ -79,28 +83,81 @@ def ExtractPages(document, firstPage, lastPage, delete):
                         min = firstPage - 1
                     if lastPage is not None:
                         max = lastPage - 1
+
+                    # image folder
+                    imageLocation = document.file.file_location + document.file.file_name + "/"
+                    x = imageLocation.find("/")
+                    imageLocation = "file_images" + imageLocation[x:]
+                    result = fileModule.makeDirectory(imageLocation, settings.USE_S3)
+
                     for i in range(min,max):
                         if(i == 999):
-                            print("Warning: reached 1000 pages in file %s" % name)
+                            result = GenerateResult(resultList,13)
+                            return result
                         try:
                             #load page
                             im.seek(i)
-                            outfile = imagePath + '/page' + str(i+1) + '.jpg'
+                            filePath = imagePath + '/page' + str(i+1) + '.jpg'
                             try:
                                 im.thumbnail(im.size)
-                                im.save(outfile, "JPEG", quality=100)
+                                im.save(filePath, "JPEG", quality=100)
                             except:
-                                print("failed to create JPEG: " + outfile)
+                                result = GenerateResult(resultList,11)
+                                result.consolLog =  result.consolLog + ". Failed to create JPEG: " + filePath
+                                log.error(result.consolLog)
                                 success = False
+
+                            # Copy to permanent location
+                            fileModule.uploadFileS3(filePath, imageLocation + 'page' + str(i+1) + ".jpg")
+                            fileModule.deleteFile(imageFolder + 'page' + str(i+1) + ".jpg",False)
+
+                            # Create page object
+                            oPage = Page.objects.filter(document=document, page_no=i+1).first()
+                            if oPage is None:
+                                try:
+                                    file = File.objects.create(
+                                        file_name = 'page' + str(i+1),
+                                        file_ext =  ".jpg",
+                                        file_location = imageLocation,
+                                        file_size = fileSize
+                                    )
+                                    oPage = Page.objects.create(
+                                        document = document,
+                                        page_no = i+1,
+                                        file = file,
+                                        extracted = False
+                                    )
+                                except Exception as e:
+                                    result = GenerateResult(resultList,5)
+                                    log.error(result.consolLog)
+                                    success = False
+                            else:
+                                try:
+                                    file = oPage.file
+                                     
+                                    file.file_name = 'page' + str(i+1)
+                                    file.file_ext =  ".jpg"
+                                    file.file_location = imageLocation
+                                    file.file_size = fileSize
+
+                                    file.save()  
+
+                                except Exception as e:
+                                    result = GenerateResult(resultList,6)
+                                    log.error(result.consolLog)
+                                    success = False
                         except EOFError:
                             # Not enough frames in img
-                            print("Not enough frames in img")
+                            result = GenerateResult(resultList,10)
+                            result.consolLog =  result.consolLog + ". Not enough frames in img."
+                            log.error(result.consolLog)
                             success = False
                             break
                 except Exception as e:
-                    print("Failed to open: " + imagePath + ". Image is probably too large.")
-                    print(e)
-                    success = False
+                    result = GenerateResult(resultList,10)
+                    result.consolLog =  result.consolLog + ". Failed to open: " + imagePath + ". Image is probably too large."
+                    log.error(result.consolLog)
+                    return result
                 
                 if(success):
                     if firstPage is None and lastPage is None:
@@ -122,9 +179,9 @@ def ExtractPages(document, firstPage, lastPage, delete):
                         )
                         success = True
                     except Exception as e:
-                        #print("File too large")
-                        print(e)
-                        success = False
+                        result = GenerateResult(resultList,14)
+                        log.error(result.consolLog)
+                        return result
 
                     i = 1
                     if(success):
@@ -142,8 +199,17 @@ def ExtractPages(document, firstPage, lastPage, delete):
                             try:
                                 fileSize = os.path.getsize(imagePath)
                             except Exception as e:
-                                print(e)
-                                success = False
+                                if hasattr(e, 'message'):
+                                    # Handle Error
+                                    result = GenerateResult(resultList,11)
+                                    result.consolLog = result.consolLog + ". Message: " + e.message
+                                    log.error(result.consolLog)
+                                    success = False
+                                else:
+                                    # Handle Error
+                                    result = GenerateResult(resultList,11)
+                                    log.error(result.consolLog)
+                                    success = False
 
                             # Copy to permanent location
                             fileModule.uploadFileS3(filePath, imageLocation + 'page' + str(i) + ".jpg")
@@ -166,7 +232,8 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                         extracted = False
                                     )
                                 except Exception as e:
-                                    print(e)     
+                                    result = GenerateResult(resultList,5)
+                                    log.error(result.consolLog)
                                     success = False
                             else:
                                 try:
@@ -180,7 +247,8 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                     file.save()  
 
                                 except Exception as e:
-                                    print(e)     
+                                    result = GenerateResult(resultList,6)
+                                    log.error(result.consolLog)
                                     success = False              
                             i = i + 1
 
@@ -193,8 +261,11 @@ def ExtractPages(document, firstPage, lastPage, delete):
         document.conversion_status = document.IGNORED
         document.save()        
 
-    result = GenerateResult(resultList,0)
-    return result
+    if success:
+        result = GenerateResult(resultList,8)
+        return result
+    else:
+
     
 def getDocumentText(document):
     pages = Page.objects.filter(document = document, extracted = False).all()
