@@ -262,10 +262,11 @@ def ExtractPages(document, firstPage, lastPage, delete):
         document.save()        
 
     if success:
-        result = GenerateResult(resultList,8)
+        result = GenerateResult(resultList,0)
         return result
     else:
-
+        result = GenerateResult(resultList,8)
+        return result
     
 def getDocumentText(document):
     pages = Page.objects.filter(document = document, extracted = False).all()
