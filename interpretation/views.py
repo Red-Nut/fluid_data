@@ -73,6 +73,12 @@ def RunPageTextAutomationView(request, did, data_type):
 def RunPageTextAutomation(did, data_type):
     document = Document.objects.get(id=did)
 
+    if document.conversion_status == 3:
+        return True
+
+    if document.conversion_status == 1:
+        return False
+
     methods = ExtractionMethod.objects.filter(data_type=data_type)
 
     for method in methods:
