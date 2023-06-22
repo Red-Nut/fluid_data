@@ -49,15 +49,18 @@ def ExtractTextFromDocument(did, start, end):
     log.debug(f"Extracting Text from document: {document.document_name} ({document.id})")
 
     # Convert file to images
+    print("a")
     result = ExtractPages(document, start, end, False)
+    print("here10")
     if result.code == "00000":
         # Extract Text from images
-        result = getDocumentText(document)
+        pass
+        #result = getDocumentText(document)
 
     # Cleanup Temporary Files
     if settings.USE_S3:
         tempFolder = document.file.file_location
-        fileModule.deleteDirectory(tempFolder,False)
+        #fileModule.deleteDirectory(tempFolder,False)
 
     log.debug(f"Extraction complete. Result: {result.description} ({result.code})")
     return result

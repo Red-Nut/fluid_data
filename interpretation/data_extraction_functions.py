@@ -26,7 +26,9 @@ import logging
 log = logging.getLogger("interpretation")
 
 def ExtractPages(document, firstPage, lastPage, delete):
+    log.debug('Extracting Pages for Well: %s, Document %s (%i).', document.well.well_name, document.document_name, document.id)
     ext = GetDocumentExt(document)
+    success = False
 
     if delete:
         for page in document.pages.all():
@@ -41,13 +43,12 @@ def ExtractPages(document, firstPage, lastPage, delete):
                 #print("Document Status: " + document.get_status_display())
                 result = fileModule.downloadWellFile(document)
                 if(result.code != "00000" and result.code != "50005"):
-                    log.error('File not downloaded Error %s: %s. Document: %i', result.code, result.consolLog, document.id)
+                    log.error(f"File not downloaded Error. Error {result.code}: {result.consolLog}. Document: {document.id}")
                     return result
                 else:
                     # Success
                     document.status = document.DOWNLOADED
                     document.save()
-
             documentLocation = document.file.file_location
             fileName = document.file.file_name + document.file.file_ext
             documentPath = document.file.file_location + document.file.file_name + document.file.file_ext
@@ -69,10 +70,38 @@ def ExtractPages(document, firstPage, lastPage, delete):
 
             # PARSE TIF FILES
             if ext == "tiff" or ext == ".tif":
+                log.debug('Processing TIF file.')
                 success = True
+
+                # Get number of pages
+                try:
+                    img = Image.open(documentPath)
+                    width, height = img.size
+                    pixels = width*height
+                    log.debug('Pixels: %i, Document: %i', pixels, document.id)
+                    log.debug('Max Pixels %i', Image.MAX_IMAGE_PIXELS)
+
+                    img.load()
+                    log.debug('Pages in TIFF file: %i', img.n_frames)
+                    pageCount = img.n_frames
+                except:
+                    result = GenerateResult(resultList,10)
+                    log.error(f"Error {result.code}: {result.consolLog}. Unable to load image. Document: {document.id}")
+
+                # set quality
+                if pageCount == 1 and pixels > 1000000:
+                    # Single page log file.
+                    document.conversion_status = document.IGNORED
+                    document.save()
+                    result = GenerateResult(resultList,0)
+                    return result
+                else: 
+                    quality = 70
+
                 try:
                     #open tif
                     im = Image.open(documentPath)
+                    success = True
 
                     #loop through pages
                     min = 0
@@ -80,7 +109,12 @@ def ExtractPages(document, firstPage, lastPage, delete):
                     if firstPage is not None:
                         min = firstPage - 1
                     if lastPage is not None:
-                        max = lastPage - 1
+                        max = lastPage
+                        if max > pageCount:
+                            max = pageCount
+                        max = max
+                    else:
+                        max = pageCount
 
                     # image folder
                     imageLocation = document.file.file_location + document.file.file_name + "/"
@@ -94,24 +128,45 @@ def ExtractPages(document, firstPage, lastPage, delete):
                             return result
                         try:
                             #load page
+                            log.debug('Loading page %i', (i+1))
                             im.seek(i)
                             filePath = imagePath + '/page' + str(i+1) + '.jpg'
                             try:
                                 im.thumbnail(im.size)
-                                im.save(filePath, "JPEG", quality=100)
+                                im.save(filePath, "JPEG", subsampling=0, quality=quality)
                             except:
                                 result = GenerateResult(resultList,11)
                                 result.consolLog =  result.consolLog + ". Failed to create JPEG: " + filePath
-                                log.error(result.consolLog)
+                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i+1)}")
                                 success = False
 
+                            try:
+                                fileSize = os.path.getsize(filePath)
+                            except Exception as e:
+                                if hasattr(e, 'message'):
+                                    # Handle Error
+                                    result = GenerateResult(resultList,11)
+                                    result.consolLog = result.consolLog + ". Message: " + e.message
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
+                                    success = False
+                                else:
+                                    # Handle Error
+                                    result = GenerateResult(resultList,11)
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
+                                    success = False
+                            
                             # Copy to permanent location
                             fileModule.uploadFileS3(filePath, imageLocation + 'page' + str(i+1) + ".jpg")
                             fileModule.deleteFile(imageFolder + 'page' + str(i+1) + ".jpg",False)
-
+                            
                             # Create page object
                             oPage = Page.objects.filter(document=document, page_no=i+1).first()
                             if oPage is None:
+                                log.debug('Creating new page for document: %s (%i) of well: %s)', document.document_name, document.id, document.well.well_name)
+                                log.debug('file_name: page%s', (i+1))
+                                log.debug('file_ext: .jpg')
+                                log.debug('file_location: %s', imageLocation)
+                                log.debug('file_size: %i', fileSize)
                                 try:
                                     file = File.objects.create(
                                         file_name = 'page' + str(i+1),
@@ -127,7 +182,7 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                     )
                                 except Exception as e:
                                     result = GenerateResult(resultList,5)
-                                    log.error(result.consolLog)
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i+1)}")
                                     success = False
                             else:
                                 try:
@@ -142,23 +197,33 @@ def ExtractPages(document, firstPage, lastPage, delete):
 
                                 except Exception as e:
                                     result = GenerateResult(resultList,6)
-                                    log.error(result.consolLog)
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i+1)}")
                                     success = False
                         except EOFError:
-                            # Not enough frames in img
-                            result = GenerateResult(resultList,10)
-                            result.consolLog =  result.consolLog + "Not enough frames in img. Document: " + document.id + " Page: " + (i+1)
-                            log.error(result.consolLog)
-                            success = False
-                            break
+                            if hasattr(e, 'message'):
+                                # Not enough frames in img
+                                result = GenerateResult(resultList,10)
+                                result.consolLog =  result.consolLog + ". Message: " + e.message
+                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i+1)}")
+                                success = False
+                                break
+                            else:
+                                # Not enough frames in img
+                                result = GenerateResult(resultList,10)
+                                result.consolLog =  result.consolLog + "Not enough frames in img."
+                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i+1)}")
+                                success = False
+                                break
+                            
+                
                 except Exception as e:
                     result = GenerateResult(resultList,10)
-                    result.consolLog =  result.consolLog + ". Failed to open: " + imagePath + ". Image is probably too large. Document: " + document.id + " Page: " + (i+1)
-                    log.error(result.consolLog)
+                    result.consolLog =  result.consolLog + ". Failed to open: " + imagePath + ". Image is probably too large."
+                    log.error(f"Error {result.code}: {result.consolLog} Document: {document.id}, Page: {(i+1)}")
                     return result
                 
                 if(success):
-                    if firstPage is None and lastPage is None:
+                    if firstPage == 1 and pageCount == max:
                         document.conversion_status = document.CONVERTED
                         document.save()      
 
@@ -201,12 +266,12 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                     # Handle Error
                                     result = GenerateResult(resultList,11)
                                     result.consolLog = result.consolLog + ". Message: " + e.message
-                                    log.error(result.consolLog)
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
                                     success = False
                                 else:
                                     # Handle Error
                                     result = GenerateResult(resultList,11)
-                                    log.error(result.consolLog)
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
                                     success = False
 
                             # Copy to permanent location
@@ -231,7 +296,7 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                     )
                                 except Exception as e:
                                     result = GenerateResult(resultList,5)
-                                    log.error(result.consolLog)
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
                                     success = False
                             else:
                                 try:
@@ -246,18 +311,19 @@ def ExtractPages(document, firstPage, lastPage, delete):
 
                                 except Exception as e:
                                     result = GenerateResult(resultList,6)
-                                    log.error(result.consolLog)
+                                    log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
                                     success = False              
                             i = i + 1
 
                     if(success):
-                        if i < lastPage:
+                        if firstPage == 1 and i < lastPage:
                             document.conversion_status = document.CONVERTED
                             document.save()        
 
     else:
         document.conversion_status = document.IGNORED
-        document.save()        
+        document.save()   
+        success = True     
 
     if success:
         result = GenerateResult(resultList,0)
