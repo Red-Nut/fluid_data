@@ -49,13 +49,10 @@ def ExtractTextFromDocument(did, start, end):
     log.debug(f"Extracting Text from document: {document.document_name} ({document.id})")
 
     # Convert file to images
-    print("a")
     result = ExtractPages(document, start, end, False)
-    print("here10")
     if result.code == "00000":
         # Extract Text from images
-        pass
-        #result = getDocumentText(document)
+        result = getDocumentText(document)
 
     # Cleanup Temporary Files
     if settings.USE_S3:
@@ -73,16 +70,22 @@ def RunPageTextAutomationView(request, did, data_type):
 def RunPageTextAutomation(did, data_type):
     document = Document.objects.get(id=did)
 
-    if document.conversion_status == 3:
+    if document.conversion_status == document.IGNORED:
         return True
 
-    if document.conversion_status == 1:
+    if document.conversion_status == document.NOTCONVERTED:
         return False
 
-    methods = ExtractionMethod.objects.filter(data_type=data_type)
+    if data_type == 0:
+        methods = ExtractionMethod.objects.all()
+    else:
+        methods = ExtractionMethod.objects.filter(data_type=data_type)
 
     for method in methods:
+        print(f"Method: {method.name} ({method.id})")
         result = ExtractData(document,method)
+        if result == False:
+            log.warning('Text Extraction Failed. Document: %s (%i), Method: %s (%i)', document.document_name, document.id, method.name, method.id)
 
-    return True
+    return redirect('document', did)
 
