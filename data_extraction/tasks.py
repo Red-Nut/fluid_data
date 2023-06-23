@@ -25,6 +25,7 @@ log = logging.getLogger("celery_tasks")
 
 @app.task
 def ProcessDocument(documentId):
+    success = True
     document = Document.objects.get(id=documentId)
 
     log.debug(f"({document.id}) Begin processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
@@ -36,6 +37,7 @@ def ProcessDocument(documentId):
         if(result.code != "00000"):
             # Failed, notify users
             log.error(f"({document.id}) Document not downloaded. Document: {document.id}, Error {result.code}: {result.description}")
+            success = False
             return
 
     # Extract Text from document
@@ -43,17 +45,25 @@ def ProcessDocument(documentId):
     result = ExtractTextFromDocument(documentId, 1, 99)
     if(result.code != "00000"):
         log.error(f"({document.id}) Error {result.code}: {result.description}. While extracting images/text from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        success = False
 
     # Extract Data from text
-    #log.debug(f"({document.id}) Extract Data from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-    dataTypes = DataType.objects.all()
+    if document.conversion_status == document.CONVERTED:
+        #log.debug(f"({document.id}) Extract Data from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        dataTypes = DataType.objects.all()
+        for dataType in dataTypes:
+            result = RunPageTextAutomation(documentId, dataType)
+            if(result != True):
+                log.error(f"({document.id}) Error while extracting data from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+                success = False
 
-    for dataType in dataTypes:
-        result = RunPageTextAutomation(documentId, dataType)
-        if(result != True):
-            log.error(f"({document.id}) Error while extracting data from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-
-    log.debug(f"({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+    if success:
+        log.debug(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+    else:
+        log.debug(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        
+    
+    return
 
 @app.task
 def saveFileBucket(userId):
@@ -146,11 +156,13 @@ def saveFileBucket(userId):
         recipient_list=[user.email],
         fail_silently=False,
     )
+    return
 
 
 @app.task
 def deleteFileBucket(filePath, useS3):
     fileModule.deleteFile(filePath, useS3)
+    return
 
 def emptyFileBucket(user):
 	fileBucket = UserFileBucket.objects.filter(user=user).first()
