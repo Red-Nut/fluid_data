@@ -41,11 +41,12 @@ def ProcessDocument(documentId):
             return
 
     # Extract Text from document
-    #log.debug(f"({document.id}) Extract Text from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-    result = ExtractTextFromDocument(documentId, 1, 99)
-    if(result.code != "00000"):
-        log.error(f"({document.id}) Error {result.code}: {result.description}. While extracting images/text from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-        success = False
+    if document.conversion_status != document.IGNORED:
+        #log.debug(f"({document.id}) Extract Text from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        result = ExtractTextFromDocument(documentId, 1, 99)
+        if(result.code != "00000"):
+            log.error(f"({document.id}) Error {result.code}: {result.description}. While extracting images/text from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+            success = False
 
     # Extract Data from text
     if document.conversion_status == document.CONVERTED:
