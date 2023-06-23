@@ -30,6 +30,9 @@ def ExtractPages(document, firstPage, lastPage, delete):
     ext = GetDocumentExt(document)
     success = False
 
+    if document.conversion_status == document.CONVERTED:
+        result = GenerateResult(resultList,0)
+        return result
     if delete:
         for page in document.pages.all():
             page.file.delete()
@@ -242,9 +245,17 @@ def ExtractPages(document, firstPage, lastPage, delete):
                         )
                         success = True
                     except Exception as e:
-                        result = GenerateResult(resultList,14)
-                        log.error(result.consolLog)
-                        return result
+                        if hasattr(e, 'message'):
+                            # Handle Error
+                            result = GenerateResult(resultList,14)
+                            result.consolLog = result.consolLog + ". Message: " + e.message
+                            log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}")
+                            return result
+                        else:
+                            # Handle Error
+                            result = GenerateResult(resultList,14)
+                            log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}")
+                            return result
 
                     i = 1
                     if(success):

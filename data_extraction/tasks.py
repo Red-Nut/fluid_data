@@ -57,6 +57,7 @@ def ProcessDocument(documentId):
             if(result != True):
                 log.error(f"({document.id}) Error while extracting data from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
                 success = False
+                return
 
     if success:
         log.debug(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")

@@ -183,7 +183,6 @@ def deleteFile(path, S3):
         try:
             s3 = boto3.client('s3')
             bucket_name = settings.AWS_STORAGE_BUCKET_NAME
-            print(path)
             s3.delete_object(Bucket=bucket_name, Key=path)
         except Exception as e:
             # Handle Error.
