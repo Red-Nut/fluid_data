@@ -418,7 +418,9 @@ def Profile(request):
 
 		buckerFilesObjects = FileBucketFiles.objects.filter(bucket=bucketObject).all()
 
+		count = 0
 		for buckerFilesObject in buckerFilesObjects:
+			count += 1
 			documentObject = buckerFilesObject.document
 			if documentObject.file is not None:
 				if sizeKnown:
@@ -435,6 +437,10 @@ def Profile(request):
 				"ext" : internalAPI.GetDocumentExt(documentObject),
 			}
 			documents.append(document)
+
+		if count == 0:
+			sizeKnown = False
+			totalSizeText = "unknown"
 
 		bucket = {
 			"id" : bucketObject.id,
