@@ -36,7 +36,7 @@ def makeDirectory(newFolder, S3):
             result = GenerateResult(resultList,1)
             result.consolLog = result.consolLog + "    New Folder: " + newFolder
             result.consolLog = result.consolLog + "    Exception: " + str(e)
-            PrintResultLog(result)
+            log.error(f"Error{result.code}: {result.consolLog}")
             return result
     else:
         # Create folder on local server.
@@ -55,8 +55,7 @@ def makeDirectory(newFolder, S3):
                 result = GenerateResult(resultList,1)
                 result.consolLog = result.consolLog + "    New Folder: " + newFolder
                 result.consolLog = result.consolLog + "    Exception: " + str(e)
-                PrintResultLog(result)
-                print(e)
+                log.error(f"Error{result.code}: {result.consolLog}")
                 return result
 
     # Success.
@@ -70,7 +69,7 @@ def downloadFile(fromFilePath, destination, fileName):
         result = GenerateResult(resultList,2)
         result.description = result.description + " Response Code: " + response.status_code
         result.consolLog = result.consolLog + " Response Code: " + response.status_code
-        PrintResultLog(result)
+        log.error(f"Error{result.code}: {result.consolLog}")
         return result
 
     # Local file path.
@@ -89,8 +88,7 @@ def downloadFile(fromFilePath, destination, fileName):
             except Exception as e:
                 # Handle Error.
                 result = GenerateResult(resultList,4)
-                PrintResultLog(result)
-                print(e)
+                log.error(f"Error{result.code}: {result.consolLog}")
                 return result
 
         # Upload to S3.
@@ -98,7 +96,7 @@ def downloadFile(fromFilePath, destination, fileName):
         if not bool:
             # Handle Error.
             result = GenerateResult(resultList,9)
-            PrintResultLog(result)
+            log.error(f"Error{result.code}: {result.consolLog}")
             return result
     else:
         # Check if file exists
@@ -110,8 +108,7 @@ def downloadFile(fromFilePath, destination, fileName):
             except Exception as e:
                 # Handle Error.
                 result = GenerateResult(resultList,4)
-                PrintResultLog(result)
-                print(e)
+                log.error(f"Error{result.code}: {result.consolLog}")
                 return result
 
     # Success.
@@ -131,7 +128,7 @@ def uploadFileS3(myPath, destination):
         return result
     except:
         result = GenerateResult(resultList,9)
-        PrintResultLog(result)
+        log.error(f"Error{result.code}: {result.consolLog}")
         return result
 
 def deleteDirectory(path, S3):
@@ -150,8 +147,7 @@ def deleteDirectory(path, S3):
         except Exception as e:
             # Handle Error.
             result = GenerateResult(resultList,7)
-            PrintResultLog(result)
-            print(e)
+            log.error(f"Error{result.code}: {result.consolLog}")
             return result
     else:
         # Delete local folder.
@@ -165,8 +161,7 @@ def deleteDirectory(path, S3):
             except OSError as e:
                 # Handle Error.
                 result = GenerateResult(resultList,7)
-                PrintResultLog(result)
-                print(e)
+                log.error(f"Error{result.code}: {result.consolLog}")
                 return result   
 
     # Success.	
@@ -187,8 +182,7 @@ def deleteFile(path, S3):
         except Exception as e:
             # Handle Error.
             result = GenerateResult(resultList,6)
-            PrintResultLog(result)
-            print(e)
+            log.error(f"Error{result.code}: {result.consolLog}")
             return result
     else:
         # Delete local file.
@@ -202,8 +196,7 @@ def deleteFile(path, S3):
             except OSError as e:
                 # Handle Error.
                 result = GenerateResult(resultList,6)
-                PrintResultLog(result)
-                print(e)
+                log.error(f"Error{result.code}: {result.consolLog}")
                 return result 
 			
     result = GenerateResult(resultList,0)
@@ -231,8 +224,7 @@ def zipFiles(name,folder):
     except Exception as e:
         # Handle Error.
         result = GenerateResult(resultList,8)
-        PrintResultLog(result)
-        print(e)
+        log.error(f"Error{result.code}: {result.consolLog}")
         return result
 
     # Get the size of the new zip file
@@ -437,7 +429,7 @@ def SaveFileToDatabase(document, file_name, file_ext, file_location, file_size):
         else:
             # If file already exists - Handle Error.
             result = GenerateResult(resultList,5)
-            PrintResultLog(result)
+            log.warning(f"Error{result.code}: {result.consolLog}")
             #return result
             
         # Save the new file entry.
@@ -451,12 +443,12 @@ def SaveFileToDatabase(document, file_name, file_ext, file_location, file_size):
             # Handle Error
             result = GenerateResult(resultList,3)
             result.consolLog = result.consolLog + ". Message: " + e.message
-            log.error(result.consolLog)
+            log.error(f"Error{result.code}: {result.consolLog}")
             return result
         else:
             # Handle Error
             result = GenerateResult(resultList,3)
-            log.error(result.consolLog)
+            log.error(f"Error{result.code}: {result.consolLog}")
             return result
 
     # Success.

@@ -28,7 +28,7 @@ def ProcessDocument(documentId):
     success = True
     document = Document.objects.get(id=documentId)
 
-    log.debug(f"({document.id}) Begin processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+    log.info(f"({document.id}) Begin processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
 
      # Download Document
     if(document.status != document.DOWNLOADED and document.status != document.IGNORED):
@@ -60,9 +60,9 @@ def ProcessDocument(documentId):
                 return
 
     if success:
-        log.debug(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        log.info(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
     else:
-        log.debug(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        log.info(f"Failed ({document.id}) to process document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
         
     
     return
@@ -71,6 +71,7 @@ def ProcessDocument(documentId):
 def saveFileBucket(userId):
     user = User.objects.get(pk=userId)
     unsaved = UserFileBucket.objects.filter(user=user).first()
+    log.info('Saving File Bucket: %i for user: %s.', unsaved.id, user.username)
 
     # Create new bucket.
     user = User.objects.get(pk=userId)
@@ -93,6 +94,7 @@ def saveFileBucket(userId):
         recipient_list=[user.email],
         fail_silently=False,
     )
+    log.info('Email Sent To user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
 
     # Document List
     fileBucketFiles = FileBucketFiles.objects.filter(bucket=userFileBucket).all()
@@ -107,13 +109,11 @@ def saveFileBucket(userId):
     for document in documents:
         print("Document Name: " + document.document_name)
         if(document.status != 2):
-
-            print("Document Status: " + document.get_status_display())
+            log.debug('Downloading document (%i) for file bucket (%i).', document.id, userFileBucket.id)
             result = fileModule.downloadWellFile(document)
             if(result.code != "50000" and result.code != "50004"):
                 # Failed, notify users
-                print("file not downloaded")
-                print(result.code)
+                log.debug('File bucket (%i) document (%i) not downloaded. Error %s: %s', userFileBucket.id, document.id, result.code, result.consolLog)
 
     # Create File Bucket
     fileModule.makeDirectory('file_buckets/',False)
@@ -136,6 +136,7 @@ def saveFileBucket(userId):
             result = fileModule.copyToTemp(sPath, dfolder, dName)
 
     # Zip Folder
+    log.debug('Zipping Folder for file bucket (%i).', userFileBucket.id)
     result = fileModule.zipFiles('file_buckets/' + userFileBucket.name,destination)
     if result.code != "00000":
         return result
@@ -158,6 +159,7 @@ def saveFileBucket(userId):
         recipient_list=[user.email],
         fail_silently=False,
     )
+    log.info('Email Sent To user: %s. Finished preparing bucket: %i', user.username, unsaved.id)
     return
 
 

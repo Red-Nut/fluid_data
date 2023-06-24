@@ -173,6 +173,7 @@ def MyFunction(request):
                             log.error(error)
             results.append(result)
 
+        well = Well.objects.filter(well_name=well_name).first()
         for document in well.documents.all():
             if document.report is not None:
                 if document.report.report_type.type_name == "Well Completion Report":
