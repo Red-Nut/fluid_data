@@ -87,14 +87,17 @@ def saveFileBucket(userId):
         FileBucketFiles.objects.create(bucket=userFileBucket, document=document.document)
 
     # Notify user
-    send_mail(
-        subject='Fluid Data - Preparing Files for Download',
-        message='We are preparing data package ' + userFileBucket.name + ' for you. You can check the progress from your profile page and an email will be sent to you when it is ready for download.',
-        from_email=settings.EMAIL_HOST_USER,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
-    log.info('Email Sent To user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
+    try:
+        send_mail(
+            subject='Fluid Data - Preparing Files for Download',
+            message='We are preparing data package ' + userFileBucket.name + ' for you. You can check the progress from your profile page and an email will be sent to you when it is ready for download.',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        log.info('Email sent to user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
+    except:
+        log.error('Failed to send email to user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
 
     # Document List
     fileBucketFiles = FileBucketFiles.objects.filter(bucket=userFileBucket).all()
@@ -152,14 +155,17 @@ def saveFileBucket(userId):
     userFileBucket.save()
 
     # Notify user
-    send_mail(
-        subject='Fluid Data - Files ready Download',
-        message='Data package ' + userFileBucket.name + ' is ready for download. Access the files from your profile page. Or using this link: ' + settings.MEDIA_URL + "file_buckets/" + userFileBucket.name + ".zip",
-        from_email=settings.EMAIL_HOST_USER,
-        recipient_list=[user.email],
-        fail_silently=False,
-    )
-    log.info('Email Sent To user: %s. Finished preparing bucket: %i', user.username, unsaved.id)
+    try:
+        send_mail(
+            subject='Fluid Data - Files ready Download',
+            message='Data package ' + userFileBucket.name + ' is ready for download. Access the files from your profile page. Or using this link: ' + settings.MEDIA_URL + "file_buckets/" + userFileBucket.name + ".zip",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        log.info('Email sent to user: %s. Finished preparing bucket: %i', user.username, unsaved.id)
+    except:
+        log.error('Failed to send email to user: %s. Finished preparing bucket: %i', user.username, userFileBucket.id)
     return
 
 
