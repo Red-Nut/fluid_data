@@ -62,7 +62,7 @@ def makeDirectory(newFolder, S3):
     result = GenerateResult(resultList,0)
     return result
 
-def downloadFile(fromFilePath, destination, fileName):
+def downloadFile(fromFilePath, destination, fileName, overwrite):
     # Test Connection.
     response = requests.get(fromFilePath)
     if(response.status_code != 200):
@@ -80,7 +80,7 @@ def downloadFile(fromFilePath, destination, fileName):
     # Download File.
     if settings.USE_S3:
         # Check if file exists.
-        if(not os.path.exists(myPath)):
+        if(not os.path.exists(myPath) or overwrite):
             # Download File.
             try:
                 with urllib.request.urlopen(fromFilePath) as response, open(myPath, 'wb') as out_file:
@@ -98,6 +98,9 @@ def downloadFile(fromFilePath, destination, fileName):
             result = GenerateResult(resultList,9)
             log.error(f"Error{result.code}: {result.consolLog}")
             return result
+        else:
+            # Cleanup temp directory
+            deleteFile(toFilePath, False)
     else:
         # Check if file exists
         if(not os.path.exists(myPath)):
@@ -350,7 +353,7 @@ def downloadWellFile(document):
     fileName = name + fileType
 
     # Download File.    
-    result = downloadFile(url, destination, fileName)
+    result = downloadFile(url, destination, fileName, False)
     if result.code != "00000":
         return result
 

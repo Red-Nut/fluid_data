@@ -176,6 +176,11 @@ LOGGING = {
             'level': env('LOG_LEVEL_INTERPRETATION'),
             'propagate': True,
         },
+        'administration': {
+            'handlers': ['console','file'], 
+            'level': env('LOG_LEVEL_ADMIN'),
+            'propagate': True,
+        },
     },
 }
 

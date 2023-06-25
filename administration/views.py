@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.db.models import Max, Count
 
 # Third party imports.
 import json
@@ -12,15 +13,19 @@ import time
 # This module imports.
 
 # Other module imports.
-from data_extraction.functions import ResultEncoder, NumberToText
-from data_extraction.models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, UserProfile, Well, WellClass, WellStatus, WellPurpose
+from data_extraction.functions import ResultEncoder, NumberToText, CleanStr, CleanURL, GetExtFromFileNameOrPath
+from data_extraction.models import *
 from data_extraction import myExceptions
 from data_extraction import tasks
 from search import config_search
 from file_manager import fileModule, convertToJPEG
 from interpretation import googleText
 from api import internalAPI
+from file_manager import fileModule
 
+# Logging
+import logging
+log = logging.getLogger("administration")
 
 def index(request):
     totalWells = internalAPI.WellCount()
@@ -453,3 +458,86 @@ def createUser(email, password, fname, lname):
     user.first_name = fname
     user.last_name = lname
     user.save()
+
+
+def FixDuplicateDocumentNaming(request):
+    wells = [
+        #"BURUNGA 2",
+        #"BURUNGA 2A",
+        #"BURUNGA LANE 4",
+        #"BURUNGA LANE 5",
+        #"BURUNGA LANE 6",
+        #"PEAT 1",
+        #"PEAT 10",
+        #"PEAT 15",
+        #"PEAT 16",
+        #"PEAT 444",
+        #"PEAT 45",
+        #"PEAT 46",
+        #"PEAT 47",
+        #"SCOTIA 34",
+        #"SCOTIA 35",
+        #"SCOTIA 44",
+        #"SCOTIA 45",
+        #"SOUTH BURUNGA 2",
+        "POLARIS 140",
+        "POLARIS 142",
+        "POLARIS 150",
+        "ACRUX 144",
+        "ACRUX 145",
+        #"ACRUX 146",
+    ]
+    for well_name in wells:
+        myfun(Document.objects.filter(well__well_name__iexact=well_name).order_by('gov_id'))
+
+    return HttpResponse("done")
+
+def myfun(documents):
+    for document in documents:
+        # Rename if same name
+        duplicates = Document.objects.filter(well=document.well,document_name=document.document_name).exclude(id=document.id).all()
+        count = Document.objects.filter(well=document.well,document_name=document.document_name).exclude(id=document.id).count()
+        if count > 0:
+            i = 0
+            for duplicate in duplicates:
+                i += 1
+                name = f"{duplicate.document_name} ({i})"
+                log.info('renaming document: %i to %s.', duplicate.id, name)
+                duplicate.document_name = name
+                duplicate.save()
+
+                if duplicate.file:
+                    if duplicate.file == document.file:
+                        duplicate.file = None
+                        duplicate.status = duplicate.MISSING
+                        duplicate.save()
+                    else:
+                        file = duplicate.file
+                        file.file_name = CleanStr(name)
+                        file.save()
+
+        # Redownload Documents
+        if document.file:
+            file = document.file
+            result = fileModule.MakeDirectoryForFile(document)
+            if result.code != "00000":
+                return result
+            
+            destination = result.destination
+
+            url = CleanURL(document.url)
+            fileType = file.file_ext
+            name = CleanStr(file.file_name)
+            fileName = name + fileType
+
+            # Download File.    
+            result = fileModule.downloadFile(url, destination, fileName, True)
+            if result.code != "00000":
+                return result
+        else:
+            if document.status == document.DOWNLOADED:
+                document.status = document.MISSING
+                document.save()
+        
+
+    return

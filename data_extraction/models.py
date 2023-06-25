@@ -286,6 +286,12 @@ class Document(CreatedModifiedModel):
         default=1,
     )
 
+    #class Meta:
+        #unique_together=('well_id', 'document_name')
+
+    class Meta:
+        ordering = ('well__id','document_name')
+
     def __str__(self):
         return f"{self.document_name}"
 

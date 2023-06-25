@@ -31,6 +31,8 @@ urlpatterns = [
 
 
     path('update-companies', views.UpdateCompanyNames, name='admin-updateCompanies'),
+    path('remove-duplicate-documents', views.FixDuplicateDocumentNaming),
+    
 
     
     path('download-all', views.DownloadAllMissing, name='admin-DownloadAll'),
