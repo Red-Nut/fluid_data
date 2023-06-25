@@ -76,8 +76,8 @@ def saveFileBucket(userId):
 
         # Create new bucket.
         userFileBucket = UserFileBucket.objects.create(
-            user=user
-            name = 'tempName'
+            user=user,
+            name = 'tempName',
             status = unsaved.PREPARING
         )
         name = user.first_name + user.last_name + str(userFileBucket.id)
