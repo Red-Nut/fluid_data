@@ -71,15 +71,17 @@ def ProcessDocument(documentId):
 def saveFileBucket(userId):
     try:
         user = User.objects.get(pk=userId)
-        unsaved = UserFileBucket.objects.filter(user=user).first()
+        unsaved = UserFileBucket.objects.filter(user=user).first() # first bucket is always used as temporary bucket
         log.info('Saving File Bucket: %i for user: %s.', unsaved.id, user.username)
 
         # Create new bucket.
-        user = User.objects.get(pk=userId)
-        userFileBucket = UserFileBucket.objects.create(user=user)
+        userFileBucket = UserFileBucket.objects.create(
+            user=user
+            name = 'tempName'
+            status = unsaved.PREPARING
+        )
         name = user.first_name + user.last_name + str(userFileBucket.id)
         userFileBucket.name = name
-        userFileBucket.status = 2
         userFileBucket.save()
 
         # Copy files from temporary bucket.
@@ -142,6 +144,7 @@ def saveFileBucket(userId):
         log.debug('Zipping Folder for file bucket (%i).', userFileBucket.id)
         result = fileModule.zipFiles('file_buckets/' + userFileBucket.name,destination)
         if result.code != "00000":
+            log.error('Failed to zip file bucket %i', userFileBucket.id)
             return result
 
         zipSize = result.fileSize
@@ -150,7 +153,7 @@ def saveFileBucket(userId):
             fileModule.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
 
         # Update file bucket status
-        userFileBucket.status = 3
+        userFileBucket.status = userFileBucket.READY
         userFileBucket.zipSize = zipSize
         userFileBucket.save()
 
