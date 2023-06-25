@@ -1453,6 +1453,15 @@ class RetriveQLD:
                             document.save()
 
                     if document is None:
+                        # check if document with same name
+                        duplicate = Document.objects.filter(well=well, document_name=documentName).first()
+                        if duplicate:
+                            for i in range(99):
+                                testName = f"documentName ({(i+1)})"
+                                duplicate = Document.objects.filter(well=well, document_name=testName).first()
+                                if duplicate is None:
+                                    documentName = testName
+                                    break
                         try:
                             document = Document.objects.create(
                                 document_name = documentName,
