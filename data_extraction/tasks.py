@@ -74,7 +74,7 @@ def saveFileBucket(userId):
     try:
         user = User.objects.get(pk=userId)
         unsaved = UserFileBucket.objects.filter(user=user).first() # first bucket is always used as temporary bucket
-        log.info('Saving File Bucket: %i for user: %s.', unsaved.id, user.username)
+        log.info('Saving File Bucket for user: %s.', user.username)
 
         # Create new bucket.
         userFileBucket = UserFileBucket.objects.create(
@@ -85,11 +85,14 @@ def saveFileBucket(userId):
         name = user.first_name + user.last_name + str(userFileBucket.id)
         userFileBucket.name = name
         userFileBucket.save()
+        log.info('Created File Bucket: %i for user: %s.', userFileBucket.id, user.username)
 
         # Copy files from temporary bucket.
         documents = FileBucketFiles.objects.filter(bucket=unsaved).all()
         for document in documents:
+            log.debug('Added document %s (%i) to File Bucket: %i for user: %s.', document.document_name, document.id, userFileBucket.id, user.username)
             FileBucketFiles.objects.create(bucket=userFileBucket, document=document.document)
+        
 
         # Notify user
         try:
@@ -112,6 +115,7 @@ def saveFileBucket(userId):
 
         # Empty temporary bucket.
         emptyFileBucket(user)
+        log.info('Emptied Temporary File Bucket for user: %s.', user.username)
 
         # Download each file
         for document in documents:
@@ -121,6 +125,7 @@ def saveFileBucket(userId):
                 if(result.code != "50000" and result.code != "50004"):
                     # Failed, notify users
                     log.debug('File bucket (%i) document (%i) not downloaded. Error %s: %s', userFileBucket.id, document.id, result.code, result.consolLog)
+        log.debug('Downloaded Document for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
 
         # Create File Bucket
         fileModule.makeDirectory('file_buckets/',False)
@@ -141,6 +146,7 @@ def saveFileBucket(userId):
                 dName = document.file.file_name + document.file.file_ext
 
                 result = fileModule.copyToTemp(sPath, dfolder, dName)
+        log.debug('Copied documents to filebucket folder for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
 
         # Zip Folder
         log.debug('Zipping Folder for file bucket (%i).', userFileBucket.id)
@@ -150,8 +156,10 @@ def saveFileBucket(userId):
             return result
 
         zipSize = result.fileSize
+        log.debug('Zip Szie for file bucket (%i): %i.', userFileBucket.id, zipSize)
 
         if settings.USE_S3:
+            log.debug('Zip file uploaded to amazon for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
             fileModule.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
 
         # Update file bucket status
