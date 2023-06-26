@@ -25,46 +25,48 @@ log = logging.getLogger("celery_tasks")
 
 @app.task
 def ProcessDocument(documentId):
-    success = True
-    document = Document.objects.get(id=documentId)
+    try:
+        success = True
+        document = Document.objects.get(id=documentId)
 
-    log.info(f"({document.id}) Begin processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        log.info(f"({document.id}) Begin processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
 
-     # Download Document
-    if(document.status != document.DOWNLOADED and document.status != document.IGNORED):
-        #log.debug(f"({document.id}) Downloading document. Document: {document.id}, Status: {document.get_status_display()}")
-        result = fileModule.downloadWellFile(document)
-        if(result.code != "00000"):
-            # Failed, notify users
-            log.error(f"({document.id}) Document not downloaded. Document: {document.id}, Error {result.code}: {result.description}")
-            success = False
-            return
-
-    # Extract Text from document
-    if document.conversion_status != document.IGNORED:
-        #log.debug(f"({document.id}) Extract Text from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-        result = ExtractTextFromDocument(documentId, 1, 99)
-        if(result.code != "00000"):
-            log.error(f"({document.id}) Error {result.code}: {result.description}. While extracting images/text from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-            success = False
-
-    # Extract Data from text
-    if document.conversion_status == document.CONVERTED:
-        #log.debug(f"({document.id}) Extract Data from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-        dataTypes = DataType.objects.all()
-        for dataType in dataTypes:
-            result = RunPageTextAutomation(documentId, dataType)
-            if(result != True):
-                log.error(f"({document.id}) Error while extracting data from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        # Download Document
+        if(document.status != document.DOWNLOADED and document.conversion_status != document.IGNORED):
+            #log.debug(f"({document.id}) Downloading document. Document: {document.id}, Status: {document.get_status_display()}")
+            result = fileModule.downloadWellFile(document)
+            if(result.code != "00000"):
+                # Failed, notify users
+                log.error(f"({document.id}) Document not downloaded. Document: {document.id}, Error {result.code}: {result.description}")
                 success = False
                 return
 
-    if success:
-        log.info(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
-    else:
-        log.info(f"Failed ({document.id}) to process document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        # Extract Text from document
+        if document.conversion_status != document.IGNORED:
+            #log.debug(f"({document.id}) Extract Text from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+            result = ExtractTextFromDocument(documentId, 1, 99)
+            if(result.code != "00000"):
+                log.error(f"({document.id}) Error {result.code}: {result.description}. While extracting images/text from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+                success = False
+
+        # Extract Data from text
+        if document.conversion_status == document.CONVERTED:
+            #log.debug(f"({document.id}) Extract Data from document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+            dataTypes = DataType.objects.all()
+            for dataType in dataTypes:
+                result = RunPageTextAutomation(documentId, dataType)
+                if(result != True):
+                    log.error(f"({document.id}) Error while extracting data from Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+                    success = False
+                    return
+
+        if success:
+            log.info(f"Success ({document.id}) Completed processing document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
+        else:
+            log.info(f"Failed ({document.id}) to process document. Well: {document.well.well_name} ({document.well.id}), Document: {document.document_name} ({document.id})")
         
-    
+    except:
+        log.error('An unknown error occured while processing document: %i.', documentId)
     return
 
 @app.task
@@ -170,7 +172,7 @@ def saveFileBucket(userId):
         except:
             log.error('Failed to send email to user: %s. Finished preparing bucket: %i', user.username, userFileBucket.id)
     except:
-        log.error('An unknown error occured whil saving file bucket: %i for user: %s.', unsaved.id, user.username)
+        log.error('An unknown error occured while saving file bucket: %i for user: %s.', unsaved.id, user.username)
     return
 
 
