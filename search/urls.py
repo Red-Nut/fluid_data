@@ -10,5 +10,5 @@ urlpatterns = [
     path('updateAllQld/', views.UpdateAllQLD),
     path('updateQld/', views.UpdateNewQLD), 
 
-    path('myFun/', views.MyFunction)
+    path('myFun/', views.MyInterpFunction)
 ]

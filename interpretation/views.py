@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect, HttpResponse
 from django.http import JsonResponse
 from django.conf import settings
+from django.db.models import Q
 
 # Third party imports.
 import json
@@ -77,9 +78,14 @@ def RunPageTextAutomation(did, data_type):
         return False
 
     if data_type == 0:
-        methods = ExtractionMethod.objects.all()
+        methods = ExtractionMethod.objects.filter(
+            Q(company__isnull=True) | Q(company=document.well.owner) | Q (company=document.report.report_owner)
+        )
     else:
         methods = ExtractionMethod.objects.filter(data_type=data_type)
+        methods = methods.filter(
+            Q(company__isnull=True) | Q(company=document.well.owner) | Q (company=document.report.report_owner)
+        )
 
     for method in methods:
         print(f"Method: {method.name} ({method.id})")
