@@ -29,6 +29,10 @@ urlpatterns = [
     path('conversion/', views.ConversionPage, name='admin-conversion'),
     path('extraction/', views.ExtractionPage, name='admin-extraction'),
 
+    path('data-extraction/', views.DataExtraction, name='admin-data-extraction'),
+    path('data-extraction/<int:id>/', views.DataExtractionByType, name='admin-data-extraction-by-type'),
+    path('method/<int:id>/', views.MethodView, name='admin-method'),
+
 
     path('update-companies', views.UpdateCompanyNames, name='admin-updateCompanies'),
     path('remove-duplicate-documents', views.FixDuplicateDocumentNaming),

@@ -5,7 +5,7 @@
 
 {% block main %}
 <div class="row">
-    <div class="col-xl-4">
+    <div class="col-xl">
         <div class="card p-2">
             <h2 class="card-title">{{document.document_name_title_case}}</h2>
             <div class="card-body">
@@ -108,21 +108,23 @@
             </div>
         </div>    
     </div>
-    <div class="col-xl-8 pb-3">
+    <div class="col-xl pb-3">
         <!-- Preview -->
-        <div class="card mb-0" style="height:100%; min-height: 700px;">
+        <div class="card mb-0">
             <div class="card-body">
-                <div>
-                    {% for page in document.pages.all %}
+                {% for page in document.pages.all %}
+                
+                <div style="text-align: center; width:60vw">
                     {% if forloop.first %}
-                    <img id="{{page.get_page}}" src="{{page.link}}" alt="{{page.get_page}}" width="100%" height="auto">
+                    <img id="{{page.get_page}}" src="{{page.link}}" alt="{{page.get_page}}" width="auto" height="100%" style="max-height:75vh; min-height: 400px; max-width:60w;">
                     {% else %}
-                    <img id="{{page.get_page}}" src="{{page.link}}" alt="{{page.get_page}}" width="100%" height="auto" style="display:None">
+                    <img id="{{page.get_page}}" src="{{page.link}}" alt="{{page.get_page}}" width="auto" height="100%" style="display: none; max-height:75vh; min-height: 400px; max-width:60vw;">
                     {% endif %}
-                    {% endfor %}
                     <!-- Full Screen -->
                     <p class="link" style="text-align:right; position: absolute; right: 30px; top:30px;"><i class="fas fa-expand-arrows-alt fa-2x"></i></p>
                 </div>
+                
+                {% endfor %}
                 <div id="controls" style="display: flex; justify-content: center; width: 100%; padding-top: 6px; margin-top: 6px; border-top: 1px solid darkgray;">
                     <!-- Previous -->
                     <p class="link" style="padding:0px; margin-right:20px;" onclick="FirstPage()"><i class="fas fa-chevron-circle-left fa-2x"></i></p>

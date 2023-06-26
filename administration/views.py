@@ -205,7 +205,8 @@ def ExtractionPage(request):
 	return render(request, "administration/search.html")
 
 def UpdateCompanyNames(request):
-    tasks.UpdateCompanyNames.delay()
+    #tasks.UpdateCompanyNames.delay()
+    UpdateCompanyNamesTask()
 
     return redirect(index)
 
@@ -226,7 +227,7 @@ def UpdateCompanyNamesTask():
                         correctCompany = Company.objects.create(company_name = correction.correctName)
                     except:
                         # Handle Error
-                        print("Failed to create new company.")
+                        log.error("Failed to create new company %s.", correction.correctName)
                         return
                 
                 # Assign company to each well.
@@ -236,10 +237,24 @@ def UpdateCompanyNamesTask():
                     well.save()
                     print("Updated " + company.company_name + " to " + correctCompany.company_name + " for " + well.well_name)
 
-                # Check if old company can be deleted.
-                check = Well.objects.filter(owner=company).first()
+                reports = Report.objects.filter(report_owner=company).all()
+                for report in reports:
+                    report.report_owner = correctCompany
+                    report.save()
+                    print("Updated " + company.company_name + " to " + correctCompany.company_name + " for " + report.gov_report_name)
 
-                if(check is None):
+                methods = ExtractionMethod.objects.filter(company=company).all()
+                for method in methods:
+                    method.company = correctCompany
+                    method.save()
+                    print("Updated " + company.company_name + " to " + correctCompany.company_name + " for " + method.name)
+
+                # Check if old company can be deleted.
+                check1 = Well.objects.filter(owner=company).first()
+                check2 = Report.objects.filter(report_owner=company).first()
+                check3 = ExtractionMethod.objects.filter(company=company).first()
+
+                if(check1 is None and check2 is None and check3 is None):
                     # Delete old company object
                     try:
                         company.delete()
@@ -250,19 +265,48 @@ def UpdateCompanyNamesTask():
     companies = Company.objects.all()
     for company in companies:
         # Check if old company can be deleted.
-        check = Well.objects.filter(owner=company).first()
+        check1 = Well.objects.filter(owner=company).first()
+        check2 = Report.objects.filter(report_owner=company).first()
+        check3 = ExtractionMethod.objects.filter(company=company).first()
 
-        if(check is None):
+        if(check1 is None and check2 is None and check3 is None):
             # Delete old company object
-            oldCompany = Company.objects.filter(company_name=company.company_name).first()
-            owner = oldCompany.company_name
+            owner = company.company_name
             try:
-                oldCompany.delete()
+                company.delete()
                 print("Successfully deleted company: " + owner)
             except:
                 print("Failed to delete company: " + owner)
 
     return
+
+def DataExtraction(request):
+    methods = ExtractionMethod.objects.order_by('data_type', 'company', 'name').all()
+
+    context = {
+        "methods" : methods,
+    }
+
+    return render(request, "administration/data_extraction.html", context)
+
+def DataExtractionByType(request, id):
+    dataType = ExtractedDataTypes.objects.get(id=id)
+    methods = ExtractionMethod.objects.filter(data_type=dataType).order_by('company')
+
+    context = {
+        "methods" : methods,
+    }
+
+    return render(request, "administration/data_extraction.html", context)
+
+def MethodView(request,id):
+    method = ExtractionMethod.objects.get(id=id)
+
+    context = {
+        "method" : method,
+    }
+
+    return render(request, "administration/method.html", context)
 
 
 def DownloadAllMissing(request):

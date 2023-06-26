@@ -1,0 +1,39 @@
+{% extends 'administration/base.html' %}
+
+{% block main %}
+<div class="container-fluid">
+   <h1>Method: {{method.name}}</h1>
+   <p><b>Data Type</b>: {{method.data_type.name}}</p>
+   <p><b>Company</b>: {{method.get_company}}</p>
+
+   <table class="table table-striped">
+      <thead>
+         <tr>
+            <th>Seq.</th>
+            <th>Type</th>
+            <th>Search String</th>
+            <th>Remove Chars</th>
+            <th>Direction</th>
+            <th>Lower Bound</th>
+            <th>Upper Bound</th>
+         </tr>
+      </thead>
+      <tbody>
+         {% for action in method.actions.all %}
+         <tr>
+            <td>{{action.order}}</td>
+            <td>{{action.action.get_type_display}}</td>
+            <td>{{action.action.string_display}}</td>
+            <td>{{action.action.remove_chars_display}}</td>
+            <td>{{action.action.direction_display}}</td>
+            <td>{{action.action.lower_bound_summary}}</td>
+            <td>{{action.action.upper_bound_summary}}</td>
+         </tr>
+         {% endfor %}
+      </tbody>
+   </table>
+
+</div>
+{% endblock %}
+
+

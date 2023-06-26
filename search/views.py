@@ -124,6 +124,55 @@ def UpdateNewQLD(request):
     
     return JsonResponse(responseList, safe=False)
 
+def MyInterpFunction(request):
+    docs = [
+        #75347,
+        121074,
+        121097,
+        176422,
+        121633,
+        176430,
+        121638,
+        77568,
+        77571,
+        77572,
+        77583,
+        77566,
+        80630,
+        80632,
+        80636,
+        80628,
+        84463,
+        84475,
+        84470,
+        84477,
+        84135,
+        84144,
+        84146,
+        180809,
+        161938,
+        161942,
+        164543,
+        164540,
+        119136,
+        118470,
+        148949,
+        148936,
+        149008,
+        149005,
+        180964,
+        135737,
+        135629,
+        133081,
+        158188,
+        148761,
+        147747
+    ]
+
+    for doc in docs:
+        document = Document.objects.get(id=doc)
+        ExtractTextFromDocument(document.id, 0, 99)
+
 def MyFunction(request):
     log.debug("Running my function")
 

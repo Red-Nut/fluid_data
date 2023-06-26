@@ -129,7 +129,7 @@ LOGGING = {
             "style": "{",
         },
         "simple": {
-            "format": "{levelname} {name}:{message}",
+            "format": "{levelname} {name}: {message}",
             "style": "{",
         },
     },

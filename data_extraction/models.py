@@ -527,7 +527,7 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def string_display(self):
         if self.string is None:
-            if self.type == self.VALUE:
+            if self.type == self.VALUE or self.type == self.TEXTVALUE or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -537,7 +537,7 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def direction_display(self):
         if self.direction is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -547,7 +547,7 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def start_display(self):
         if self.start is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -557,7 +557,7 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def lower_bound_display(self):
         if self.lower_bound is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -567,7 +567,7 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def lower_offset_percent_display(self):
         if self.lower_offset_percent is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -577,7 +577,7 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def lower_offset_pixels_display(self):
         if self.lower_offset_pixels is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -585,9 +585,27 @@ class ExtractionAction(CreatedModifiedModel):
             return f"{self.lower_offset_pixels}px"
         
     @property
+    def lower_bound_summary(self):
+        if self.start is None:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
+                return "-"
+            else:
+                return "Error"
+        else:
+            myStr = f"{self.get_lower_bound_display()} of Step {self.start}"
+            
+            if self.lower_offset_percent:
+                myStr = f"{myStr} ({self.lower_offset_percent}%)"
+            if self.lower_offset_pixels:
+                myStr = f"{myStr} ({self.lower_offset_pixels}px)"
+
+            return myStr
+
+
+    @property
     def upper_bound_display(self):
         if self.upper_bound is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -597,7 +615,7 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def upper_offset_percent_display(self):
         if self.upper_offset_percent is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
@@ -607,16 +625,36 @@ class ExtractionAction(CreatedModifiedModel):
     @property
     def upper_offset_pixels_display(self):
         if self.upper_offset_pixels is None:
-            if self.type == self.INITIAL:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
                 return "-"
             else:
                 return "Error"
         else:
             return f"{self.upper_offset_pixels}px"
+        
+    @property
+    def upper_bound_summary(self):
+        if self.start is None:
+            if self.type == self.INITIAL or self.type == self.SAVE or self.NEXTDATA:
+                return "-"
+            else:
+                return "Error"
+        else:
+            myStr = f"{self.get_upper_bound_display()} of Step {self.start}"
+            
+            if self.upper_offset_percent:
+                myStr = f"{myStr} ({self.upper_offset_percent}%)"
+            if self.upper_offset_pixels:
+                myStr = f"{myStr} ({self.upper_offset_pixels}px)"
+
+            return myStr
 
     @property
     def remove_chars_display(self):
-        return self.remove_chars.replace("#", " ")
+        if self.remove_chars:
+            return self.remove_chars.replace("#", " ")
+        else:
+            return self.remove_chars
     
 
 class ExtractionActions(CreatedModifiedModel):
