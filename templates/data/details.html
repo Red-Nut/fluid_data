@@ -37,7 +37,7 @@
                 </tr>
                 {% for document in well.documents.all %}
                     <tr>
-                        <td class="link" onclick="window.location.href='{% url 'document' id=document.id %}'">{{document.document_name}}{{document.file_ext}}</td>
+                        <td class="link" onclick="window.location.href='{% url 'document' id=document.id %}'">{{document.document_name_title_case}}{{document.file_ext}}</td>
                         <td style="text-align: center;">{{document.document_type|upper}}</td>
                         {% if document.status == document.DOWNLOADED %}
                             <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.link}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
@@ -80,7 +80,7 @@
                                 </tr>
                                 {% for document in report.documents.all %}
                                     <tr>
-                                        <td class="link" onclick="window.location.href='{% url 'document' id=document.id %}'">{{document.document_name}}{{document.file_ext}}</td>
+                                        <td class="link" onclick="window.location.href='{% url 'document' id=document.id %}'">{{document.document_name_title_case}}{{document.file_ext}}</td>
                                         <td style="text-align: center;">{{document.document_type|upper}}</td>
                                         {% if document.status == "DOWNLOADED" %}
                                             <td style="text-align:center;"><a  class="btn btn-primary document" href="{{document.link}}" download="{{document.document_name}}{{document.ext}}">Download</a></td>
