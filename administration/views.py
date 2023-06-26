@@ -461,38 +461,14 @@ def createUser(email, password, fname, lname):
 
 
 def FixDuplicateDocumentNaming(request):
-    wells = [
-        #"BURUNGA 2",
-        #"BURUNGA 2A",
-        #"BURUNGA LANE 4",
-        #"BURUNGA LANE 5",
-        #"BURUNGA LANE 6",
-        #"PEAT 1",
-        #"PEAT 10",
-        #"PEAT 15",
-        #"PEAT 16",
-        #"PEAT 444",
-        #"PEAT 45",
-        #"PEAT 46",
-        #"PEAT 47",
-        #"SCOTIA 34",
-        #"SCOTIA 35",
-        #"SCOTIA 44",
-        #"SCOTIA 45",
-        #"SOUTH BURUNGA 2",
-        "POLARIS 140",
-        "POLARIS 142",
-        "POLARIS 150",
-        "ACRUX 144",
-        "ACRUX 145",
-        #"ACRUX 146",
-    ]
-    for well_name in wells:
-        myfun(Document.objects.filter(well__well_name__iexact=well_name).order_by('gov_id'))
+    wells = Well.object.all()[0:10]
+    for well in wells:
+        log.info('renaming documents for well: %s (%i).', well.well_name, well.id)
+        myRenamefun(Document.objects.filter(well=well).order_by('gov_id'))
 
     return HttpResponse("done")
 
-def myfun(documents):
+def myRenamefun(documents):
     for document in documents:
         # Rename if same name
         duplicates = Document.objects.filter(well=document.well,document_name=document.document_name).exclude(id=document.id).all()
@@ -516,28 +492,28 @@ def myfun(documents):
                         file.file_name = CleanStr(name)
                         file.save()
 
-        # Redownload Documents
-        if document.file:
-            file = document.file
-            result = fileModule.MakeDirectoryForFile(document)
-            if result.code != "00000":
-                return result
-            
-            destination = result.destination
+            # Redownload Documents
+            if document.file:
+                file = document.file
+                result = fileModule.MakeDirectoryForFile(document)
+                if result.code != "00000":
+                    return result
+                
+                destination = result.destination
 
-            url = CleanURL(document.url)
-            fileType = file.file_ext
-            name = CleanStr(file.file_name)
-            fileName = name + fileType
+                url = CleanURL(document.url)
+                fileType = file.file_ext
+                name = CleanStr(file.file_name)
+                fileName = name + fileType
 
-            # Download File.    
-            result = fileModule.downloadFile(url, destination, fileName, True)
-            if result.code != "00000":
-                return result
-        else:
-            if document.status == document.DOWNLOADED:
-                document.status = document.MISSING
-                document.save()
+                # Download File.    
+                result = fileModule.downloadFile(url, destination, fileName, True)
+                if result.code != "00000":
+                    return result
+            else:
+                if document.status == document.DOWNLOADED:
+                    document.status = document.MISSING
+                    document.save()
         
 
     return
