@@ -1,0 +1,36 @@
+{% extends 'administration/base.html' %}
+
+{% block main %}
+<!-- Search -->
+<div class="container-fluid">
+   <h1>Data Extraction Methods</h1>
+   <table class="table table-striped" style="width:auto;">
+      <thead>
+         <tr>
+            <th>ID</th>
+            <th>Data Type</th>
+            <th>Company</th>
+            <th>Name</th>
+         </tr>
+      </thead>
+      <tbody>
+         {% for method in methods %}
+         <tr class="link" onclick="window.location.href='{% url 'admin-method' id=method.id %}'">
+            <th>{{method.id}}</th>
+            <td>{{method.data_type}}</td>
+            <td>{{method.get_company}}</td>
+            <td>{{method.name}}</td>
+         </tr>
+         {% endfor %}
+      </tbody>
+   </table>
+
+</div>
+
+
+
+
+
+{% endblock %}
+
+
