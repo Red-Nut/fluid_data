@@ -14,6 +14,7 @@ from data_extraction.functions import ConvertToTrueFalse
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, searchList as resultList
 from data_extraction import tasks
 from interpretation.views import ExtractTextFromDocument, RunPageTextAutomation
+from file_manager import fileModule
 
 # Logging
 import logging
@@ -125,7 +126,7 @@ def UpdateNewQLD(request):
 
 def MyFunction(request):
     log.debug("Running my function")
-    
+
     wells = [
         "BURUNGA 2",
         "BURUNGA 2A",
@@ -154,6 +155,25 @@ def MyFunction(request):
     ]
 
     results = []
+
+    for well_name in wells:
+        well = Well.objects.filter(well_name=well_name).first()
+        documents = well.documents.all()
+        for document in documents:
+            if document.status != document.DOWNLOADED:
+                result = fileModule.downloadWellFile(document)
+                if(result.code != "00000"):
+                    # Failed, notify users
+                    log.error(f"({document.id}) Document not downloaded. Document: {document.id}, Error {result.code}: {result.description}")
+                    results.append(f"Error {result.code}: {result.description}")
+
+    response = {
+		'results' : results,
+	}
+
+    json_resonse = json.dumps(response)
+
+    return HttpResponse(json_resonse)
 
     for well_name in wells:
         well = Well.objects.filter(well_name=well_name).first()

@@ -91,6 +91,9 @@ def downloadFile(fromFilePath, destination, fileName, overwrite):
                 log.error(f"Error{result.code}: {result.consolLog}")
                 return result
 
+        # Get file size
+        fileSize = getFileSize(myPath)
+
         # Upload to S3.
         bool = uploadFileS3(myPath, toFilePath)
         if not bool:
@@ -113,9 +116,13 @@ def downloadFile(fromFilePath, destination, fileName, overwrite):
                 result = GenerateResult(resultList,4)
                 log.error(f"Error{result.code}: {result.consolLog}")
                 return result
+            
+        # Get file size
+        fileSize = getFileSize(myPath)
 
     # Success.
     result = GenerateResult(resultList,0)
+    result.size = fileSize
     return result
 
 def uploadFileS3(myPath, destination):
@@ -241,8 +248,12 @@ def zipFiles(name,folder):
 def getFileSize(filePath):
     # Get the size of a file at a specified filePath in the media folder.
     root_folder = settings.MEDIA_ROOT
+
+    if not filePath.startswith(root_folder):
+        filePath = root_folder + filePath
+
     try:
-        size = os.path.getsize(root_folder + filePath)
+        size = os.path.getsize(filePath)
         return size
     except:
         return None
@@ -358,8 +369,7 @@ def downloadWellFile(document):
         return result
 
     # Get the size of the downloaded file.
-    filePath = destination + fileName
-    fileSize = getFileSize(filePath)
+    fileSize = result.size
 
     # Make database entry for the file.
     result = SaveFileToDatabase(document, name, fileType, destination, fileSize)
@@ -451,6 +461,7 @@ def SaveFileToDatabase(document, file_name, file_ext, file_location, file_size):
         else:
             # Handle Error
             result = GenerateResult(resultList,3)
+            print(e)
             log.error(f"Error{result.code}: {result.consolLog}")
             return result
 
