@@ -58,7 +58,7 @@ def ExtractTextFromDocument(did, start, end):
     # Cleanup Temporary Files
     if settings.USE_S3:
         tempFolder = document.file.file_location
-        #fileModule.deleteDirectory(tempFolder,False)
+        fileModule.deleteDirectory(tempFolder,False)
 
     log.debug(f"Extraction complete. Result: {result.description} ({result.code})")
     return result
@@ -95,3 +95,23 @@ def RunPageTextAutomation(did, data_type):
 
     return redirect('document', did)
 
+def RunPageTextAutomationByMethodView(request, did, method_id):
+    result = RunPageTextAutomationByMethod(did, method_id)
+
+    return redirect('document', did)
+
+def RunPageTextAutomationByMethod(did, method_id):
+    document = Document.objects.get(id=did)
+    method = ExtractionMethod.objects.get(id=method_id)
+
+    if document.conversion_status == document.IGNORED:
+        return True
+
+    if document.conversion_status == document.NOTCONVERTED:
+        return False
+
+    result = ExtractData(document,method)
+    if result == False:
+        log.warning('Text Extraction Failed. Document: %s (%i), Method: %s (%i)', document.document_name, document.id, method.name, method.id)
+
+    return redirect('document', did)

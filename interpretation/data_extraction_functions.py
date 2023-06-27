@@ -353,14 +353,17 @@ def getDocumentText(document):
             tempFolder = file.file_location
 
             # Copy to temp folder
-            print(filePath)
             result = fileModule.copyToTemp(filePath, tempFolder, fileName)
             if result.code != "00000":
                 return result
 
             path = file.path()
 
-            pageTexts = getTextArray(path)
+            result = getTextArray(path)
+            if result.code != "00000":
+                return result
+
+            pageTexts = result.texts
 
             i = 0
             for pageText in pageTexts:
@@ -403,18 +406,24 @@ def getTextArray(path):
     texts = response.text_annotations
 
     if response.error.message:
-        raise Exception(
-            '{}\nFor more info on error messages, check: '
-            'https://cloud.google.com/apis/design/errors'.format(
-                response.error.message))
+        result = GenerateResult(resultList,9)
+        result.consolLog = result.consolLog + ". " + response.error.message + '\nFor more info on error messages, check: https://cloud.google.com/apis/design/errors'
+        return result
 
-    return texts
+    result = GenerateResult(resultList,0)
+    result.texts = texts
+    return result
 
 def ExtractData(document,method):
     pages = document.pages.all()
     actions = method.actions.all()
+    log.debug("*****************************************************")
+    log.debug("Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
     
     for page in pages:
+        #log.debug("Page: %s",page.page_no)
+        if page.page_no != 14:
+            continue
         texts = page.texts.all()
         for text in texts:
             actionResults = []
@@ -431,11 +440,10 @@ def ExtractData(document,method):
                     try:
                         previousAction = actionResults[action.start-1]
                     except:
-                        print(f"Start action out of range. Method {method.id}, Action: {action.id}")
+                        log.error(f"Start action out of range. Method {method.id}, Action: {action.id}")
                         break
 
                     previousText = previousAction.text
-                    
 
                     # Check if it was on the end of the previous action
                     success = False
@@ -511,20 +519,21 @@ def ExtractData(document,method):
                 if not actionResult.success:
                     if action.type != action.INITIAL:
                         #pass
-                        print(actionResult)
+                        log.debug(actionResult)
                     if actionResult.action.can_fail:
                         actionResult.value=None
                         actionResults.append(actionResult)
                     else:
                         break
                 else:
-                    print(actionResult)
+                    log.debug(actionResult)
                     actionResults.append(actionResult)
 
                 
                 
             # Check Success
             if len(actions) != 0 and len(actions) == len(actionResults) or partialSuccess:
+                log.debug("SUCCESS Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
                 # Get Values
                 values = []
                 texts = []
@@ -654,6 +663,9 @@ def ExtractData(document,method):
                             )
                         except Exception as e:
                             print(e)
+            else:
+                pass
+                #log.debug("FAILED Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
 
     return True
 
@@ -678,6 +690,7 @@ def InitialAction(text,action):
         texts = []
         texts.append(text)
         result = Action(texts,foundStr,True,action)
+        log.debug("Initial Action: %s", foundStr)
     else:
         result = Action(None,None,False,action)
     
@@ -801,8 +814,12 @@ def NextAction(action, startAction, page):
 
             if foundStr == chkStr:
                 result = Action(aTexts,foundStr,True,action)
+                log.debug("Next String (%s): %s", chkStr, foundStr)
                 return result
-
+            else:
+                log.debug("Next String - FAILED (%s): %s", chkStr, foundStr)
+        else:
+            log.debug("Next String - FAILED (%s): NULL", chkStr)
 
     result = Action(None,None,False,action)
     return result
@@ -1066,6 +1083,7 @@ def ValueAction(action, startAction, page):
     # Get first value
     fText = None
     for t in texts:
+        print(t.text)
         if t != lowerBoundText and t != upperBoundText:
             result = processPoly(t)
             if result.code == "00000":
@@ -1110,6 +1128,7 @@ def ValueAction(action, startAction, page):
     if fText is not None:
         foundStr = strCorrections(fText.text, action.remove_chars, False)
         #print(foundStr)
+        log.debug("Get Value found string: %s", foundStr)
  
         aTexts = []
         aTexts.append(fText)
@@ -1175,6 +1194,7 @@ def ValueAction(action, startAction, page):
                     fText = None
 
         result = Action(aTexts,foundStr,True,action)
+        
         return result
 
     result = Action(None,None,False,action)
@@ -1438,7 +1458,7 @@ def processPoly(text):
     if polys.count() != 4:
         result = GenerateResult(resultList,15)
         result.consolLog = f"{result.consolLog} Poly Count: {polys.count()}"
-        PrintResultLog(result)
+        log.warning("Error%s: %s", result.code, result.consolLog)
         return result
     
     BL = polys[0]
