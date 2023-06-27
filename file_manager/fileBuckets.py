@@ -2,8 +2,6 @@ from django.core.mail import send_mail
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from background_task import background
-
 from data_extraction.models import BoundingPoly, Company, Data, Document, File, Page, Permit, Report, ReportType, State, Text, Well, WellClass, WellStatus, WellPurpose, UserFileBucket, FileBucketFiles
 from data_extraction.myExceptions import Error, downloadList as errorList
 from . import fileModule

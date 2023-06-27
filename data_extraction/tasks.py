@@ -24,6 +24,10 @@ import logging
 log = logging.getLogger("celery_tasks")
 
 @app.task
+def ProcessDocumentTask(documentId):
+    ProcessDocument(documentId)
+    return
+
 def ProcessDocument(documentId):
     try:
         success = True
@@ -70,6 +74,10 @@ def ProcessDocument(documentId):
     return
 
 @app.task
+def saveFileBucketTask(userId):
+    saveFileBucket(userId)
+    return
+
 def saveFileBucket(userId):
     try:
         user = User.objects.get(pk=userId)
@@ -185,9 +193,17 @@ def saveFileBucket(userId):
 
 
 @app.task
+def deleteFileBucketTask(filePath, useS3):
+    deleteFileBucket(filePath, useS3)
+    return
+
 def deleteFileBucket(filePath, useS3):
     log.info('Deleting files in path: %s.', filePath)
     fileModule.deleteFile(filePath, useS3)
+    return
+
+def emptyFileBucketTask(user):
+    emptyFileBucket(user)
     return
 
 def emptyFileBucket(user):
@@ -202,6 +218,10 @@ def emptyFileBucket(user):
     return True
 
 @app.task
+def UpdateCompanyNamesTask():
+    UpdateCompanyNames()
+    return
+
 def UpdateCompanyNames():
     log.info('Updating company Names')
     admin_views.UpdateCompanyNamesTask()

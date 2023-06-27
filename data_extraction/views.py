@@ -360,7 +360,7 @@ def emptyFileBucket(user):
 def saveFileBucket(request):
 	userId = request.user.id
 	log.debug(f"Sending task to celery to saving file bucket of user {request.user.username}.")
-	tasks.saveFileBucket.delay(userId)
+	tasks.saveFileBucketTask.delay(userId)
 
 	response = {'success':True}
 	return JsonResponse(response)	
@@ -372,7 +372,7 @@ def deleteFileBucket(request, id):
 
 	filePath = 'file_buckets/' + fileBucket.name + '.zip'
 	
-	tasks.deleteFileBucket.delay(filePath, settings.USE_S3)
+	tasks.deleteFileBucketTask.delay(filePath, settings.USE_S3)
 
 	fileBucket.delete()
 
