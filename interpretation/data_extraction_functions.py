@@ -421,9 +421,6 @@ def ExtractData(document,method):
     log.debug("Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
     
     for page in pages:
-        #log.debug("Page: %s",page.page_no)
-        if page.page_no != 14:
-            continue
         texts = page.texts.all()
         for text in texts:
             actionResults = []
