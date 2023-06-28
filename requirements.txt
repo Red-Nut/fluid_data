@@ -2,7 +2,7 @@ django==3.2.8
 gunicorn
 wheel
 requests
-mysqlclient
+mysqlclient==2.1.0
 django-mysql
 django-allauth
 python-dateutil
