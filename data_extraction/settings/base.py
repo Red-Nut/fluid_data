@@ -36,7 +36,7 @@ INSTALLED_APPS = [
     'django_mysql',
     'storages',
     'django.contrib.sites',
-    'background_task',
+    #'background_task',
     'data_extraction',
     'administration',
     'search',

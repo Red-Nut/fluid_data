@@ -39,6 +39,7 @@ urlpatterns = [
     path('saveToFileBucket',views.saveToFileBucket, name='saveToFileBucket'),
     path('emptyBucket',views.emptyFileBucketRequest, name='emptyBucket'),
     path('saveBucket',views.saveFileBucket, name='saveBucket'),
+    path('saveBucketTest',views.saveFileBucketTest, name='saveBucketTest'),
     path('deleteBucket/<int:id>/',views.deleteFileBucket, name='deleteBucket'),
 
         # API Page.

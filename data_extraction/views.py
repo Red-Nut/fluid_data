@@ -115,8 +115,6 @@ def search(request):
 		show_qty = 20
 		orderBy = "id"
 
-	print(wells)
-	
 	context = {
 		"wells" : wells,
 		"form" : form,
@@ -345,7 +343,7 @@ def emptyFileBucketRequest(request):
 		return JsonResponse(response)		
 
 def emptyFileBucket(user):
-	log.debug(f"Deleting filebuck of user {request.user.username}.")
+	log.debug(f"Deleting filebuck of user {user.username}.")
 	fileBucket = UserFileBucket.objects.filter(user=user).first()
 
 	if(fileBucket is not None):
@@ -364,6 +362,14 @@ def saveFileBucket(request):
 
 	response = {'success':True}
 	return JsonResponse(response)	
+
+def saveFileBucketTest(request):
+	userId = request.user.id
+	log.debug(f"Sending task to celery to saving file bucket of user {request.user.username}.")
+	tasks.saveFileBucket(userId)
+
+	response = {'success':True}
+	return JsonResponse(response)
 
 # File Bucket - Delete.
 @login_required

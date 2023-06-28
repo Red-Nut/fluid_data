@@ -13,6 +13,7 @@ from .celery import app
 
 # This module imports.
 from data_extraction.models import *
+from data_extraction.functions import CleanStr
 
 # Other module imports.
 from file_manager import fileModule, convertToJPEG, fileBuckets
@@ -75,120 +76,124 @@ def ProcessDocument(documentId):
 
 @app.task
 def saveFileBucketTask(userId):
-    saveFileBucket(userId)
+    #saveFileBucket(userId)
     return
 
 def saveFileBucket(userId):
+    #try:
+    user = User.objects.get(pk=userId)
+    unsaved = UserFileBucket.objects.filter(user=user).first() # first bucket is always used as temporary bucket
+    log.info('Saving File Bucket for user: %s.', user.username)
+
+    # Create new bucket.
+    userFileBucket = UserFileBucket.objects.create(
+        user=user,
+        name = 'tempName',
+        status = unsaved.PREPARING
+    )
+    name = user.first_name + user.last_name + str(userFileBucket.id)
+    userFileBucket.name = name
+    userFileBucket.save()
+    log.info('Created File Bucket: %i for user: %s.', userFileBucket.id, user.username)
+
+    # Copy files from temporary bucket.
+    fileBucketFiles = FileBucketFiles.objects.filter(bucket=unsaved).all()
+    for fileBucketfile in fileBucketFiles:
+        log.debug('Added document %s (%i) to File Bucket: %i for user: %s.', fileBucketfile.document.document_name, fileBucketfile.document.id, userFileBucket.id, user.username)
+        FileBucketFiles.objects.create(bucket=userFileBucket, document=fileBucketfile.document)
+    
+
+    # Notify user
     try:
-        user = User.objects.get(pk=userId)
-        unsaved = UserFileBucket.objects.filter(user=user).first() # first bucket is always used as temporary bucket
-        log.info('Saving File Bucket for user: %s.', user.username)
-
-        # Create new bucket.
-        userFileBucket = UserFileBucket.objects.create(
-            user=user,
-            name = 'tempName',
-            status = unsaved.PREPARING
+        send_mail(
+            subject='Fluid Data - Preparing Files for Download',
+            message='We are preparing data package ' + userFileBucket.name + ' for you. You can check the progress from your profile page and an email will be sent to you when it is ready for download.',
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=False,
         )
-        name = user.first_name + user.last_name + str(userFileBucket.id)
-        userFileBucket.name = name
-        userFileBucket.save()
-        log.info('Created File Bucket: %i for user: %s.', userFileBucket.id, user.username)
-
-        # Copy files from temporary bucket.
-        documents = FileBucketFiles.objects.filter(bucket=unsaved).all()
-        for document in documents:
-            log.debug('Added document %s (%i) to File Bucket: %i for user: %s.', document.document_name, document.id, userFileBucket.id, user.username)
-            FileBucketFiles.objects.create(bucket=userFileBucket, document=document.document)
-        
-
-        # Notify user
-        try:
-            send_mail(
-                subject='Fluid Data - Preparing Files for Download',
-                message='We are preparing data package ' + userFileBucket.name + ' for you. You can check the progress from your profile page and an email will be sent to you when it is ready for download.',
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-            log.info('Email sent to user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
-        except:
-            log.error('Failed to send email to user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
-
-        # Document List
-        fileBucketFiles = FileBucketFiles.objects.filter(bucket=userFileBucket).all()
-        documents = []
-        for fileBucketfile in fileBucketFiles:
-            documents.append(fileBucketfile.document)
-
-        # Empty temporary bucket.
-        emptyFileBucket(user)
-        log.info('Emptied Temporary File Bucket for user: %s.', user.username)
-
-        # Download each file
-        for document in documents:
-            if(document.status != 2):
-                log.debug('Downloading document (%i) for file bucket (%i).', document.id, userFileBucket.id)
-                result = fileModule.downloadWellFile(document)
-                if(result.code != "50000" and result.code != "50004"):
-                    # Failed, notify users
-                    log.debug('File bucket (%i) document (%i) not downloaded. Error %s: %s', userFileBucket.id, document.id, result.code, result.consolLog)
-        log.debug('Downloaded Document for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
-
-        # Create File Bucket
-        fileModule.makeDirectory('file_buckets/',False)
-        
-
-        destination = 'file_buckets/' + userFileBucket.name + '/'
-        fileModule.makeDirectory(destination, False)
-        
-
-        # Copy Files
-        for document in documents:
-            if document.file is not None:
-                sPath = document.file.file_location + document.file.file_name + document.file.file_ext
-                
-                dfolder = destination + document.well.well_name + '/'
-                fileModule.makeDirectory(dfolder, False)
-                
-                dName = document.file.file_name + document.file.file_ext
-
-                result = fileModule.copyToTemp(sPath, dfolder, dName)
-        log.debug('Copied documents to filebucket folder for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
-
-        # Zip Folder
-        log.debug('Zipping Folder for file bucket (%i).', userFileBucket.id)
-        result = fileModule.zipFiles('file_buckets/' + userFileBucket.name,destination)
-        if result.code != "00000":
-            log.error('Failed to zip file bucket %i', userFileBucket.id)
-            return result
-
-        zipSize = result.fileSize
-        log.debug('Zip Szie for file bucket (%i): %i.', userFileBucket.id, zipSize)
-
-        if settings.USE_S3:
-            log.debug('Zip file uploaded to amazon for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
-            fileModule.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
-
-        # Update file bucket status
-        userFileBucket.status = userFileBucket.READY
-        userFileBucket.zipSize = zipSize
-        userFileBucket.save()
-
-        # Notify user
-        try:
-            send_mail(
-                subject='Fluid Data - Files ready Download',
-                message='Data package ' + userFileBucket.name + ' is ready for download. Access the files from your profile page. Or using this link: ' + settings.MEDIA_URL + "file_buckets/" + userFileBucket.name + ".zip",
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[user.email],
-                fail_silently=False,
-            )
-            log.info('Email sent to user: %s. Finished preparing bucket: %i', user.username, unsaved.id)
-        except:
-            log.error('Failed to send email to user: %s. Finished preparing bucket: %i', user.username, userFileBucket.id)
+        log.info('Email sent to user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
     except:
-        log.error('An unknown error occured while saving file bucket: %i for user: %s.', unsaved.id, user.username)
+        log.error('Failed to send email to user: %s. Preparing file bucket: %i', user.username, userFileBucket.id)
+
+    # Document List
+    fileBucketFiles = FileBucketFiles.objects.filter(bucket=userFileBucket).all()
+    documents = []
+    for fileBucketfile in fileBucketFiles:
+        documents.append(fileBucketfile.document)
+
+    # Empty temporary bucket.
+    emptyFileBucket(user)
+    log.info('Emptied Temporary File Bucket for user: %s.', user.username)
+
+    # Download each file
+    for document in documents:
+        if(document.status != 2):
+            log.debug('Downloading document (%i) for file bucket (%i).', document.id, userFileBucket.id)
+            result = fileModule.downloadWellFile(document)
+            if(result.code != "50000" and result.code != "50004"):
+                # Failed, notify users
+                log.debug('File bucket (%i) document (%i) not downloaded. Error %s: %s', userFileBucket.id, document.id, result.code, result.consolLog)
+    log.debug('Downloaded Document for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
+
+    # Create File Bucket
+    fileModule.makeDirectory('file_buckets/',False)
+    
+
+    destination = 'file_buckets/' + userFileBucket.name + '/'
+    fileModule.makeDirectory(destination, False)
+    
+
+    # Copy Files
+    for document in documents:
+        if document.file is not None:
+            sPath = document.file.file_location + document.file.file_name + document.file.file_ext
+            
+            dfolder = destination + document.well.well_name + '/'
+            if document.report:
+                reportName = CleanStr(document.report.report_name)
+                dfolder = dfolder + reportName + '/'
+                
+            fileModule.makeDirectory(dfolder, False)
+            
+            dName = document.file.file_name + document.file.file_ext
+
+            result = fileModule.copyToTemp(sPath, dfolder, dName)
+    log.debug('Copied documents to filebucket folder for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
+
+    # Zip Folder
+    log.debug('Zipping Folder for file bucket (%i).', userFileBucket.id)
+    result = fileModule.zipFiles('file_buckets/' + userFileBucket.name,destination)
+    if result.code != "00000":
+        log.error('Failed to zip file bucket %i', userFileBucket.id)
+        return result
+
+    zipSize = result.fileSize
+    log.debug('Zip Szie for file bucket (%i): %i.', userFileBucket.id, zipSize)
+
+    if settings.USE_S3:
+        log.debug('Zip file uploaded to amazon for File Bucket: %i for user: %s.', userFileBucket.id, user.username)
+        fileModule.uploadFileS3(settings.MEDIA_ROOT + 'file_buckets/' + userFileBucket.name + '.zip', 'file_buckets/' + userFileBucket.name + '.zip')
+
+    # Update file bucket status
+    userFileBucket.status = userFileBucket.READY
+    userFileBucket.zipSize = zipSize
+    userFileBucket.save()
+
+    # Notify user
+    try:
+        send_mail(
+            subject='Fluid Data - Files ready Download',
+            message='Data package ' + userFileBucket.name + ' is ready for download. Access the files from your profile page. Or using this link: ' + settings.MEDIA_URL + "file_buckets/" + userFileBucket.name + ".zip",
+            from_email=settings.EMAIL_HOST_USER,
+            recipient_list=[user.email],
+            fail_silently=False,
+        )
+        log.info('Email sent to user: %s. Finished preparing bucket: %i', user.username, unsaved.id)
+    except:
+        log.error('Failed to send email to user: %s. Finished preparing bucket: %i', user.username, userFileBucket.id)
+    #except:
+        #log.error('An unknown error occured while saving file bucket: %i for user: %s.', unsaved.id, user.username)
     return
 
 
