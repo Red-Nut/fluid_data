@@ -39,7 +39,7 @@ def DataExtractionView(request, id):
 
 def ExtractTextFromDocumentView(request, did):
     
-    result = ExtractTextFromDocument(did, 1, 99)
+    result = ExtractTextFromDocument(did, 1, 300)
 
     # Convert to Json and return the response.
     #return JsonResponse(result.description, safe=False)
@@ -75,7 +75,7 @@ def RunPageTextAutomation(did, data_type):
         return True
 
     if document.conversion_status == document.NOTCONVERTED:
-        return False
+        log.warning("Document not converted or only partially converted")
 
     if data_type == 0:
         methods = ExtractionMethod.objects.filter(

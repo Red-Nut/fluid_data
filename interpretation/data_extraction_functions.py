@@ -421,6 +421,7 @@ def ExtractData(document,method):
     log.debug("Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
     
     for page in pages:
+        log.debug("Page %i", page.page_no)
         texts = page.texts.all()
         for text in texts:
             actionResults = []
@@ -457,7 +458,7 @@ def ExtractData(document,method):
                             actionResults[action.start-1].text = previousText
                             actionResult = Action(previousAction.texts,chkStr,True,action)
                     if not success:
-                        actionResult = NextAction(action, actionResults[action.start-1], page)
+                        actionResult = NextAction(action, actionResults[action.start-1], actionResults[action.lower_bound_start-1], actionResults[action.upper_bound_start-1], page)
 
                 # Search Action
                 #if action.type == action.SEARCH:
@@ -693,7 +694,7 @@ def InitialAction(text,action):
     
     return result
 
-def NextAction(action, startAction, page):
+def NextAction(action, startAction, startActionLower, startActionUpper, page):
     chkStr = strCorrections(action.string, action.remove_chars, True) 
     if action.remove_chars:
         ignoreList = action.remove_chars.split('#')
@@ -704,9 +705,13 @@ def NextAction(action, startAction, page):
     # Right or Down
     if(action.direction == action.RIGHT or action.direction == action.DOWN):
         startText = startAction.texts[-1]
+        startTextLower = startActionLower.texts[-1]
+        startTextUpper = startActionUpper.texts[-1]
     # Left or Up
     if(action.direction == action.LEFT or action.direction == action.UP):
         startText = startAction.texts[0]
+        startTextLower = startActionLower.texts[0]
+        startTextUpper = startActionUpper.texts[0]
 
     foundStr = ""
     aTexts = []
@@ -719,6 +724,20 @@ def NextAction(action, startAction, page):
         else:
             poly = result.poly
 
+        result = processPoly(startTextLower)
+        if result.code != "00000":
+            result.text = None
+            return result
+        else:
+            polyLower = result.poly
+
+        result = processPoly(startTextUpper)
+        if result.code != "00000":
+            result.text = None
+            return result
+        else:
+            polyUpper = result.poly
+
 
         texts = Text.objects.filter(
             page = page)
@@ -726,36 +745,36 @@ def NextAction(action, startAction, page):
         # Right 
         if(action.direction == action.RIGHT):
             texts = texts.filter(BoundingPolys__x__gte = poly['x2'])
-            lowerBound = poly['y1']-poly['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['y1']-polyLower['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__y__gte = lowerBound)
-            upperBound = poly['y2']+poly['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            upperBound = polyUpper['y2']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__y__lte = upperBound)
 
             x = 9999999
         # LEFT
         elif(action.direction == action.LEFT):
             texts = texts.filter(BoundingPolys__x__lte = poly['x1'])
-            lowerBound = poly['y1']-poly['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['y1']-polyLower['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__y__gte = lowerBound)
-            upperBound = poly['y2']+poly['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            upperBound = polyUpper['y2']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__y__lte = upperBound)
 
             x = -9999999
         # Up
         elif(action.direction == action.UP):
             texts = texts.filter(BoundingPolys__y__lte = poly['y1'])
-            lowerBound = poly['x1']-poly['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['x1']-polyLower['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__x__gte = lowerBound)
-            upperBound = poly['x2']+poly['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            upperBound = polyUpper['x2']+polyUpper['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__x__lte = upperBound)
 
             y = -9999999
         # Down
         elif(action.direction == action.DOWN):
             texts = texts.filter(BoundingPolys__y__gte = poly['y2'])
-            lowerBound = poly['x1']-poly['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['x1']-polyLower['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__x__gte = lowerBound)
-            upperBound = poly['x2']+poly['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            upperBound = polyUpper['x2']+polyUpper['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__x__lte = upperBound)
 
             y = 9999999
@@ -779,24 +798,24 @@ def NextAction(action, startAction, page):
 
                     if(action.direction == action.RIGHT):
                         if testPoly['xave'] > poly['x2'] and testPoly['xave'] < x:
-                            if testPoly['yave'] > poly['y1'] and testPoly['yave'] < poly['y2']:
+                            if testPoly['yave'] > polyLower['y1'] and testPoly['yave'] < polyUpper['y2']:
                                 x = testPoly['xave']
                                 fText = t
                     elif(action.direction == action.LEFT):
                         if testPoly['xave'] < poly['x2'] and testPoly['xave'] > x:
-                            if testPoly['yave'] > poly['y1'] and testPoly['yave'] < poly['y2']:
+                            if testPoly['yave'] > polyLower['y1'] and testPoly['yave'] < polyUpper['y2']:
                                 x = testPoly['xave']
                                 fText = t
 
                     elif(action.direction == action.UP):
                         if testPoly['yave'] < poly['y2'] and testPoly['yave'] > y:
-                            if testPoly['xave'] > poly['x1'] and testPoly['xave'] < poly['x2']:
+                            if testPoly['xave'] > polyLower['x1'] and testPoly['xave'] < polyUpper['x2']:
                                 y = testPoly['yave']
                                 fText = t
 
                     elif(action.direction == action.DOWN):
                         if testPoly['yave'] > poly['y2'] and testPoly['yave'] < y:
-                            if testPoly['xave'] > poly['x1'] and testPoly['xave'] < poly['x2']:
+                            if testPoly['xave'] > polyLower['x1'] and testPoly['xave'] < polyUpper['x2']:
                                 y = testPoly['yave']
                                 fText = t
 

@@ -494,6 +494,8 @@ class ExtractionAction(CreatedModifiedModel):
         null=True
     )
     start = models.PositiveSmallIntegerField(null=True)
+    startLower = models.PositiveSmallIntegerField(null=True)
+    startUpper = models.PositiveSmallIntegerField(null=True)
     unit = models.ForeignKey(
         Unit,
         null=True,
@@ -552,7 +554,14 @@ class ExtractionAction(CreatedModifiedModel):
             else:
                 return "Error"
         else:
-            return f"Action {self.start}"
+            return f"Step {self.start} going {self.direction_display}"
+
+    @property
+    def lower_bound_start(self):
+        if self.startLower:
+            return self.startLower
+        else: 
+            return self.start
 
     @property
     def lower_bound_display(self):
@@ -592,7 +601,7 @@ class ExtractionAction(CreatedModifiedModel):
             else:
                 return "Error"
         else:
-            myStr = f"{self.get_lower_bound_display()} of Step {self.start}"
+            myStr = f"{self.get_lower_bound_display()} of Step {self.lower_bound_start}"
             
             if self.lower_offset_percent:
                 myStr = f"{myStr} ({self.lower_offset_percent}%)"
@@ -601,6 +610,12 @@ class ExtractionAction(CreatedModifiedModel):
 
             return myStr
 
+    @property
+    def upper_bound_start(self):
+        if self.startUpper:
+            return self.startUpper
+        else: 
+            return self.start
 
     @property
     def upper_bound_display(self):
@@ -640,7 +655,7 @@ class ExtractionAction(CreatedModifiedModel):
             else:
                 return "Error"
         else:
-            myStr = f"{self.get_upper_bound_display()} of Step {self.start}"
+            myStr = f"{self.get_upper_bound_display()} of Step {self.upper_bound_start}"
             
             if self.upper_offset_percent:
                 myStr = f"{myStr} ({self.upper_offset_percent}%)"
@@ -654,7 +669,10 @@ class ExtractionAction(CreatedModifiedModel):
         if self.remove_chars:
             return self.remove_chars.replace("#", " ")
         else:
-            return self.remove_chars
+            if self.type == self.SAVE or self.NEXTDATA:
+                return "-"
+            else:
+                return self.remove_chars
     
 
 class ExtractionActions(CreatedModifiedModel):
