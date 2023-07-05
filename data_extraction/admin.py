@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import BoundingPoly, Company, CompanyNameCorrections, Data, Document, File, Page, Permit, Report, ReportType, State, Text, UserProfile, Organisation, Well, WellClass, WellStatus, WellPurpose
+from .models import *
 
 # Company.
 class CompanyAdmin(admin.ModelAdmin):
@@ -76,3 +76,28 @@ admin.site.register(UserProfile)
 
 # Organisation
 admin.site.register(Organisation)
+
+
+
+# Data Extraction
+class ExtractionActionsInline(admin.TabularInline):
+    model = ExtractionActions
+    extra=1
+    verbose_name = "Action"
+    verbose_name_plural = "Actions"
+    show_change_link = True
+
+class ExtractionMethodAdmin(admin.ModelAdmin):
+    list_display = ['id','data_type','company','name']
+    search_fields = ['name']
+    inlines = [ExtractionActionsInline]
+    def get_ordering(self, request):
+        return ['data_type', 'id']
+admin.site.register(ExtractionMethod, ExtractionMethodAdmin)
+
+class ExtractionActionsAdmin(admin.ModelAdmin):
+    list_display = ['id','method','order','action']
+    search_fields = ['name']
+    def get_ordering(self, request):
+        return ['method', 'order']
+admin.site.register(ExtractionActions, ExtractionActionsAdmin)

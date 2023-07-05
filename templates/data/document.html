@@ -130,7 +130,7 @@
                     <p class="link" style="padding:0px; margin-right:20px;" onclick="FirstPage()"><i class="fas fa-chevron-circle-left fa-2x"></i></p>
                     <p class="link" style="padding:0px; margin-right:20px;" onclick="PreviousPage()"><i class="fas fa-chevron-left fa-2x"></i></p>
                     <!-- Jump to Page -->
-                    <p id="currentPage" style="padding:0px;">1 of {{document.pages.count}}</p>
+                    <p id="currentPage" style="padding:0px;">Page 1 of {{document.pages.count}}</p>
                     <!-- Next -->
                     <p class="link" style="padding:0px; margin-left:20px;" onclick="NextPage()"><i class="fas fa-chevron-right fa-2x"></i></p>
                     <p class="link" style="padding:0px; margin-left:20px;" onclick="LastPage()"><i class="fas fa-chevron-circle-right fa-2x"></i></p>
@@ -184,7 +184,7 @@
             page = pages[i];
             if (i == pageNo){
                 document.getElementById(page).style.display = "Inline";
-                document.getElementById("currentPage").innerText = (i+1) + " of {{document.pages.count}}";
+                document.getElementById("currentPage").innerText = page + " of {{document.pages.count}}";
             } else {
                 document.getElementById(page).style.display = "None";
             }

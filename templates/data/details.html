@@ -4,25 +4,142 @@
 {% endblock %}
 
 {% block main %}
-<div class="card">
-    <div class="card-body">
-        <h2 class="card-title">{{well.well_name}}</h2>
-        <div class="row align-items-start" style="border-bottom: 1px lightgrey solid; margin-bottom: 12px;">
-            <div class="col-auto">
-                <p><strong>Owner</strong>: {{well.owner}}</p>
-                <p><strong>State</strong>: {{well.state.name_long}}</p>
-                <p><strong>Permit</strong>: {{well.permit}}</p>
-            </div>
-            <div class="col-auto">
-                <p><strong>Status</strong>: {{well.status}}</p>
-                <p><strong>Class</strong>: {{well.well_class}}</p>
-                <p><strong>Purpose</strong>: {{well.purpose}}</p>
+<div class="row">
+    <div class="col">
+        <div class="card">
+            <div class="card-body">
+                <h2 class="card-title">{{well.well_name}}</h2>
             </div>
         </div>
-        <!-- Link -->
-        <a class="btn btn-primary" href={{well.url}} target="_blank">View on Geoscience Portal</a>
     </div>
 </div>
+<div class="row">
+    <div class="col-xl-4 pb-3">
+        <div class="card">
+            <div class="card-body">
+                <table class="table">
+                    <tr>
+                        <th colspan="2">Well Name</th>
+                        <td>{{well.well_name}}</td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">State</th>
+                        <td>{{well.state.name_long}}</td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">Status</th>
+                        <td>{{well.status}}</td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">Operator</th>
+                        <td>{{well.owner}}</td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">Permit</th>
+                        <td>{{well.permit}}</td>
+                    </tr>
+                    <tr>
+                        <th rowspan="2">Location</th>
+                        <th>Latitude</th>
+                        <td>{{well.latitude}}</td>
+                    </tr>
+                    <tr>
+                        <th>Logitude</th>
+                        <td>{{well.longitude}}</td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">Class</th>
+                        <td>{{well.well_class}}</td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">Purpose</th>
+                        <td>{{well.purpose}}</td>
+                    </tr>
+                    <tr>
+                        <th colspan="2">Rig Release Date</th>
+                        <td>{{well.rig_release|date:"d/m/Y"}}</td>
+                    </tr>
+                </table>
+                <!-- Link -->
+                <a class="btn btn-primary" href={{well.url}} target="_blank">View on Geoscience Portal</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-xl-8 pb-3">
+        <!-- Data -->
+        <div class="card p-2">
+            <h2 class="card-title">Extracted Data</h2>
+            <div class="card-body">
+                <table class="table">
+                    {% for data in datas %}
+                        {% with type=data.extraction_method.data_type %}
+                        {% ifchanged data.extraction_method.data_type %}
+                        <tr><td colspan="5"></td></tr>
+                        {% if type.value1 %}
+                        <tr>
+                            <th colspan=5>{{type}}</th>
+                        </tr>
+                        <tr>
+                            <th>{{type.value1}}</th>
+                            {% if type.value2 %}
+                            <th>{{type.value2}}</th>
+                            {% else %}
+                            <th></th>
+                            {% endif %}
+                            {% if type.value3 %}
+                            <th>{{type.value3}}</th>
+                            {% else %}
+                            <th></th>
+                            {% endif %}
+                            {% if type.value4 %}
+                            <th>{{type.value4}}</th>
+                            {% else %}
+                            <th></th>
+                            {% endif %}
+                        </tr>
+                        {% endif %}
+                        {% endifchanged %}
+                        {% if type.value1 %}
+                        <tr>
+                            <td>
+                                {% if data.get_value1 is not None %}
+                                {{data.get_value1}}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if data.get_value2 is not None %}
+                                {{data.get_value2}}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if data.get_value3 is not None %}
+                                {{data.get_value3}}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if data.get_value4 is not None %}
+                                {{data.get_value4}}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <th>{{type}}:</th>
+                            <td colspan=4>{{data.get_value1}}</td>
+                        </tr>
+                        {% endif %}
+                    {% endwith %}
+                    {% endfor %}
+                </table>
+            </div>
+        </div>   
+    </div> 
+</div>
+    
+
+
+
+
 <!-- Files -->
 <div class="card">
     <div class="card-body">
@@ -32,8 +149,7 @@
                 <tr>
                     <th>File Name</th>
                     <th style="text-align: center;">File Type</th>
-                    <th style="text-align:center; border-right:none;">Download</th>
-                    <th style="border-left:none;"></th>
+                    <th colspan=2 style="text-align:center; border-right:none;">Download</th>
                 </tr>
                 {% for document in well.documents.all %}
                     <tr>
@@ -75,8 +191,7 @@
                                 <tr>
                                     <th>File Name</th>
                                     <th style="text-align: center;">File Type</th>
-                                    <th style="text-align:center; border-right:none;">Download</th>
-                                    <th style="border-left:none;"></th>
+                                    <th colspan=2 style="text-align:center; border-right:none;">Download</th>
                                 </tr>
                                 {% for document in report.documents.all %}
                                     <tr>

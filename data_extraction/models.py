@@ -435,6 +435,7 @@ class ExtractionMethod(CreatedModifiedModel):
         on_delete=models.RESTRICT,
         default=None
     )
+    enabled = models.BooleanField(default=True)
 
     def __str__(self):
         return f"{self.name}"
@@ -454,6 +455,11 @@ class ExtractionAction(CreatedModifiedModel):
     TEXTVALUE=4
     SAVE = 5
     NEXTDATA = 6
+    REPEAT = 99
+    TABLEHEADER = 11
+    TABLEROW = 12
+    TABLECELLVALUE = 13
+    TABLECELLTEXT = 14
     TYPE = (
         (INITIAL, _('Initial Action')),
         (NEXT, _('Immediately Next Text')),
@@ -462,6 +468,10 @@ class ExtractionAction(CreatedModifiedModel):
         (TEXTVALUE, _('Get Text Value')),
         (NEXTDATA, _('Next Data Row')),
         (SAVE, _('Save Data')),
+        (TABLEHEADER, _('Table Header')),
+        (TABLEROW, _('Table Row')),
+        (TABLECELLVALUE, _('Table Cell Value')),
+        (TABLECELLTEXT, _('Table Cell Text')),
     )
 
     LEFT=1
@@ -492,10 +502,16 @@ class ExtractionAction(CreatedModifiedModel):
     direction = models.PositiveSmallIntegerField(
         choices=DIRECTION,
         null=True
-    )
+    ) 
     start = models.PositiveSmallIntegerField(null=True)
-    startLower = models.PositiveSmallIntegerField(null=True)
-    startUpper = models.PositiveSmallIntegerField(null=True)
+    offset_percent = models.SmallIntegerField(null=True) # percentage offset, 1 = 1%, can be negative. 
+    offset_pixels = models.SmallIntegerField(null=True) # pixel offset, 1 = 1px, can be negative
+                                                        # in table header used for y variation
+
+    startLower = models.PositiveSmallIntegerField(null=True) 
+    startUpper = models.PositiveSmallIntegerField(null=True) # Also Column Number
+                                                             # Also used to specifiy step range repeating
+
     unit = models.ForeignKey(
         Unit,
         null=True,
@@ -506,8 +522,10 @@ class ExtractionAction(CreatedModifiedModel):
         choices=BOUNDS,
         null=True
     )
-    lower_offset_percent = models.SmallIntegerField(null=True)
-    lower_offset_pixels = models.SmallIntegerField(null=True)
+    lower_offset_percent = models.SmallIntegerField(null=True) # percentage offset, 1 = 1%, can be negative
+    lower_offset_pixels = models.SmallIntegerField(null=True) # pixel offset, 1 = 1px, can be negative
+                                                                # in table initial used to set the x range the the intial column occupies
+                                                                # in table header used to set the x range the the column occupies
 
     upper_bound = models.PositiveSmallIntegerField(
         choices=BOUNDS,
@@ -515,6 +533,9 @@ class ExtractionAction(CreatedModifiedModel):
     )
     upper_offset_percent = models.SmallIntegerField(null=True) # percentage offset, 1 = 1%, can be negative
     upper_offset_pixels = models.SmallIntegerField(null=True) # pixel offset, 1 = 1px, can be negative
+                                                                # in table initial used to set the x range the the intial column occupies
+                                                                # in table header used to set the x range the the column occupies
+
     
     remove_chars = models.CharField( # char list separated by hash symbol
         max_length=100, 
@@ -675,7 +696,7 @@ class ExtractionAction(CreatedModifiedModel):
                 return self.remove_chars
     
 
-class ExtractionActions(CreatedModifiedModel):
+class ExtractionActions(models.Model):
     method = models.ForeignKey(
         ExtractionMethod,
         null=False,
@@ -685,7 +706,8 @@ class ExtractionActions(CreatedModifiedModel):
     action = models.ForeignKey(
         ExtractionAction,
         null=False,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        related_name="methods"
     ) 
     
     order = models.IntegerField()
@@ -709,7 +731,8 @@ class Data(CreatedModifiedModel):
 
     value = models.DecimalField(
         max_digits=10, 
-        decimal_places=2) 
+        decimal_places=2,
+        null=True) 
     text = models.CharField(max_length=100, null=True)
     unit = models.ForeignKey(
         Unit,
@@ -763,6 +786,9 @@ class Data(CreatedModifiedModel):
 
     def name(self):
         return self.extraction_method.data_type.name
+    
+    class Meta:
+        unique_together=('page', 'extraction_method', 'value', 'text', 'unit', 'value2', 'text2', 'unit2', 'value3', 'text3', 'unit3', 'value4', 'text4', 'unit4',)
     
     @property
     def get_value(self):

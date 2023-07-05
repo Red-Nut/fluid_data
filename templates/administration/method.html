@@ -9,6 +9,7 @@
    <table class="table table-striped">
       <thead>
          <tr>
+            <th>id</th>
             <th>Seq.</th>
             <th>Type</th>
             <th>Search String</th>
@@ -20,7 +21,12 @@
       </thead>
       <tbody>
          {% for action in method.actions.all %}
-         <tr>
+         <tr
+         {% if action.action.type == action.action.SAVE %}
+         style="background-color: lightgreen;"
+         {% endif %}
+         >
+            <td>{{action.action.id}}</td>
             <td>{{action.order}}</td>
             <td>{{action.action.get_type_display}}</td>
             <td>{{action.action.string_display}}</td>

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db.models import Q
 
 # Other module imports.
 from data_extraction.models import *
@@ -8,14 +9,16 @@ from file_manager import fileModule
 from data_extraction.responseCodes import Result, GenerateResult, PrintResultLog, convertList as resultList
 from data_extraction.functions import IsNumber
 
+# Python imports
+from decimal import Decimal
+import re
+
 # Third party imports.
 import os
 import io
 from PIL import Image #pip install Pillow
 from pdf2image import convert_from_path #pip install pdf2image and install poppler and add to PATH (https://pypi.org/project/pdf2image/)
 import tempfile
-
-from decimal import Decimal
 
 # Imports the Google Cloud client library
 from google.cloud import vision
@@ -41,7 +44,7 @@ def ExtractPages(document, firstPage, lastPage, delete):
         document.save()
 
     if ext == "tiff" or ext == ".tif" or ext == ".pdf":
-        if(document.status != document.DOWNLOADED):
+        if document.status != document.DOWNLOADED or not document.file:
             result = fileModule.downloadWellFile(document)
             if(result.code != "00000" and result.code != "50005"):
                 log.error(f"File not downloaded Error. Error {result.code}: {result.consolLog}. Document: {document.id}")
@@ -169,12 +172,19 @@ def ExtractPages(document, firstPage, lastPage, delete):
                             log.debug('file_location: %s', imageLocation)
                             log.debug('file_size: %i', fileSize)
                             try:
-                                file = File.objects.create(
+                                file = File.objects.filter(
                                     file_name = 'page' + str(i+1),
                                     file_ext =  ".jpg",
                                     file_location = imageLocation,
                                     file_size = fileSize
-                                )
+                                ).first()
+                                if file is None:
+                                    file = File.objects.create(
+                                        file_name = 'page' + str(i+1),
+                                        file_ext =  ".jpg",
+                                        file_location = imageLocation,
+                                        file_size = fileSize
+                                    )
                                 oPage = Page.objects.create(
                                     document = document,
                                     page_no = i+1,
@@ -188,16 +198,33 @@ def ExtractPages(document, firstPage, lastPage, delete):
                         else:
                             try:
                                 file = oPage.file
-                                    
-                                file.file_name = 'page' + str(i+1)
-                                file.file_ext =  ".jpg"
-                                file.file_location = imageLocation
-                                file.file_size = fileSize
+                                if file:    
+                                    file.file_name = 'page' + str(i+1)
+                                    file.file_ext =  ".jpg"
+                                    file.file_location = imageLocation
+                                    file.file_size = fileSize
 
-                                file.save()  
+                                    file.save()  
+                                else:
+                                    file = File.objects.filter(
+                                        file_name = 'page' + str(i+1),
+                                        file_ext =  ".jpg",
+                                        file_location = imageLocation,
+                                        file_size = fileSize
+                                    ).first()
+                                    if file is None:
+                                        file = File.objects.create(
+                                            file_name = 'page' + str(i+1),
+                                            file_ext =  ".jpg",
+                                            file_location = imageLocation,
+                                            file_size = fileSize
+                                        )
+                                    oPage.file = file
+                                    oPage.save()
 
                             except Exception as e:
                                 result = GenerateResult(resultList,6)
+                                print(e)
                                 log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i+1)}")
                                 success = False
                     except EOFError:
@@ -243,6 +270,7 @@ def ExtractPages(document, firstPage, lastPage, delete):
                     )
                     success = True
                 except Exception as e:
+                    print(e)
                     if hasattr(e, 'message'):
                         # Handle Error
                         result = GenerateResult(resultList,14)
@@ -255,7 +283,6 @@ def ExtractPages(document, firstPage, lastPage, delete):
                         log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}")
                         return result
 
-                i = 1
                 if(success):
                     # image folder
                     imageLocation = document.file.file_location + document.file.file_name + "/"
@@ -264,8 +291,9 @@ def ExtractPages(document, firstPage, lastPage, delete):
                     result = fileModule.makeDirectory(imageLocation, settings.USE_S3)
 
                     # save pages
-                    for page in pages:
-                        filePath = imagePath + 'page' + str(i) + ".jpg"
+                    for i, page in enumerate(pages):
+                        pageNo = i + firstPage
+                        filePath = imagePath + 'page' + str(pageNo) + ".jpg"
                         page.save(filePath, 'JPEG')
 
                         try:
@@ -275,54 +303,78 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                 # Handle Error
                                 result = GenerateResult(resultList,11)
                                 result.consolLog = result.consolLog + ". Message: " + e.message
-                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
+                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(pageNo)}")
                                 success = False
                             else:
                                 # Handle Error
                                 result = GenerateResult(resultList,11)
-                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
+                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(pageNo)}")
                                 success = False
 
                         # Copy to permanent location
-                        fileModule.uploadFileS3(filePath, imageLocation + 'page' + str(i) + ".jpg")
-                        fileModule.deleteFile(imageFolder + 'page' + str(i) + ".jpg",False)
+                        fileModule.uploadFileS3(filePath, imageLocation + 'page' + str(pageNo) + ".jpg")
+                        fileModule.deleteFile(imageFolder + 'page' + str(pageNo) + ".jpg",False)
 
                         # Create page object
-                        oPage = Page.objects.filter(document=document, page_no=i).first()
+                        oPage = Page.objects.filter(document=document, page_no=pageNo).first()
                         if oPage is None:
                             try:
-                                file = File.objects.create(
-                                    file_name = 'page' + str(i),
+                                file = File.objects.filter(
+                                    file_name = 'page' + str(pageNo),
                                     file_ext =  ".jpg",
                                     file_location = imageLocation,
                                     file_size = fileSize
-                                )
+                                ).first()
+                                print(file)
+                                if file is None:
+                                    file = File.objects.create(
+                                        file_name = 'page' + str(pageNo),
+                                        file_ext =  ".jpg",
+                                        file_location = imageLocation,
+                                        file_size = fileSize
+                                    )
                                 oPage = Page.objects.create(
                                     document = document,
-                                    page_no = i,
+                                    page_no = pageNo,
                                     file = file,
                                     extracted = False
                                 )
                             except Exception as e:
                                 result = GenerateResult(resultList,5)
-                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
+                                print(e)
+                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(pageNo)}")
                                 success = False
                         else:
                             try:
                                 file = oPage.file
-                                    
-                                file.file_name = 'page' + str(i)
-                                file.file_ext =  ".jpg"
-                                file.file_location = imageLocation
-                                file.file_size = fileSize
+                                if file:    
+                                    file.file_name = 'page' + str(pageNo)
+                                    file.file_ext =  ".jpg"
+                                    file.file_location = imageLocation
+                                    file.file_size = fileSize
 
-                                file.save()  
+                                    file.save()  
+                                else:
+                                    file = File.objects.filter(
+                                        file_name = 'page' + str(pageNo),
+                                        file_ext =  ".jpg",
+                                        file_location = imageLocation,
+                                        file_size = fileSize
+                                    ).first()
+                                    if file is None:
+                                        file = File.objects.create(
+                                            file_name = 'page' + str(pageNo),
+                                            file_ext =  ".jpg",
+                                            file_location = imageLocation,
+                                            file_size = fileSize
+                                        )
+                                    oPage.file = file
+                                    oPage.save()
 
                             except Exception as e:
                                 result = GenerateResult(resultList,6)
-                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(i)}")
+                                log.error(f"Error {result.code}: {result.consolLog}. Document: {document.id}, Page: {(pageNo)}")
                                 success = False              
-                        i = i + 1
 
                 if(success):
                     if firstPage == 1 and i < lastPage:
@@ -347,49 +399,49 @@ def getDocumentText(document):
     for page in pages:
         if not page.extracted:
             file = page.file
-            
-            fileName = file.file_name + file.file_ext
-            filePath = file.file_location + file.file_name + file.file_ext
-            tempFolder = file.file_location
+            if file:
+                fileName = file.file_name + file.file_ext
+                filePath = file.file_location + file.file_name + file.file_ext
+                tempFolder = file.file_location
 
-            # Copy to temp folder
-            result = fileModule.copyToTemp(filePath, tempFolder, fileName)
-            if result.code != "00000":
-                return result
+                # Copy to temp folder
+                result = fileModule.copyToTemp(filePath, tempFolder, fileName)
+                if result.code != "00000":
+                    return result
 
-            path = file.path()
+                path = file.path()
 
-            result = getTextArray(path)
-            if result.code != "00000":
-                return result
+                result = getTextArray(path)
+                if result.code != "00000":
+                    return result
 
-            pageTexts = result.texts
+                pageTexts = result.texts
 
-            i = 0
-            for pageText in pageTexts:
-                i = i + 1
-                if(len(pageText.description) > 255):
-                    #print(str(i) + ": " + pageText.description)
-                    pass
-                else:
-                    text = Text.objects.create(
-                        page = page,
-                        text = pageText.description
-                    )
-                    bps = pageText.bounding_poly
-
-
-                    for i in range(4):
-                        x = int(bps.vertices[i].x)
-                        y = int(bps.vertices[i].y)
-                        BoundingPoly.objects.create(
-                            text = text,
-                            x = x,
-                            y = y
+                i = 0
+                for pageText in pageTexts:
+                    i = i + 1
+                    if(len(pageText.description) > 255):
+                        #print(str(i) + ": " + pageText.description)
+                        pass
+                    else:
+                        text = Text.objects.create(
+                            page = page,
+                            text = pageText.description
                         )
-            
-            page.extracted = True
-            page.save()
+                        bps = pageText.bounding_poly
+
+
+                        for i in range(4):
+                            x = int(bps.vertices[i].x)
+                            y = int(bps.vertices[i].y)
+                            BoundingPoly.objects.create(
+                                text = text,
+                                x = x,
+                                y = y
+                            )
+                
+                page.extracted = True
+                page.save()
 
     result = GenerateResult(resultList,0)
     return result
@@ -421,10 +473,14 @@ def ExtractData(document,method):
     log.debug("Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
     
     for page in pages:
+        if page.page_no != 2:
+            continue
         log.debug("Page %i", page.page_no)
         texts = page.texts.all()
         for text in texts:
             actionResults = []
+            columns = []
+            rows = []
     
             partialSuccess = False
             for i, a in enumerate(actions):
@@ -441,22 +497,23 @@ def ExtractData(document,method):
                         log.error(f"Start action out of range. Method {method.id}, Action: {action.id}")
                         break
 
-                    previousText = previousAction.text
+                    previousText = previousAction.texts[-1].text
 
                     # Check if it was on the end of the previous action
                     success = False
                     chkStr = strCorrections(action.string, action.remove_chars, True)
-                    if len(previousText) > len(chkStr):
-                        if previousText[-1*len(chkStr):] == chkStr:
-                            success = True
+                    if previousText:
+                        if len(previousText) > len(chkStr):
+                            if previousText[-1*len(chkStr):] == chkStr:
+                                success = True
 
-                            # adjust previous text
-                            endCut = -1*len(chkStr)
-                            previousText = previousText[:endCut]
+                                # adjust previous text
+                                endCut = -1*len(chkStr)
+                                previousText = previousText[:endCut]
 
-                            # save results
-                            actionResults[action.start-1].text = previousText
-                            actionResult = Action(previousAction.texts,chkStr,True,action)
+                                # save results
+                                actionResults[action.start-1].text = previousText
+                                actionResult = Action(previousAction.texts,chkStr,True,action)
                     if not success:
                         actionResult = NextAction(action, actionResults[action.start-1], actionResults[action.lower_bound_start-1], actionResults[action.upper_bound_start-1], page)
 
@@ -466,7 +523,7 @@ def ExtractData(document,method):
                 
                 # Value Action
                 elif action.type == action.VALUE:
-                    actionResult = ValueAction(action, actionResults[action.start-1], page)
+                    actionResult = ValueAction(action, actionResults[action.start-1], actionResults[action.lower_bound_start-1], actionResults[action.upper_bound_start-1], page)
                     if actionResult.success:
                         valueText = actionResult.text
 
@@ -499,7 +556,7 @@ def ExtractData(document,method):
 
                 # Text Value Action
                 elif action.type == action.TEXTVALUE:
-                    actionResult = ValueAction(action, actionResults[action.start-1], page)
+                    actionResult = ValueAction(action, actionResults[action.start-1], actionResults[action.lower_bound_start-1], actionResults[action.upper_bound_start-1], page)
 
                 # Save Action
                 elif action.type == action.SAVE:
@@ -509,6 +566,89 @@ def ExtractData(document,method):
                 # Next Data Row
                 elif action.type == action.NEXTDATA:
                     actionResult = Action(None,None, True, action)
+
+
+
+                # Table Header
+                elif action.type == action.TABLEHEADER:
+                    actionResult = TableHeader(action, actionResults[0], page)
+
+                # Table Rows
+                elif action.type == action.TABLEROW:
+                    # Get columns
+                    for result in actionResults:
+                        ra = result.action
+                        if ra.type == action.TABLEHEADER or result.tableHeader:
+                            col = Column(ra.startUpper, result.colMin, result.colMax, result.yMin, result.yMax)
+                            columns.append(col)
+
+                    columns.sort(key=lambda x: x.no)
+
+                    # fix column boundaries
+                    ymin = 9999999999
+                    ymax = 0
+                    percent = actionResults[0].action.offset_percent
+                    if percent is None:
+                        percent = 0
+                    pixels = actionResults[0].action.offset_pixels
+                    if pixels is None:
+                        pixels = 0
+
+                    for i in range(len(columns)-1):
+                        if i != 0:
+                            x = (columns[i-1].xmax + columns[i].xmin)/2
+                            columns[i-1].xmax = x
+                            columns[i].xmin = x
+
+                        if columns[i].ymin < ymin:
+                            ymin = columns[i].ymin
+
+                        if columns[i].ymax > ymax:
+                            ymax = columns[i].ymax
+
+                    ymax = ymax + (ymax - ymin)/2 * percent/100 + pixels
+
+                    for column in columns:
+                        column.ymin = ymin
+                        column.ymax = ymax
+                        print(f"Column {column.no} ({column.xmin}, {column.xmax})")
+
+                    rows = TableRows(action, columns, page)
+                    for i, row in enumerate(rows):
+                        print(f"Row {i+1} ({row.ymin}, {row.ymax})")
+                    
+                    actionResult = Action(None, None, True,action)
+                
+                # Table Cells
+                elif action.type == action.TABLECELLVALUE or action.type == action.TABLECELLTEXT:
+                    if columns and rows:
+                        col = None
+                        for column in columns:
+                            if column.no == action.start:
+                                col = column
+                        if col:
+                            for row in rows:
+                                actionResult = TableCell(action, col.xmin, col.xmax, row.ymin, row.ymax, page)
+                                if actionResult.success:
+                                    if action.type == action.TABLECELLVALUE:
+                                        try:
+                                            value = Decimal(actionResult.text)
+                                            row.values.append(value)
+                                            row.units.append(action.unit)
+                                        except Exception as e:
+                                            log.error(e)
+                                            row.values.append(None)
+                                            row.units.append(action.unit)
+                                    else:
+                                        row.values.append(actionResult.text)
+                                        row.units.append(action.unit)
+                                else:
+                                    row.values.append(None)
+                                    row.units.append(action.unit)
+                        else:
+                            actionResult = Action(None, None, True,action)
+                    else:                    
+                        actionResult = Action(None, None, True,action)
 
                 # No action type
                 else:
@@ -532,6 +672,73 @@ def ExtractData(document,method):
             # Check Success
             if len(actions) != 0 and len(actions) == len(actionResults) or partialSuccess:
                 log.debug("SUCCESS Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
+
+                # Save Table
+                if actionResults[0].action.startUpper:
+                    for row in rows:
+                        fvalues = [None, None, None, None]
+                        ftexts = [None, None, None, None]
+                        funits = [None, None, None, None]
+                        for i in range(len(row.values)):
+                            if row.units[i]:
+                                if row.units[i].name == 'text':
+                                    ftexts[i] = row.values[i]                                
+                                else:
+                                    fvalues[i] = row.values[i]
+                            funits[i] = row.units[i]
+
+                        print("***********************************************")
+                        print(fvalues)
+                        print(ftexts)
+                        print(funits)
+                        # check no all null
+                        chk = False
+                        for v in fvalues:
+                            if v:
+                                chk = True
+                        for t in ftexts:
+                            if t:
+                                chk = True
+                        
+                        if chk:
+                            data = Data.objects.filter(
+                                page = page,
+                                extraction_method__data_type = method.data_type,
+                                value = fvalues[0],
+                                text = ftexts[0],
+                                unit = funits[0],
+                                value2 = fvalues[1],
+                                text2 = ftexts[1],
+                                unit2 = funits[1],
+                                value3 = fvalues[2],
+                                text3 = ftexts[2],
+                                unit3 = funits[2],
+                                value4 = fvalues[3],
+                                text4 = ftexts[3],
+                                unit4 = funits[3]
+                            ).first()
+                            if data is None:
+                                try:
+                                    data = Data.objects.create(
+                                        page = page,
+                                        extraction_method = method,
+                                        value = fvalues[0],
+                                        text = ftexts[0],
+                                        unit = funits[0],
+                                        value2 = fvalues[1],
+                                        text2 = ftexts[1],
+                                        unit2 = funits[1],
+                                        value3 = fvalues[2],
+                                        text3 = ftexts[2],
+                                        unit3 = funits[2],
+                                        value4 = fvalues[3],
+                                        text4 = ftexts[3],
+                                        unit4 = funits[3]
+                                    )
+                                except Exception as e:
+                                    print(e)
+                                    success = False
+
                 # Get Values
                 values = []
                 texts = []
@@ -567,16 +774,17 @@ def ExtractData(document,method):
                         fvalues = [None, None, None, None]
                         ftexts = [None, None, None, None]
                         funits = [None, None, None, None]
-                        print("SAVING VALUES ####################") 
+                        print("#SAVING VALUES ####################") 
                         for i in range(len(values)-j):
-                            fvalues[i] = values[i+j]
+                            if values[i+j]:
+                                fvalues[i] = Decimal(round(values[i+j],2))
                             ftexts[i] = texts[i+j]
                             funits[i] = units[i+j]
                         print(fvalues)
 
                         data = Data.objects.filter(
                             page = page,
-                            extraction_method = method,
+                            extraction_method__data_type = method.data_type,
                             value = fvalues[0],
                             text = ftexts[0],
                             unit = funits[0],
@@ -589,7 +797,8 @@ def ExtractData(document,method):
                             value4 = fvalues[3],
                             text4 = ftexts[3],
                             unit4 = funits[3]
-                            ).first()
+                        ).first()
+
                         if data is None:
                             try:
                                 data = Data.objects.create(
@@ -627,7 +836,7 @@ def ExtractData(document,method):
 
                     data = Data.objects.filter(
                         page = page,
-                        extraction_method = method,
+                        extraction_method__data_type = method.data_type,
                         value = fvalues[0],
                         text = ftexts[0],
                         unit = funits[0],
@@ -688,6 +897,40 @@ def InitialAction(text,action):
         texts = []
         texts.append(text)
         result = Action(texts,foundStr,True,action)
+        # If table header
+        if action.startUpper:
+            polyResult = processPoly(text)
+            if polyResult.code == "00000":
+                poly = polyResult.poly
+                result.tableHeader = True
+
+                xdif = poly['xdif']
+                if action.lower_offset_percent:
+                    lowerPercent = action.lower_offset_percent
+                else:
+                    lowerPercent = 0
+                if action.lower_offset_pixels:
+                    lowerPixels = action.lower_offset_pixels
+                else:
+                    lowerPixels = 0
+
+                if action.upper_offset_percent:
+                    upperPercent = action.upper_offset_percent
+                else:
+                    upperPercent = 0
+                if action.upper_offset_pixels:
+                    upperPixels = action.upper_offset_pixels
+                else:
+                    upperPixels = 0
+
+                xmin = poly['x1'] - xdif * (lowerPercent/100) - lowerPixels
+                xmax = poly['x2'] + xdif * (upperPercent/100) + upperPixels
+
+                result.colMin = xmin
+                result.colMax = xmax
+                result.yMin = poly['y1']
+                result.yMax = poly['y2']
+        
         log.debug("Initial Action: %s", foundStr)
     else:
         result = Action(None,None,False,action)
@@ -695,7 +938,10 @@ def InitialAction(text,action):
     return result
 
 def NextAction(action, startAction, startActionLower, startActionUpper, page):
-    chkStr = strCorrections(action.string, action.remove_chars, True) 
+    if action.string == "#":
+        chkStr = "#"
+    else:
+        chkStr = strCorrections(action.string, action.remove_chars, True) 
     if action.remove_chars:
         ignoreList = action.remove_chars.split('#')
     else:
@@ -742,38 +988,66 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
         texts = Text.objects.filter(
             page = page)
         
+        # Offsets
+        if action.offset_percent:
+            percent = action.offset_percent
+        else:
+            percent = 0
+        
+        if action.offset_pixels:
+            pixels = action.offset_pixels
+        else:
+            pixels = 0
+
         # Right 
         if(action.direction == action.RIGHT):
-            texts = texts.filter(BoundingPolys__x__gte = poly['x2'])
+            start = poly['x2']+poly['xdif']*(percent/100)+pixels
+            texts = texts.filter(BoundingPolys__x__gte = start)
+            
             lowerBound = polyLower['y1']-polyLower['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__y__gte = lowerBound)
-            upperBound = polyUpper['y2']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+
+            if action.upper_bound==action.START:
+                upperBound = polyUpper['y2']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            if action.upper_bound==action.MID:
+                upperBound = (polyUpper['y2']+polyUpper['y2'])/2+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            if action.upper_bound==action.END:
+                upperBound = polyUpper['y1']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__y__lte = upperBound)
 
             x = 9999999
         # LEFT
         elif(action.direction == action.LEFT):
-            texts = texts.filter(BoundingPolys__x__lte = poly['x1'])
+            start = poly['x1']-poly['xdif']*(percent/100)-pixels
+            texts = texts.filter(BoundingPolys__x__lte = start)
+
             lowerBound = polyLower['y1']-polyLower['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+
             upperBound = polyUpper['y2']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__y__lte = upperBound)
 
             x = -9999999
         # Up
         elif(action.direction == action.UP):
-            texts = texts.filter(BoundingPolys__y__lte = poly['y1'])
+            start = poly['y1']-poly['ydif']*(percent/100)-pixels
+            texts = texts.filter(BoundingPolys__y__lte = start)
+
             lowerBound = polyLower['x1']-polyLower['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+
             upperBound = polyUpper['x2']+polyUpper['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__x__lte = upperBound)
 
             y = -9999999
         # Down
         elif(action.direction == action.DOWN):
-            texts = texts.filter(BoundingPolys__y__gte = poly['y2'])
+            start = poly['y2']+poly['ydif']*(percent/100)+pixels
+            texts = texts.filter(BoundingPolys__y__gte = start)
+
             lowerBound = polyLower['x1']-polyLower['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
             texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+
             upperBound = polyUpper['x2']+polyUpper['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
             texts = texts.filter(BoundingPolys__x__lte = upperBound)
 
@@ -786,42 +1060,51 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
         
         # Distinct
         texts = texts.distinct()
-
+        #log.debug(f"x start: {start}")
+        #log.debug(f"lowerBound: {lowerBound}")
+        #log.debug(f"upperBound: {upperBound}")  
         
-        fText = None
+        fText = None        
 
         for t in texts:
             if t != startText:
                 result = processPoly(t)
                 if result.code == "00000":
                     testPoly = result.poly
+                    #log.debug(f"{t.text} ({testPoly['xave']},{testPoly['yave']})")
 
                     if(action.direction == action.RIGHT):
                         if testPoly['xave'] > poly['x2'] and testPoly['xave'] < x:
-                            if testPoly['yave'] > polyLower['y1'] and testPoly['yave'] < polyUpper['y2']:
+                            if testPoly['yave'] > lowerBound and testPoly['yave'] < upperBound:
                                 x = testPoly['xave']
                                 fText = t
                     elif(action.direction == action.LEFT):
                         if testPoly['xave'] < poly['x2'] and testPoly['xave'] > x:
-                            if testPoly['yave'] > polyLower['y1'] and testPoly['yave'] < polyUpper['y2']:
+                            if testPoly['yave'] > lowerBound and testPoly['yave'] < upperBound:
                                 x = testPoly['xave']
                                 fText = t
 
                     elif(action.direction == action.UP):
-                        if testPoly['yave'] < poly['y2'] and testPoly['yave'] > y:
-                            if testPoly['xave'] > polyLower['x1'] and testPoly['xave'] < polyUpper['x2']:
+                        if testPoly['yave'] < poly['y2'] and testPoly['yave'] > (y+4):
+                            if testPoly['xave'] > lowerBound and testPoly['xave'] < upperBound:
                                 y = testPoly['yave']
                                 fText = t
 
                     elif(action.direction == action.DOWN):
                         if testPoly['yave'] > poly['y2'] and testPoly['yave'] < y:
-                            if testPoly['xave'] > polyLower['x1'] and testPoly['xave'] < polyUpper['x2']:
+                            if testPoly['xave'] > lowerBound and testPoly['xave'] < upperBound:
                                 y = testPoly['yave']
                                 fText = t
 
 
 
         if fText is not None:
+            aTexts.append(fText)
+            if chkStr == "#":
+                result = Action(aTexts,foundStr,True,action)
+                log.debug("Next String (%s): %s", chkStr, foundStr)
+                return result
+            
             foundStr += strCorrections(fText.text, action.remove_chars, True)
             aTexts.append(fText)
             startText = fText
@@ -833,9 +1116,16 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
                 log.debug("Next String (%s): %s", chkStr, foundStr)
                 return result
             else:
-                log.debug("Next String - FAILED (%s): %s", chkStr, foundStr)
+                if not chkStr[:len(foundStr)] == foundStr:
+                    log.debug("Next String - FAILED (%s): %s", chkStr, foundStr)
+                    result = Action(aTexts,foundStr,False,action)
+                    return result
+                else:
+                    log.debug("Next String - CONTINUE (%s): %s", chkStr, foundStr)
         else:
             log.debug("Next String - FAILED (%s): NULL", chkStr)
+            result = Action(aTexts,foundStr,False,action)
+            return result
 
     result = Action(None,None,False,action)
     return result
@@ -843,7 +1133,7 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
 def SearchAction():
     pass
 
-def ValueAction(action, startAction, page):
+def ValueAction(action, startAction, startActionLower, startActionUpper, page):
     if startAction.texts is None:
         result = Action(None,None,False,action)
         return result
@@ -856,77 +1146,181 @@ def ValueAction(action, startAction, page):
     if(action.direction == action.RIGHT):
         # Right
         if startAction.action.direction == action.RIGHT:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[-1]
         # Left
         elif startAction.action.direction == action.LEFT:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[0]
         # Up
         elif startAction.action.direction == action.UP:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[-1]
         # Down
         else:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[0]
+
+        # Lower Bound
+        # Right
+        if startActionLower.action.direction == action.RIGHT:
+            lowerBoundText = startActionLower.texts[-1]
+        # Left
+        elif startActionLower.action.direction == action.LEFT:
+            lowerBoundText = startActionLower.texts[0]
+        # Up
+        elif startActionLower.action.direction == action.UP:
+            lowerBoundText = startActionLower.texts[-1]
+        # Down
+        else:
+            lowerBoundText = startActionLower.texts[0]
+
+        # Upper Bound
+        # Right
+        if startActionUpper.action.direction == action.RIGHT:
+            upperBoundText = startActionUpper.texts[-1]
+        # Left
+        elif startActionUpper.action.direction == action.LEFT:
+            upperBoundText = startActionUpper.texts[0]
+        # Up
+        elif startActionUpper.action.direction == action.UP:
+            upperBoundText = startActionUpper.texts[0]
+        # Down
+        else:
+            upperBoundText = startActionUpper.texts[-1]
 
     # Left
     if(action.direction == action.LEFT):
         # Right
         if startAction.action.direction == action.RIGHT:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[0]
         # Left
         elif startAction.action.direction == action.LEFT:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[-1]
         # Up
         elif startAction.action.direction == action.UP:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[-1]
         # Down
         else:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[0]
+
+        # Lower Bound
+        # Right
+        if startActionLower.action.direction == action.RIGHT:
+            lowerBoundText = startActionLower.texts[0]
+        # Left
+        elif startActionLower.action.direction == action.LEFT:
+            lowerBoundText = startActionLower.texts[-1]
+        # Up
+        elif startActionLower.action.direction == action.UP:
+            lowerBoundText = startActionLower.texts[-1]
+        # Down
+        else:
+            lowerBoundText = startActionLower.texts[0]
+
+        # Upper Bound
+        # Right
+        if startActionUpper.action.direction == action.RIGHT:
+            upperBoundText = startActionUpper.texts[0]
+        # Left
+        elif startActionUpper.action.direction == action.LEFT:
+            upperBoundText = startActionUpper.texts[-1]
+        # Up
+        elif startActionUpper.action.direction == action.UP:
+            upperBoundText = startActionUpper.texts[0]
+        # Down
+        else:
+            upperBoundText = startActionUpper.texts[-1]
 
     # Up
     if(action.direction == action.UP):
         # Right
         if startAction.action.direction == action.RIGHT:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[0]
         # Left
         elif startAction.action.direction == action.LEFT:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[-1]
         # Up
         elif startAction.action.direction == action.UP:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[-1]
         # Down
         else:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[0]
+
+        # Lower Bound
+        # Right
+        if startActionLower.action.direction == action.RIGHT:
+            lowerBoundText = startActionLower.texts[0]
+        # Left
+        elif startActionLower.action.direction == action.LEFT:
+            lowerBoundText = startActionLower.texts[-1]
+        # Up
+        elif startActionLower.action.direction == action.UP:
+            lowerBoundText = startActionLower.texts[-1]
+        # Down
+        else:
+            lowerBoundText = startActionLower.texts[0]
+
+        # Upper Bound
+        # Right
+        if startActionUpper.action.direction == action.RIGHT:
+            upperBoundText = startActionUpper.texts[-1]
+        # Left
+        elif startActionUpper.action.direction == action.LEFT:
+            upperBoundText = startActionUpper.texts[0]
+        # Up
+        elif startActionUpper.action.direction == action.UP:
+            upperBoundText = startActionUpper.texts[-1]
+        # Down
+        else:
+            upperBoundText = startActionUpper.texts[0]
 
     # Down
     if(action.direction == action.DOWN):
         # Right
         if startAction.action.direction == action.RIGHT:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[0]
         # Left
         elif startAction.action.direction == action.LEFT:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[-1]
         # Up
         elif startAction.action.direction == action.UP:
-            lowerBoundText = startAction.texts[0]
-            upperBoundText = startAction.texts[0]
+            startText = startAction.texts[0]
         # Down
         else:
-            lowerBoundText = startAction.texts[-1]
-            upperBoundText = startAction.texts[-1]
+            startText = startAction.texts[-1]
+
+        # Lower Bound
+        # Right
+        if startActionLower.action.direction == action.RIGHT:
+            lowerBoundText = startActionLower.texts[0]
+        # Left
+        elif startActionLower.action.direction == action.LEFT:
+            lowerBoundText = startActionLower.texts[-1]
+        # Up
+        elif startActionLower.action.direction == action.UP:
+            lowerBoundText = startActionLower.texts[0]
+        # Down
+        else:
+            lowerBoundText = startActionLower.texts[-1]
+        
+        # Upper Bound
+        # Right
+        if startActionUpper.action.direction == action.RIGHT:
+            upperBoundText = startActionUpper.texts[-1]
+        # Left
+        elif startActionUpper.action.direction == action.LEFT:
+            upperBoundText = startActionUpper.texts[0]
+        # Up
+        elif startActionUpper.action.direction == action.UP:
+            upperBoundText = startActionUpper.texts[0]
+        # Down
+        else:
+            upperBoundText = startActionUpper.texts[-1]
+
+    # startPoly
+    result = processPoly(startText)
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        startPoly = result.poly
 
     # poly1
     result = processPoly(lowerBoundText)
@@ -956,6 +1350,16 @@ def ValueAction(action, startAction, page):
         page = page)
     
     # Offsets
+    if action.offset_percent:
+        percent = action.offset_percent
+    else:
+        percent = 0
+    
+    if action.offset_pixels:
+        pixel = action.offset_pixels
+    else:
+        pixel = 0
+
     if action.lower_offset_percent:
         lPercent = action.lower_offset_percent
     else:
@@ -978,7 +1382,8 @@ def ValueAction(action, startAction, page):
 
     # Right 
     if(action.direction == action.RIGHT):
-        texts = texts.filter(BoundingPolys__x__gte = poly['x2'])
+        start = startPoly['x2'] + startPoly['xdif']*(percent/100) + pixel
+        texts = texts.filter(BoundingPolys__x__gte = start)
         
         # Lower Bound
         if action.lower_bound == action.START:
@@ -988,7 +1393,7 @@ def ValueAction(action, startAction, page):
         else:
             lowerStart = poly['y2']
 
-        lowerBound = lowerStart + poly['ydif']*(lPercent/100) + lPixel
+        lowerBound = lowerStart - poly['ydif']*(lPercent/100) - lPixel
         texts = texts.filter(BoundingPolys__y__gte = lowerBound)
         
         # Upper Bound
@@ -1005,7 +1410,8 @@ def ValueAction(action, startAction, page):
         x = 9999999
     # LEFT
     elif(action.direction == action.LEFT):
-        texts = texts.filter(BoundingPolys__x__lte = poly['x1'])
+        start = startPoly['x1'] - startPoly['xdif']*(percent/100) - pixel
+        texts = texts.filter(BoundingPolys__x__lte = start)
 
         # Lower Bound
         if action.lower_bound == action.START:
@@ -1015,7 +1421,7 @@ def ValueAction(action, startAction, page):
         else:
             lowerStart = poly['y2']
 
-        lowerBound = lowerStart + poly['ydif']*(lPercent/100) + lPixel
+        lowerBound = lowerStart - poly['ydif']*(lPercent/100) - lPixel
         texts = texts.filter(BoundingPolys__y__gte = lowerBound)
         
         # Upper Bound
@@ -1032,7 +1438,8 @@ def ValueAction(action, startAction, page):
         x = -9999999
     # Up
     elif(action.direction == action.UP):
-        texts = texts.filter(BoundingPolys__y__lte = poly['y1'])
+        start = startPoly['y1'] - startPoly['ydif']*(percent/100) - pixel
+        texts = texts.filter(BoundingPolys__y__lte = start)
 
         # Lower Bound
         if action.lower_bound == action.START:
@@ -1042,7 +1449,7 @@ def ValueAction(action, startAction, page):
         else:
             lowerStart = poly['x2']
 
-        lowerBound = lowerStart + poly['xdif']*(lPercent/100) + lPixel
+        lowerBound = lowerStart - poly['xdif']*(lPercent/100) - lPixel
         texts = texts.filter(BoundingPolys__x__gte = lowerBound)
         
         # Upper Bound
@@ -1057,11 +1464,11 @@ def ValueAction(action, startAction, page):
         texts = texts.filter(BoundingPolys__x__lte = upperBound)
 
         y = -9999999
-        x = 9999999
-        
+        x = 9999999     
     # Down
     elif(action.direction == action.DOWN):
-        texts = texts.filter(BoundingPolys__y__gte = poly['y2']-4)
+        start = startPoly['y2'] + startPoly['ydif']*(percent/100) + pixel
+        texts = texts.filter(BoundingPolys__y__gte = start)
 
         # Lower Bound
         if action.lower_bound == action.START:
@@ -1071,7 +1478,7 @@ def ValueAction(action, startAction, page):
         else:
             lowerStart = poly['x2']
 
-        lowerBound = lowerStart + poly['xdif']*(lPercent/100) + lPixel
+        lowerBound = lowerStart - poly['xdif']*(lPercent/100) - lPixel
         texts = texts.filter(BoundingPolys__x__gte = lowerBound)
         
         # Upper Bound
@@ -1099,8 +1506,8 @@ def ValueAction(action, startAction, page):
     # Get first value
     fText = None
     for t in texts:
-        print(t.text)
-        if t != lowerBoundText and t != upperBoundText:
+        #print(t.text)
+        if t != startText and t != lowerBoundText and t != upperBoundText:
             result = processPoly(t)
             if result.code == "00000":
                 testPoly = result.poly
@@ -1130,9 +1537,9 @@ def ValueAction(action, startAction, page):
 
                 elif(action.direction == action.DOWN):
                     test = False
-                    if testPoly['yave'] > poly['y2'] and testPoly['yave'] < (y + 4) and testPoly['xave'] < x:
+                    if testPoly['yave'] > poly['y2'] and testPoly['yave'] < (y + 8) and testPoly['xave'] < x:
                         test = True
-                    elif testPoly['yave'] > poly['y2'] and testPoly['yave'] < (y - 4):
+                    elif testPoly['yave'] > poly['y2'] and testPoly['yave'] < (y - 8):
                         test = True
                     if test:
                         if testPoly['xave'] > lowerBound and testPoly['xave'] < upperBound:
@@ -1143,7 +1550,6 @@ def ValueAction(action, startAction, page):
 
     if fText is not None:
         foundStr = strCorrections(fText.text, action.remove_chars, False)
-        #print(foundStr)
         log.debug("Get Value found string: %s", foundStr)
  
         aTexts = []
@@ -1151,8 +1557,24 @@ def ValueAction(action, startAction, page):
 
         # VALUE Only
         if action.type == action.VALUE:
-            #TODO: check that whole number was found
-            pass
+            x = re.findall(r"\d+", foundStr)
+            if len(x) == 1:
+                foundStr = x[0]
+            elif len(x) == 2:
+                start = re.search(x[0], foundStr)
+                end = re.search(x[1], foundStr)
+                if end.start() - start.end() == 1:
+                    decimalPointStr = foundStr[start.end():end.start()]
+                    if decimalPointStr == ".":
+                        foundStr = x[0] + "." + x[1]
+                    else:
+                        result = Action(aTexts,foundStr,False,action)
+                        return result
+                else:
+                    foundStr=x[0]
+            else:
+                result = Action(aTexts,foundStr,False,action)
+                return result
 
         # TEXTVALUE Only
         if action.type == action.TEXTVALUE:
@@ -1183,14 +1605,18 @@ def ValueAction(action, startAction, page):
             # Distinct
             texts = texts.distinct()
             for i in range(10):
+                fText = None
                 for t in texts:
                     if t != startText:
+                        #print(t)
                         result = processPoly(t)
                         if result.code == "00000":
                             testPoly = result.poly
 
-                            if testPoly['xave'] > poly['x2'] and testPoly['x1'] < (poly['x2']+10):
+                            if testPoly['xave'] > poly['x2'] and testPoly['x1'] < (poly['x2']+20):
+                                #print("test x")
                                 if testPoly['yave'] > lowerBound and testPoly['yave'] < upperBound:
+                                    #print("test y")
                                     fText = t
 
 
@@ -1207,7 +1633,6 @@ def ValueAction(action, startAction, page):
                         poly = result.poly
                     
                     startText = fText
-                    fText = None
 
         result = Action(aTexts,foundStr,True,action)
         
@@ -1215,6 +1640,384 @@ def ValueAction(action, startAction, page):
 
     result = Action(None,None,False,action)
     return result
+
+def TableHeader(action, referenceAction, page):
+    foundStr = ""
+
+    # Ignore List
+    if action.remove_chars:
+        ignoreList = action.remove_chars.split('#')
+    else:
+        ignoreList = None
+
+    # Offsets
+    if action.offset_percent:
+        percent = action.offset_percent
+    else:
+        percent = 0
+    if action.offset_pixels:
+        pixels = action.offset_pixels
+    else:
+        pixels = 0
+
+    if referenceAction.action.lower_offset_percent:
+        xLowerPercent = referenceAction.action.lower_offset_percent
+    else:
+        xLowerPercent = 0
+    if referenceAction.action.lower_offset_pixels:
+        xLowerPixels = referenceAction.action.lower_offset_pixels
+    else:
+        xLowerPixels = 0
+
+    if referenceAction.action.upper_offset_percent:
+        xUpperPercent = referenceAction.action.upper_offset_percent
+    else:
+        xUpperPercent = 0
+    if referenceAction.action.upper_offset_pixels:
+        xUpperPixels = referenceAction.action.upper_offset_pixels
+    else:
+        xUpperPixels = 0
+
+    # Head Row Bounds 
+    result = processPoly(referenceAction.texts[0])
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        poly = result.poly
+
+
+    # Row Text Objects
+    rowTexts = Text.objects.filter(page = page)
+
+    lowerBound = poly['y1'] - poly['ydif'] * (percent/100) - pixels
+    rowTexts = rowTexts.filter(BoundingPolys__y__gte = lowerBound)
+
+    upperBound = poly['y2'] + poly['ydif'] * (percent/100) + pixels
+    rowTexts = rowTexts.filter(BoundingPolys__y__lte = upperBound) 
+
+    xLowerBound = poly['x1'] - poly['xdif'] * (xLowerPercent/100) - xLowerPixels
+    xUpperBound = poly['x2'] + poly['xdif'] * (xUpperPercent/100) + xUpperPixels
+    rowTexts = rowTexts.exclude(Q(BoundingPolys__x__gte = xLowerBound) & Q(BoundingPolys__x__lte = xUpperBound))
+    
+    rowTexts = rowTexts.filter() 
+    
+    
+    if ignoreList:
+        for ignore in ignoreList:
+            rowTexts = rowTexts.exclude(text=ignore)
+    
+    # Distinct
+    rowTexts = rowTexts.distinct()  
+
+    searchStrs = action.string.split(" ")
+
+    items = []
+
+    for searchStr in searchStrs:
+        foundTexts = []
+        for t in rowTexts:
+            checkStr = strCorrections(searchStr, action.remove_chars, True)
+            foundStr = strCorrections(t.text, action.remove_chars, True)
+            if checkStr == foundStr:
+                foundTexts.append(t)
+        
+        
+        texts = []
+        xs = []
+        # No results
+        if len(foundTexts) == 0:
+            result = Action(foundTexts,"",False,action)
+            return result
+        # One result
+        if len(foundTexts) == 1:
+            text = foundTexts[0]
+            texts.append(text)
+            result = processPoly(text)
+            if result.code == "00000":
+                testPoly = result.poly
+                xs.append(testPoly['xave'])
+                item = {
+                    "texts" : texts,
+                    "count" : 1,
+                    "xs" : xs
+                }
+                items.append(item)
+        # Multiple results
+        if len(foundTexts) > 1:
+            for text in foundTexts:
+                texts.append(text)
+                result = processPoly(text)
+                if result.code == "00000":
+                    testPoly = result.poly
+                    xs.append(testPoly['xave'])
+            item = {
+                "texts" : texts,
+                "count" : len(foundTexts),
+                "xs" : xs
+            }
+            items.append(item)
+    
+    texts = []
+    foundStr = ""
+
+    for i, item in enumerate(items):
+        # Choose best candidate of Multiple Texts
+        if item['count'] > 1:
+            fText = None
+            minXDif = 9999999999
+            for j, text in enumerate(item['texts']):
+                x = item['xs'][j]
+                xdif = 0
+                count = 0
+                for object in items:
+                    if object is not item:
+                        for xave in object['xs']:
+                            count += 1
+                            xdif += abs(xave-x)
+                if count != 0:
+                    xdif = xdif / count
+                else:
+                    xdif = 9999999999
+
+                if xdif < minXDif:
+                    minXDif = xdif
+                    fText = text
+
+        # Single Text
+        else:
+            fText = item['texts'][0]
+        
+        # Add the text to our text list
+        if fText is not None:
+            texts.append(fText)
+            foundStr += fText.text
+        else:
+            result = Action(texts,foundStr,False,action)
+
+    # Determine Column Widths
+    xmin = 9999999999
+    xmax = 0
+    ymin = 9999999999
+    ymax = 0
+    for text in texts:
+        result = processPoly(text)
+        if result.code == "00000":
+            poly = result.poly
+            if poly['x1'] < xmin:
+                xmin = poly['x1']
+            if poly['x2'] > xmax:
+                xmax = poly['x2']
+            if poly['y1'] < ymin:
+                ymin = poly['y1']
+            if poly['y2'] > ymax:
+                ymax = poly['y2']
+
+    xdif = xmax - xmin
+    
+    if action.lower_offset_percent:
+        lowerPercent = action.lower_offset_percent
+    else:
+        lowerPercent = 0
+    if action.lower_offset_pixels:
+        lowerPixels = action.lower_offset_pixels
+    else:
+        lowerPixels = 0
+
+    if action.upper_offset_percent:
+        upperPercent = action.upper_offset_percent
+    else:
+        upperPercent = 0
+    if action.upper_offset_pixels:
+        upperPixels = action.upper_offset_pixels
+    else:
+        upperPixels = 0
+
+    if xdif < 1:
+        result = Action(texts,foundStr,False,action)
+    else:
+        xmin = xmin - xdif * (lowerPercent/100) - lowerPixels
+        xmax = xmax + xdif * (upperPercent/100) + upperPixels
+
+    result = Action(texts,foundStr,True,action)
+    result.column = action.startUpper
+    result.colMin = xmin
+    result.colMax = xmax
+    result.yMin = ymin
+    result.yMax = ymax
+    return result
+
+def TableRows(action, columns, page):
+    rows = []
+
+    column = None
+    for col in columns:
+        if col.no == action.start:
+            column = col
+
+    
+    #log.debug(f"column min {column.ymin}, column max {column.ymax}")
+
+    if column is None:
+        result = None
+        return result
+
+    # Offsets
+    if action.offset_percent:
+        percent = action.offset_percent
+    else:
+        percent = 0
+    
+    if action.offset_pixels:
+        pixel = action.offset_pixels
+    else:
+        pixel = 0
+
+    # Boundaryies
+    xmin = column.xmin
+    xmax = column.xmax
+    ymin = column.ymax
+    ymax = column.ymax + (column.ymax - column.ymin)*percent/100 + pixel
+
+    row = TableRow(action, xmin, xmax, ymin, ymax, page)
+    
+    for i in range(action.startLower):
+        if row is not None:
+            rows.append(row)
+            ymin = row.ymax
+            ymax = row.ymax + (row.ymax - row.ymin)*percent/100 + pixel
+            row = TableRow(action, xmin, xmax, ymin, ymax, page)
+
+    return rows
+
+def TableRow(action, xmin,xmax,ymin,ymax, page):
+    log.debug(f"ymin: {ymin}, ymax: {ymax}")
+    # Texts
+    texts = Text.objects.filter(page=page)
+    texts = texts.filter(BoundingPolys__x__gte = xmin)
+    texts = texts.filter(BoundingPolys__x__lte = xmax)
+    texts = texts.filter(BoundingPolys__y__gte = ymin)
+    texts = texts.filter(BoundingPolys__y__lte = ymax)
+
+    # Distinct
+    texts = texts.distinct() 
+
+    if action.lower_offset_percent:
+        lPercent = action.lower_offset_percent
+    else:
+        lPercent = 0
+    
+    if action.lower_offset_pixels:
+        lPixel = action.lower_offset_pixels
+    else:
+        lPixel = 0
+
+    if action.upper_offset_percent:
+        uPercent = action.upper_offset_percent
+    else:
+        uPercent = 0
+    
+    if action.upper_offset_pixels:
+        uPixel = action.upper_offset_pixels
+    else:
+        uPixel = 0
+
+    y = 9999999999
+    fText = None
+    for t in texts:
+        result = processPoly(t)
+        if result.code == "00000":
+            poly = result.poly
+            if poly['yave'] < y and poly['yave'] > ymin and poly['yave'] < ymax:
+                y = poly['yave']
+                fText = t
+
+    if fText is not None:
+        result = processPoly(fText)
+        if result.code == "00000":
+            poly = result.poly
+            lowerBound = poly['y1'] - poly['ydif']*lPercent/100-lPixel
+            upperBound = poly['y2'] + poly['ydif']*uPercent/100+uPixel
+            row = Row(lowerBound, upperBound)
+            return row
+        
+    return None
+
+def TableCell(action, xmin,xmax,ymin,ymax,page):
+    if action.remove_chars:
+        ignoreList = action.remove_chars.split('#')
+    else:
+        ignoreList = None
+
+    # Texts
+    texts = Text.objects.filter(page=page)
+    texts = texts.filter(BoundingPolys__x__gte = xmin)
+    texts = texts.filter(BoundingPolys__x__lte = xmax)
+    texts = texts.filter(BoundingPolys__y__gte = ymin)
+    texts = texts.filter(BoundingPolys__y__lte = ymax)
+    #texts = texts.order_by('BoundingPolys__x')
+
+    # Ignore List
+    if ignoreList:
+        for ignore in ignoreList:
+            texts = texts.exclude(text=ignore)
+    
+    # Distinct
+    texts = texts.distinct()
+
+    foundStr = ""
+    aTexts = []
+    #print("TABLE CELL TEXTS")
+    for t in texts:
+        #print(f"text: {t.text}")
+        result = processPoly(t)
+        if result.code == "00000":
+            poly = result.poly
+            #print(f"xmin: {xmin}, xmax: {xmax}, ymin: {ymin}, ymax: {ymax},")
+            #print(f"xave: {poly['xave']}, yave: {poly['yave']}")
+            if poly['xave'] > xmin and poly['xave'] < xmax and poly['yave'] > ymin and poly['yave'] < ymax:
+
+                mtext = strCorrections(t.text, action.remove_chars, False)
+                if action.type == action.TABLECELLVALUE:
+                    foundStr += mtext
+                else:
+                    foundStr += " " + mtext
+                #print(f"foundStr: {foundStr}")
+                aTexts.append(t)
+
+    if foundStr != "":
+        #log.debug("Get Value found string: %s", foundStr)
+
+        # VALUE Only
+        if action.type == action.TABLECELLVALUE:
+            x = re.findall(r"\d+", foundStr)
+            if len(x) == 1:
+                foundStr = x[0]
+            elif len(x) >= 2:
+                start = re.search(x[0], foundStr)
+                end = re.search(x[1], foundStr)
+                if end.start() - start.end() == 1:
+                    decimalPointStr = foundStr[start.end():end.start()]
+                    if decimalPointStr == ".":
+                        foundStr = x[0] + "." + x[1]
+                    else:
+                        foundStr=x[0]
+                else:
+                    foundStr=x[0]
+            else:
+                result = Action(aTexts,foundStr,False,action)
+                return result
+            
+        # TEXTVALUE Only
+        if action.type == action.TABLECELLTEXT:
+            if foundStr[0] == " ":
+                foundStr = foundStr[1:]
+        result = Action(aTexts,foundStr,True,action)
+        return result
+
+    result = Action(None,None,False,action)
+    return result
+
 
 def ExtractDataBackup(document,method):
     pages = document.pages.all()
@@ -1682,9 +2485,31 @@ class Action:
         self.value = None
         self.success = success
         self.action = action
+        self.tableHeader = False
+        self.column = None
+        self.colMin = None
+        self.colMax = None
+        self.yMin = None
+        self.yMax = None
 
     def __str__(self):
         if self.success:
             return f"Action: Success, {self.action.get_type_display()}: {self.text}"
         else:
             return f"Action: Fail, {self.action.get_type_display()}: {self.action.string}"
+        
+class Column:
+    def __init__(self, no, xmin, xmax, ymin, ymax):
+        self.no = no
+        self.xmin = xmin
+        self.xmax = xmax
+        self.ymin = ymin
+        self.ymax = ymax
+
+class Row:
+    def __init__ (self, ymin, ymax):
+        self.ymin = ymin
+        self.ymax = ymax
+        self.values = []
+        self.texts = []
+        self.units = []

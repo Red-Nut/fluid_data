@@ -281,7 +281,7 @@ def UpdateCompanyNamesTask():
     return
 
 def DataExtraction(request):
-    methods = ExtractionMethod.objects.order_by('data_type', 'company', 'name').all()
+    methods = ExtractionMethod.objects.filter(enabled=True).order_by('data_type', 'company', 'name').all()
 
     context = {
         "methods" : methods,
@@ -291,7 +291,7 @@ def DataExtraction(request):
 
 def DataExtractionByType(request, id):
     dataType = ExtractedDataTypes.objects.get(id=id)
-    methods = ExtractionMethod.objects.filter(data_type=dataType).order_by('company')
+    methods = ExtractionMethod.objects.filter(data_type=dataType,enabled=True).order_by('company')
 
     context = {
         "methods" : methods,

@@ -287,13 +287,13 @@ def copyToTemp(filePath, tempFolder, fileName):
             if e.response['Error']['Code'] == "404":
                 # Handle Error.
                 result = GenerateResult(resultList,10)
-                result.consolLog = result.consolLog + " Error: 404"
+                result.consolLog = result.consolLog + " Error: 404, File: " + filePath
                 PrintResultLog(result)
                 return result
             else:
                 # Handle Error.
                 result = GenerateResult(resultList,11)
-                result.consolLog = result.consolLog + " Error: 404"
+                result.consolLog = result.consolLog + " Error: 404, File: " + filePath
                 PrintResultLog(result)
                 return result
         
