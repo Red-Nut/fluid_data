@@ -74,59 +74,58 @@
                     {% for data in datas %}
                         {% with type=data.extraction_method.data_type %}
                         {% ifchanged data.extraction_method.data_type %}
-                        <tr><td colspan="5"></td></tr>
-                        {% if type.value1 %}
-                        <tr>
-                            <th colspan=5>{{type}}</th>
-                        </tr>
-                        <tr>
-                            <th>{{type.value1}}</th>
-                            {% if type.value2 %}
-                            <th>{{type.value2}}</th>
-                            {% else %}
-                            <th></th>
+                            <tr><td colspan="5"></td></tr>
+                            {% if type.value1 %}
+                                <tr>
+                                    <th colspan=5>{{type}}</th>
+                                </tr>
+                                <tr>
+                                    <th>{{type.value1}}</th>
+                                    {% if type.value2 %}
+                                    <th>{{type.value2}}</th>
+                                    {% else %}
+                                    <th></th>
+                                    {% endif %}
+                                    {% if type.value3 %}
+                                    <th>{{type.value3}}</th>
+                                    {% else %}
+                                    <th></th>
+                                    {% endif %}
+                                    {% if type.value4 %}
+                                    <th>{{type.value4}}</th>
+                                    {% else %}
+                                    <th></th>
+                                    {% endif %}
+                                </tr>
                             {% endif %}
-                            {% if type.value3 %}
-                            <th>{{type.value3}}</th>
-                            {% else %}
-                            <th></th>
-                            {% endif %}
-                            {% if type.value4 %}
-                            <th>{{type.value4}}</th>
-                            {% else %}
-                            <th></th>
-                            {% endif %}
-                        </tr>
-                        {% endif %}
                         {% endifchanged %}
                         {% if type.value1 %}
-                        <tr>
-                            <td>
-                                {% if data.get_value1 is not None %}
-                                {{data.get_value1}}
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if data.get_value2 is not None %}
-                                {{data.get_value2}}
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if data.get_value3 is not None %}
-                                {{data.get_value3}}
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if data.get_value4 is not None %}
-                                {{data.get_value4}}
-                                {% endif %}
-                            </td>
-                        </tr>
+                            <tr>
+                                <td>
+                                    {% if data.get_value1 is not None %}
+                                    {{data.get_value1_with_units}}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if data.get_value2 is not None %}
+                                    {{data.get_value2_with_units}}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if data.get_value3 is not None %}
+                                    {{data.get_value3_with_units}}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if data.get_value4 is not None %}
+                                    {{data.get_value4_with_units}}
+                                    {% endif %}
+                                </td>
+                            </tr>
                         {% else %}
-                        <tr>
-                            <th>{{type}}:</th>
-                            <td colspan=4>{{data.get_value1}}</td>
-                        </tr>
+                            <tr>
+                                <td colspan=5><b>{{type}}:</b> {{data.get_value_with_units}}</td>
+                            </tr>
                         {% endif %}
                     {% endwith %}
                     {% endfor %}

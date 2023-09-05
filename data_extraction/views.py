@@ -687,14 +687,129 @@ def details(request, id):
 def document(request, id):
 	document = Document.objects.filter(id=id).first()
 
-	datas = Data.objects.filter(page__document=document).order_by('extraction_method__data_type').all()
+	rows = []
+	rowsEmpty = []
+	columns = 1
 
 	dataTypes = ExtractedDataTypes.objects.order_by("name").all()
+	for dataType in dataTypes:
+		if dataType.columns > columns:
+			columns = dataType.columns
+
+		datas = Data.objects.filter(page__document=document).filter(extraction_method__data_type=dataType).all()
+		dataCount = Data.objects.filter(page__document=document).filter(extraction_method__data_type=dataType).count()
+		dataFirst = datas.first()
+		
+		single = True
+		if dataType.value1:
+			single = False
+		
+		hasData = True
+		if dataCount == 0:
+			hasData = False
+
+		multiple = False
+		if dataCount > 1:
+			multiple = True
+
+		if not hasData:
+			row = {
+				"format" : "title",
+				"arg1" : "search",
+				"type" : dataType,
+				"data" : None,
+			}
+			rowsEmpty.append(row)
+		else:
+			if single and not multiple:
+				row = {
+					"format" : "title",
+					"arg1" : "single",
+					"type" : dataType,
+					"data" : dataFirst,
+				}
+				rows.append(row)
+			if single and multiple:
+				row = {
+					"format" : "title",
+					"arg1" : None,
+					"type" : dataType,
+					"data" : None,
+				}
+				rows.append(row)
+				for data in datas:
+					row = {
+						"format" : "data",
+						"arg1" : "units",
+						"type" : dataType,
+						"data" : data,
+					}
+					rows.append(row)
+
+			if not single:
+				row = {
+					"format" : "title",
+					"arg1" : None,
+					"type" : dataType,
+					"data" : None,
+				}
+				rows.append(row)
+				row = {
+					"format" : "header",
+					"arg1" : "units",
+					"type" : dataType,
+					"data" : dataFirst,
+				}
+				rows.append(row)
+				headerRow = len(rows)-1
+				chk = False
+			
+				for data in datas:
+					row = {
+						"format" : "data",
+						"arg1" : None,
+						"type" : dataType,
+						"data" : data,
+					}
+					rows.append(row)
+					if ((data.unit != dataFirst.unit and data.unit is not None) or
+						(data.unit2 != dataFirst.unit2 and data.unit2 is not None) or
+						(data.unit3 != dataFirst.unit3 and data.unit3 is not None) or
+						(data.unit4 != dataFirst.unit4 and data.unit4 is not None) or
+						(data.unit5 != dataFirst.unit5 and data.unit5 is not None) or
+						(data.unit6 != dataFirst.unit6 and data.unit6 is not None) or
+						(data.unit7 != dataFirst.unit7 and data.unit7 is not None) or
+						(data.unit8 != dataFirst.unit8 and data.unit8 is not None) or
+						(data.unit9 != dataFirst.unit9 and data.unit9 is not None) or
+						(data.unit10 != dataFirst.unit10 and data.unit10 is not None) or
+						(data.unit11 != dataFirst.unit11 and data.unit11 is not None) or
+						(data.unit12 != dataFirst.unit12 and data.unit12 is not None) or
+						(data.unit13 != dataFirst.unit13 and data.unit13 is not None) or
+						(data.unit14 != dataFirst.unit14 and data.unit14 is not None) or
+						(data.unit15 != dataFirst.unit15 and data.unit15 is not None) or
+						(data.unit16 != dataFirst.unit16 and data.unit16 is not None) or
+						(data.unit17 != dataFirst.unit17 and data.unit17 is not None) or
+						(data.unit18 != dataFirst.unit18 and data.unit18 is not None) or
+						(data.unit19 != dataFirst.unit19 and data.unit19 is not None) or
+						(data.unit20 != dataFirst.unit20 and data.unit20 is not None)):
+						chk=True
+				if chk:
+					rows[headerRow]["arg1"] = None
+					for i in range(headerRow+1, len(rows)):
+						rows[i]["arg1"] = "units"
+
+	for row in rowsEmpty:
+		rows.append(row)
+
+	#for row in rows:
+		#if row['data']:
+			#print(row)
+			#print(row['data'].unit)
 
 	context = {
 		"document" :  document,
-		"datas" : datas,
-		"dataTypes" : dataTypes,
+		"rows" : rows,
+		"columns" : columns,
 	}
 	log.debug("Loading document view")
 	return render(request, "data/document.html", context)
