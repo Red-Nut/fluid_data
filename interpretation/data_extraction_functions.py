@@ -33,15 +33,17 @@ def ExtractPages(document, firstPage, lastPage, delete):
     ext = GetDocumentExt(document)
     success = False
 
+    if delete:
+        for page in document.pages.all():
+            if page.page_no >= firstPage and page.page_no <= lastPage:
+                page.file.delete()
+                page.delete()
+        document.conversion_status = document.NOTCONVERTED
+        document.save()
     if document.conversion_status == document.CONVERTED:
         result = GenerateResult(resultList,0)
         return result
-    if delete:
-        for page in document.pages.all():
-            page.file.delete()
-            page.delete()
-        document.conversion_status = document.NOTCONVERTED
-        document.save()
+    
 
     if ext == "tiff" or ext == ".tif" or ext == ".pdf":
         if document.status != document.DOWNLOADED or not document.file:
@@ -325,7 +327,6 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                     file_location = imageLocation,
                                     file_size = fileSize
                                 ).first()
-                                print(file)
                                 if file is None:
                                     file = File.objects.create(
                                         file_name = 'page' + str(pageNo),
@@ -515,11 +516,26 @@ def ExtractData(document,method):
                                 actionResults[action.start-1].text = previousText
                                 actionResult = Action(previousAction.texts,chkStr,True,action)
                     if not success:
-                        actionResult = NextAction(action, actionResults[action.start-1], actionResults[action.lower_bound_start-1], actionResults[action.upper_bound_start-1], page)
+                        actionStart = actionResults[action.start-1]
+                        actionLower = actionStart
+                        actionUpper = actionStart
+                        if action.lower_bound_start:
+                            actionLower = actionResults[action.lower_bound_start-1]
+                        if action.upper_bound_start:
+                            actionUpper = actionResults[action.upper_bound_start-1]
+
+                        actionResult = NextAction(action, actionStart, actionLower, actionUpper, page)
 
                 # Search Action
-                #if action.type == action.SEARCH:
-                    #actionResult = SearchAction(action, actionResults[action.start-1], page)
+                elif action.type == action.SEARCH:
+                    actionStart = actionResults[action.start-1]
+                    actionLower = actionStart
+                    actionUpper = actionStart
+                    if action.lower_bound_start:
+                        actionLower = actionResults[action.lower_bound_start-1]
+                    if action.upper_bound_start:
+                        actionUpper = actionResults[action.upper_bound_start-1]
+                    actionResult = SearchAction(action, actionStart, actionLower, actionUpper, page)
                 
                 # Value Action
                 elif action.type == action.VALUE:
@@ -556,7 +572,14 @@ def ExtractData(document,method):
 
                 # Text Value Action
                 elif action.type == action.TEXTVALUE:
-                    actionResult = ValueAction(action, actionResults[action.start-1], actionResults[action.lower_bound_start-1], actionResults[action.upper_bound_start-1], page)
+                    actionStart = actionResults[action.start-1]
+                    actionLower = actionStart
+                    actionUpper = actionStart
+                    if action.lower_bound_start:
+                        actionLower = actionResults[action.lower_bound_start-1]
+                    if action.upper_bound_start:
+                        actionUpper = actionResults[action.upper_bound_start-1]
+                    actionResult = ValueAction(action, actionStart, actionLower, actionUpper, page)
 
                 # Save Action
                 elif action.type == action.SAVE:
@@ -583,6 +606,28 @@ def ExtractData(document,method):
                             columns.append(col)
 
                     columns.sort(key=lambda x: x.no)
+                    print('********* Found Columns **************')
+                    for col in columns:
+                        print(col)
+
+                    # insert missing columns
+                    for i in range(columns[-1].no):
+                        print(f"i: {i}")
+                        columnNo = i+1
+                        if columns[i].no != columnNo:
+                            print(f"column {i}:{columns[i].no}")
+                            min=0
+                            max=9999
+                            if columnNo > 1:
+                                min=columns[i-1].xmax
+                            if columnNo < columns[-1].no:
+                                max=columns[i+1].xmin
+                            col = Column(columnNo, min, max, columns[i].ymin, columns[i].ymax)
+                            columns.insert(i,col)
+                        
+                    print('********* Inserted Columns **************')
+                    for col in columns:
+                        print(col)
 
                     # fix column boundaries
                     ymin = 9999999999
@@ -611,7 +656,10 @@ def ExtractData(document,method):
                     for column in columns:
                         column.ymin = ymin
                         column.ymax = ymax
-                        print(f"Column {column.no} ({column.xmin}, {column.xmax})")
+                    
+                    print('********* Finalised Columns **************')
+                    for col in columns:
+                        print(col)
 
                     rows = TableRows(action, columns, page)
                     for i, row in enumerate(rows):
@@ -675,32 +723,227 @@ def ExtractData(document,method):
 
                 # Save Table
                 if actionResults[0].action.startUpper:
-                    for row in rows:
-                        fvalues = [None, None, None, None]
-                        ftexts = [None, None, None, None]
-                        funits = [None, None, None, None]
-                        for i in range(len(row.values)):
-                            if row.units[i]:
-                                if row.units[i].name == 'text':
-                                    ftexts[i] = row.values[i]                                
-                                else:
-                                    fvalues[i] = row.values[i]
-                            funits[i] = row.units[i]
+                    if method.id == 43:
+                        print("Method 43")
+                        for row in rows:
+                            fvalues = [None, None, None]
+                            ftexts = [None, None, None]
+                            funits = [None, None, None]
+                            for i in range(len(row.values)):
+                                if row.units[i]:
+                                    if row.units[i].name == 'text':
+                                        ftexts[i] = row.values[i]                                
+                                    else:
+                                        fvalues[i] = row.values[i]
+                                funits[i] = row.units[i]
+                            print(ftexts)
+                            print(funits)
+                    else:
+                        for row in rows:
+                            fvalues = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                            ftexts = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                            funits = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                            for i in range(len(row.values)):
+                                if row.units[i]:
+                                    if row.units[i].name == 'text':
+                                        ftexts[i] = row.values[i]                                
+                                    else:
+                                        fvalues[i] = row.values[i]
+                                funits[i] = row.units[i]
 
-                        print("***********************************************")
-                        print(fvalues)
-                        print(ftexts)
-                        print(funits)
-                        # check no all null
-                        chk = False
-                        for v in fvalues:
-                            if v:
-                                chk = True
-                        for t in ftexts:
-                            if t:
-                                chk = True
+                            print("************* SAVING TABLE VALUES ********************")
+                            print(fvalues)
+                            print(ftexts)
+                            print(funits)
+                            # check no all null
+                            chk = False
+                            for v in fvalues:
+                                if v:
+                                    chk = True
+                            for t in ftexts:
+                                if t:
+                                    chk = True
+                            
+                            if chk:
+                                data = Data.objects.filter(
+                                    page = page,
+                                    extraction_method__data_type = method.data_type,
+                                    value = fvalues[0],
+                                    text = ftexts[0],
+                                    unit = funits[0],
+                                    value2 = fvalues[1],
+                                    text2 = ftexts[1],
+                                    unit2 = funits[1],
+                                    value3 = fvalues[2],
+                                    text3 = ftexts[2],
+                                    unit3 = funits[2],
+                                    value4 = fvalues[3],
+                                    text4 = ftexts[3],
+                                    unit4 = funits[3],
+                                    value5 = fvalues[4],
+                                    text5 = ftexts[4],
+                                    unit5 = funits[4],
+                                    value6 = fvalues[5],
+                                    text6 = ftexts[5],
+                                    unit6 = funits[5],
+                                    value7 = fvalues[6],
+                                    text7 = ftexts[6],
+                                    unit7 = funits[6],
+                                    value8 = fvalues[7],
+                                    text8 = ftexts[7],
+                                    unit8 = funits[7],
+                                    value9 = fvalues[8],
+                                    text9 = ftexts[8],
+                                    unit9 = funits[8],
+                                    value10 = fvalues[9],
+                                    text10 = ftexts[9],
+                                    unit10 = funits[9],
+                                    value11 = fvalues[10],
+                                    text11 = ftexts[10],
+                                    unit11 = funits[10],
+                                    value12 = fvalues[11],
+                                    text12 = ftexts[11],
+                                    unit12 = funits[11],
+                                    value13 = fvalues[12],
+                                    text13 = ftexts[12],
+                                    unit13 = funits[12],
+                                    value14 = fvalues[13],
+                                    text14 = ftexts[13],
+                                    unit14 = funits[13],
+                                    value15 = fvalues[14],
+                                    text15 = ftexts[14],
+                                    unit15 = funits[14],
+                                    value16 = fvalues[15],
+                                    text16 = ftexts[15],
+                                    unit16 = funits[15],
+                                    value17 = fvalues[16],
+                                    text17 = ftexts[16],
+                                    unit17 = funits[16],
+                                    value18 = fvalues[17],
+                                    text18 = ftexts[17],
+                                    unit18 = funits[17],
+                                    value19 = fvalues[18],
+                                    text19 = ftexts[18],
+                                    unit19 = funits[18],
+                                    value20 = fvalues[19],
+                                    text20 = ftexts[19],
+                                    unit20 = funits[19]
+                                ).first()
+                                if data is None:
+                                    try:
+                                        data = Data.objects.create(
+                                            page = page,
+                                            extraction_method = method,
+                                            value = fvalues[0],
+                                            text = ftexts[0],
+                                            unit = funits[0],
+                                            value2 = fvalues[1],
+                                            text2 = ftexts[1],
+                                            unit2 = funits[1],
+                                            value3 = fvalues[2],
+                                            text3 = ftexts[2],
+                                            unit3 = funits[2],
+                                            value4 = fvalues[3],
+                                            text4 = ftexts[3],
+                                            unit4 = funits[3],
+                                            value5 = fvalues[4],
+                                            text5 = ftexts[4],
+                                            unit5 = funits[4],
+                                            value6 = fvalues[5],
+                                            text6 = ftexts[5],
+                                            unit6 = funits[5],
+                                            value7 = fvalues[6],
+                                            text7 = ftexts[6],
+                                            unit7 = funits[6],
+                                            value8 = fvalues[7],
+                                            text8 = ftexts[7],
+                                            unit8 = funits[7],
+                                            value9 = fvalues[8],
+                                            text9 = ftexts[8],
+                                            unit9 = funits[8],
+                                            value10 = fvalues[9],
+                                            text10 = ftexts[9],
+                                            unit10 = funits[9],
+                                            value11 = fvalues[10],
+                                            text11 = ftexts[10],
+                                            unit11 = funits[10],
+                                            value12 = fvalues[11],
+                                            text12 = ftexts[11],
+                                            unit12 = funits[11],
+                                            value13 = fvalues[12],
+                                            text13 = ftexts[12],
+                                            unit13 = funits[12],
+                                            value14 = fvalues[13],
+                                            text14 = ftexts[13],
+                                            unit14 = funits[13],
+                                            value15 = fvalues[14],
+                                            text15 = ftexts[14],
+                                            unit15 = funits[14],
+                                            value16 = fvalues[15],
+                                            text16 = ftexts[15],
+                                            unit16 = funits[15],
+                                            value17 = fvalues[16],
+                                            text17 = ftexts[16],
+                                            unit17 = funits[16],
+                                            value18 = fvalues[17],
+                                            text18 = ftexts[17],
+                                            unit18 = funits[17],
+                                            value19 = fvalues[18],
+                                            text19 = ftexts[18],
+                                            unit19 = funits[18],
+                                            value20 = fvalues[19],
+                                            text20 = ftexts[19],
+                                            unit20 = funits[19]
+                                        )
+                                    except Exception as e:
+                                        print(e)
+                                        success = False
+                
+                # Not Table
+                else:
+                    # Get Values
+                    values = []
+                    texts = []
+                    units = []
+                    success = True
+                    j = 0
+                    k = 0
+                    for i in range(len(actionResults)):
+                        action = actions[i].action
+                        actionResult = actionResults[i]
+
+                        # VALUES
+                        if action.type == action.VALUE:
+                            value = actionResult.value
+                                
+                            values.append(value)
+                            texts.append(None)
+                            units.append(action.unit)
+                            k += 1
+                            
+                        # TEXT
+                        if action.type == action.TEXTVALUE:
+                            valueText = actionResult.text
+                            unit = Unit.objects.filter(name="text").first()
                         
-                        if chk:
+                            values.append(0)
+                            texts.append(valueText)
+                            units.append(unit)
+                            k += 1
+
+                        # SAVE ROW
+                        if action.type == action.SAVE:
+                            fvalues = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                            ftexts = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                            funits = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                            print("#SAVING VALUES ####################") 
+                            for i in range(len(values)-j):
+                                if values[i+j]:
+                                    fvalues[i] = Decimal(round(values[i+j],4))
+                                ftexts[i] = texts[i+j]
+                                funits[i] = units[i+j]
+                            print(fvalues)
+
                             data = Data.objects.filter(
                                 page = page,
                                 extraction_method__data_type = method.data_type,
@@ -715,8 +958,57 @@ def ExtractData(document,method):
                                 unit3 = funits[2],
                                 value4 = fvalues[3],
                                 text4 = ftexts[3],
-                                unit4 = funits[3]
+                                unit4 = funits[3],
+                                value5 = fvalues[4],
+                                text5 = ftexts[4],
+                                unit5 = funits[4],
+                                value6 = fvalues[5],
+                                text6 = ftexts[5],
+                                unit6 = funits[5],
+                                value7 = fvalues[6],
+                                text7 = ftexts[6],
+                                unit7 = funits[6],
+                                value8 = fvalues[7],
+                                text8 = ftexts[7],
+                                unit8 = funits[7],
+                                value9 = fvalues[8],
+                                text9 = ftexts[8],
+                                unit9 = funits[8],
+                                value10 = fvalues[9],
+                                text10 = ftexts[9],
+                                unit10 = funits[9],
+                                value11 = fvalues[10],
+                                text11 = ftexts[10],
+                                unit11 = funits[10],
+                                value12 = fvalues[11],
+                                text12 = ftexts[11],
+                                unit12 = funits[11],
+                                value13 = fvalues[12],
+                                text13 = ftexts[12],
+                                unit13 = funits[12],
+                                value14 = fvalues[13],
+                                text14 = ftexts[13],
+                                unit14 = funits[13],
+                                value15 = fvalues[14],
+                                text15 = ftexts[14],
+                                unit15 = funits[14],
+                                value16 = fvalues[15],
+                                text16 = ftexts[15],
+                                unit16 = funits[15],
+                                value17 = fvalues[16],
+                                text17 = ftexts[16],
+                                unit17 = funits[16],
+                                value18 = fvalues[17],
+                                text18 = ftexts[17],
+                                unit18 = funits[17],
+                                value19 = fvalues[18],
+                                text19 = ftexts[18],
+                                unit19 = funits[18],
+                                value20 = fvalues[19],
+                                text20 = ftexts[19],
+                                unit20 = funits[19]
                             ).first()
+
                             if data is None:
                                 try:
                                     data = Data.objects.create(
@@ -733,51 +1025,70 @@ def ExtractData(document,method):
                                         unit3 = funits[2],
                                         value4 = fvalues[3],
                                         text4 = ftexts[3],
-                                        unit4 = funits[3]
+                                        unit4 = funits[3],
+                                        value5 = fvalues[4],
+                                        text5 = ftexts[4],
+                                        unit5 = funits[4],
+                                        value6 = fvalues[5],
+                                        text6 = ftexts[5],
+                                        unit6 = funits[5],
+                                        value7 = fvalues[6],
+                                        text7 = ftexts[6],
+                                        unit7 = funits[6],
+                                        value8 = fvalues[7],
+                                        text8 = ftexts[7],
+                                        unit8 = funits[7],
+                                        value9 = fvalues[8],
+                                        text9 = ftexts[8],
+                                        unit9 = funits[8],
+                                        value10 = fvalues[9],
+                                        text10 = ftexts[9],
+                                        unit10 = funits[9],
+                                        value11 = fvalues[10],
+                                        text11 = ftexts[10],
+                                        unit11 = funits[10],
+                                        value12 = fvalues[11],
+                                        text12 = ftexts[11],
+                                        unit12 = funits[11],
+                                        value13 = fvalues[12],
+                                        text13 = ftexts[12],
+                                        unit13 = funits[12],
+                                        value14 = fvalues[13],
+                                        text14 = ftexts[13],
+                                        unit14 = funits[13],
+                                        value15 = fvalues[14],
+                                        text15 = ftexts[14],
+                                        unit15 = funits[14],
+                                        value16 = fvalues[15],
+                                        text16 = ftexts[15],
+                                        unit16 = funits[15],
+                                        value17 = fvalues[16],
+                                        text17 = ftexts[16],
+                                        unit17 = funits[16],
+                                        value18 = fvalues[17],
+                                        text18 = ftexts[17],
+                                        unit18 = funits[17],
+                                        value19 = fvalues[18],
+                                        text19 = ftexts[18],
+                                        unit19 = funits[18],
+                                        value20 = fvalues[19],
+                                        text20 = ftexts[19],
+                                        unit20 = funits[19]
                                     )
                                 except Exception as e:
                                     print(e)
                                     success = False
+                            j = k
 
-                # Get Values
-                values = []
-                texts = []
-                units = []
-                success = True
-                j = 0
-                k = 0
-                for i in range(len(actionResults)):
-                    action = actions[i].action
-                    actionResult = actionResults[i]
-
-                    # VALUES
-                    if action.type == action.VALUE:
-                        value = actionResult.value
-                            
-                        values.append(value)
-                        texts.append(None)
-                        units.append(action.unit)
-                        k += 1
-                        
-                    # TEXT
-                    if action.type == action.TEXTVALUE:
-                        valueText = actionResult.text
-                        unit = Unit.objects.filter(name="text").first()
-                    
-                        values.append(0)
-                        texts.append(valueText)
-                        units.append(unit)
-                        k += 1
-
-                    # SAVE ROW
-                    if action.type == action.SAVE:
-                        fvalues = [None, None, None, None]
-                        ftexts = [None, None, None, None]
-                        funits = [None, None, None, None]
-                        print("#SAVING VALUES ####################") 
+                    # SAVE LAST ROW
+                    if success and not partialSuccess:  
+                        fvalues = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                        ftexts = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                        funits = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
+                        print("SAVING VALUES ####################") 
                         for i in range(len(values)-j):
                             if values[i+j]:
-                                fvalues[i] = Decimal(round(values[i+j],2))
+                                fvalues[i] = Decimal(round(values[i+j],4))
                             ftexts[i] = texts[i+j]
                             funits[i] = units[i+j]
                         print(fvalues)
@@ -796,9 +1107,56 @@ def ExtractData(document,method):
                             unit3 = funits[2],
                             value4 = fvalues[3],
                             text4 = ftexts[3],
-                            unit4 = funits[3]
-                        ).first()
-
+                            unit4 = funits[3],
+                            value5 = fvalues[4],
+                            text5 = ftexts[4],
+                            unit5 = funits[4],
+                            value6 = fvalues[5],
+                            text6 = ftexts[5],
+                            unit6 = funits[5],
+                            value7 = fvalues[6],
+                            text7 = ftexts[6],
+                            unit7 = funits[6],
+                            value8 = fvalues[7],
+                            text8 = ftexts[7],
+                            unit8 = funits[7],
+                            value9 = fvalues[8],
+                            text9 = ftexts[8],
+                            unit9 = funits[8],
+                            value10 = fvalues[9],
+                            text10 = ftexts[9],
+                            unit10 = funits[9],
+                            value11 = fvalues[10],
+                            text11 = ftexts[10],
+                            unit11 = funits[10],
+                            value12 = fvalues[11],
+                            text12 = ftexts[11],
+                            unit12 = funits[11],
+                            value13 = fvalues[12],
+                            text13 = ftexts[12],
+                            unit13 = funits[12],
+                            value14 = fvalues[13],
+                            text14 = ftexts[13],
+                            unit14 = funits[13],
+                            value15 = fvalues[14],
+                            text15 = ftexts[14],
+                            unit15 = funits[14],
+                            value16 = fvalues[15],
+                            text16 = ftexts[15],
+                            unit16 = funits[15],
+                            value17 = fvalues[16],
+                            text17 = ftexts[16],
+                            unit17 = funits[16],
+                            value18 = fvalues[17],
+                            text18 = ftexts[17],
+                            unit18 = funits[17],
+                            value19 = fvalues[18],
+                            text19 = ftexts[18],
+                            unit19 = funits[18],
+                            value20 = fvalues[19],
+                            text20 = ftexts[19],
+                            unit20 = funits[19]
+                            ).first()
                         if data is None:
                             try:
                                 data = Data.objects.create(
@@ -815,61 +1173,58 @@ def ExtractData(document,method):
                                     unit3 = funits[2],
                                     value4 = fvalues[3],
                                     text4 = ftexts[3],
-                                    unit4 = funits[3]
+                                    unit4 = funits[3],
+                                    value5 = fvalues[4],
+                                    text5 = ftexts[4],
+                                    unit5 = funits[4],
+                                    value6 = fvalues[5],
+                                    text6 = ftexts[5],
+                                    unit6 = funits[5],
+                                    value7 = fvalues[6],
+                                    text7 = ftexts[6],
+                                    unit7 = funits[6],
+                                    value8 = fvalues[7],
+                                    text8 = ftexts[7],
+                                    unit8 = funits[7],
+                                    value9 = fvalues[8],
+                                    text9 = ftexts[8],
+                                    unit9 = funits[8],
+                                    value10 = fvalues[9],
+                                    text10 = ftexts[9],
+                                    unit10 = funits[9],
+                                    value11 = fvalues[10],
+                                    text11 = ftexts[10],
+                                    unit11 = funits[10],
+                                    value12 = fvalues[11],
+                                    text12 = ftexts[11],
+                                    unit12 = funits[11],
+                                    value13 = fvalues[12],
+                                    text13 = ftexts[12],
+                                    unit13 = funits[12],
+                                    value14 = fvalues[13],
+                                    text14 = ftexts[13],
+                                    unit14 = funits[13],
+                                    value15 = fvalues[14],
+                                    text15 = ftexts[14],
+                                    unit15 = funits[14],
+                                    value16 = fvalues[15],
+                                    text16 = ftexts[15],
+                                    unit16 = funits[15],
+                                    value17 = fvalues[16],
+                                    text17 = ftexts[16],
+                                    unit17 = funits[16],
+                                    value18 = fvalues[17],
+                                    text18 = ftexts[17],
+                                    unit18 = funits[17],
+                                    value19 = fvalues[18],
+                                    text19 = ftexts[18],
+                                    unit19 = funits[18],
+                                    value20 = fvalues[19],
+                                    text20 = ftexts[19],
+                                    unit20 = funits[19]
                                 )
                             except Exception as e:
                                 print(e)
-                                success = False
-                        j = k
-
-                # SAVE LAST ROW
-                if success and not partialSuccess:  
-                    fvalues = [None, None, None, None]
-                    ftexts = [None, None, None, None]
-                    funits = [None, None, None, None]
-                    print("SAVING VALUES ####################") 
-                    for i in range(len(values)-j):
-                        fvalues[i] = values[i+j]
-                        ftexts[i] = texts[i+j]
-                        funits[i] = units[i+j]
-                    print(fvalues)
-
-                    data = Data.objects.filter(
-                        page = page,
-                        extraction_method__data_type = method.data_type,
-                        value = fvalues[0],
-                        text = ftexts[0],
-                        unit = funits[0],
-                        value2 = fvalues[1],
-                        text2 = ftexts[1],
-                        unit2 = funits[1],
-                        value3 = fvalues[2],
-                        text3 = ftexts[2],
-                        unit3 = funits[2],
-                        value4 = fvalues[3],
-                        text4 = ftexts[3],
-                        unit4 = funits[3]
-                        ).first()
-                    if data is None:
-                        try:
-                            data = Data.objects.create(
-                                page = page,
-                                extraction_method = method,
-                                value = fvalues[0],
-                                text = ftexts[0],
-                                unit = funits[0],
-                                value2 = fvalues[1],
-                                text2 = ftexts[1],
-                                unit2 = funits[1],
-                                value3 = fvalues[2],
-                                text3 = ftexts[2],
-                                unit3 = funits[2],
-                                value4 = fvalues[3],
-                                text4 = ftexts[3],
-                                unit4 = funits[3]
-                            )
-                        except Exception as e:
-                            print(e)
             else:
                 pass
                 #log.debug("FAILED Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
@@ -962,6 +1317,44 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
     foundStr = ""
     aTexts = []
 
+    # Offsets
+    if action.offset_percent:
+        percent = action.offset_percent
+    else:
+        percent = 0
+    
+    if action.offset_pixels:
+        pixels = action.offset_pixels
+    else:
+        pixels = 0
+
+    if action.offset_percent:
+        percent = action.offset_percent
+    else:
+        percent = 0
+    if action.offset_pixels:
+        pixels = action.offset_pixels
+    else:
+        pixels = 0
+
+    if action.lower_offset_percent:
+        lowerPercent = action.lower_offset_percent
+    else:
+        lowerPercent = 0
+    if action.lower_offset_pixels:
+        lowerPixels = action.lower_offset_pixels
+    else:
+        lowerPixels = 0
+
+    if action.upper_offset_percent:
+        upperPercent = action.upper_offset_percent
+    else:
+        upperPercent = 0
+    if action.upper_offset_pixels:
+        upperPixels = action.upper_offset_pixels
+    else:
+        upperPixels = 0
+
     for i in range(10):
         result = processPoly(startText)
         if result.code != "00000":
@@ -987,32 +1380,21 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
 
         texts = Text.objects.filter(
             page = page)
-        
-        # Offsets
-        if action.offset_percent:
-            percent = action.offset_percent
-        else:
-            percent = 0
-        
-        if action.offset_pixels:
-            pixels = action.offset_pixels
-        else:
-            pixels = 0
 
         # Right 
         if(action.direction == action.RIGHT):
             start = poly['x2']+poly['xdif']*(percent/100)+pixels
             texts = texts.filter(BoundingPolys__x__gte = start)
             
-            lowerBound = polyLower['y1']-polyLower['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['y1']-polyLower['ydif']*(lowerPercent/100)-lowerPixels
             texts = texts.filter(BoundingPolys__y__gte = lowerBound)
 
             if action.upper_bound==action.START:
-                upperBound = polyUpper['y2']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+                upperBound = polyUpper['y2']+polyUpper['ydif']*(upperPercent/100)+upperPixels
             if action.upper_bound==action.MID:
-                upperBound = (polyUpper['y2']+polyUpper['y2'])/2+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+                upperBound = (polyUpper['y2']+polyUpper['y2'])/2+polyUpper['ydif']*(upperPercent/100)+upperPixels
             if action.upper_bound==action.END:
-                upperBound = polyUpper['y1']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+                upperBound = polyUpper['y1']+polyUpper['ydif']*(upperPercent/100)+upperPixels
             texts = texts.filter(BoundingPolys__y__lte = upperBound)
 
             x = 9999999
@@ -1021,10 +1403,10 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
             start = poly['x1']-poly['xdif']*(percent/100)-pixels
             texts = texts.filter(BoundingPolys__x__lte = start)
 
-            lowerBound = polyLower['y1']-polyLower['ydif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['y1']-polyLower['ydif']*(lowerPercent/100)-lowerPixels
             texts = texts.filter(BoundingPolys__y__gte = lowerBound)
 
-            upperBound = polyUpper['y2']+polyUpper['ydif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            upperBound = polyUpper['y2']+polyUpper['ydif']*(upperPercent/100)+upperPixels
             texts = texts.filter(BoundingPolys__y__lte = upperBound)
 
             x = -9999999
@@ -1033,10 +1415,10 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
             start = poly['y1']-poly['ydif']*(percent/100)-pixels
             texts = texts.filter(BoundingPolys__y__lte = start)
 
-            lowerBound = polyLower['x1']-polyLower['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['x1']-polyLower['xdif']*(lowerPercent/100)-lowerPixels
             texts = texts.filter(BoundingPolys__x__gte = lowerBound)
 
-            upperBound = polyUpper['x2']+polyUpper['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            upperBound = polyUpper['x2']+polyUpper['xdif']*(upperPercent/100)+upperPixels
             texts = texts.filter(BoundingPolys__x__lte = upperBound)
 
             y = -9999999
@@ -1045,10 +1427,10 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
             start = poly['y2']+poly['ydif']*(percent/100)+pixels
             texts = texts.filter(BoundingPolys__y__gte = start)
 
-            lowerBound = polyLower['x1']-polyLower['xdif']*(action.lower_offset_percent/100)-action.lower_offset_pixels
+            lowerBound = polyLower['x1']-polyLower['xdif']*(lowerPercent/100)-lowerPixels
             texts = texts.filter(BoundingPolys__x__gte = lowerBound)
 
-            upperBound = polyUpper['x2']+polyUpper['xdif']*(action.upper_offset_percent/100)+action.upper_offset_pixels
+            upperBound = polyUpper['x2']+polyUpper['xdif']*(upperPercent/100)+upperPixels
             texts = texts.filter(BoundingPolys__x__lte = upperBound)
 
             y = 9999999
@@ -1130,8 +1512,168 @@ def NextAction(action, startAction, startActionLower, startActionUpper, page):
     result = Action(None,None,False,action)
     return result
 
-def SearchAction():
-    pass
+def SearchAction(action, startAction, startActionLower, startActionUpper, page):
+    chkStr = strCorrections(action.string, action.remove_chars, True) 
+
+    if action.remove_chars:
+        ignoreList = action.remove_chars.split('#')
+    else:
+        ignoreList = None
+
+    # Starting Text
+    # Right or Down
+    if(action.direction == action.RIGHT or action.direction == action.DOWN):
+        startText = startAction.texts[-1]
+        startTextLower = startActionLower.texts[-1]
+        startTextUpper = startActionUpper.texts[-1]
+    # Left or Up
+    if(action.direction == action.LEFT or action.direction == action.UP):
+        startText = startAction.texts[0]
+        startTextLower = startActionLower.texts[0]
+        startTextUpper = startActionUpper.texts[0]
+
+    # Offsets
+    if action.offset_percent:
+        percent = action.offset_percent
+    else:
+        percent = 0
+    
+    if action.offset_pixels:
+        pixels = action.offset_pixels
+    else:
+        pixels = 0
+
+    if action.offset_percent:
+        percent = action.offset_percent
+    else:
+        percent = 0
+    if action.offset_pixels:
+        pixels = action.offset_pixels
+    else:
+        pixels = 0
+
+    if action.lower_offset_percent:
+        lowerPercent = action.lower_offset_percent
+    else:
+        lowerPercent = 0
+    if action.lower_offset_pixels:
+        lowerPixels = action.lower_offset_pixels
+    else:
+        lowerPixels = 0
+
+    if action.upper_offset_percent:
+        upperPercent = action.upper_offset_percent
+    else:
+        upperPercent = 0
+    if action.upper_offset_pixels:
+        upperPixels = action.upper_offset_pixels
+    else:
+        upperPixels = 0
+
+    result = processPoly(startText)
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        poly = result.poly
+
+    result = processPoly(startTextLower)
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        polyLower = result.poly
+
+    result = processPoly(startTextUpper)
+    if result.code != "00000":
+        result.text = None
+        return result
+    else:
+        polyUpper = result.poly
+
+
+    texts = Text.objects.filter(
+        page = page)
+
+    # Right 
+    if(action.direction == action.RIGHT):
+        start = poly['x2']+poly['xdif']*(percent/100)+pixels
+        texts = texts.filter(BoundingPolys__x__gte = start)
+        
+        lowerBound = polyLower['y1']-polyLower['ydif']*(lowerPercent/100)-lowerPixels
+        texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+
+        if action.upper_bound==action.START:
+            upperBound = polyUpper['y2']+polyUpper['ydif']*(upperPercent/100)+upperPixels
+        if action.upper_bound==action.MID:
+            upperBound = (polyUpper['y2']+polyUpper['y2'])/2+polyUpper['ydif']*(upperPercent/100)+upperPixels
+        if action.upper_bound==action.END:
+            upperBound = polyUpper['y1']+polyUpper['ydif']*(upperPercent/100)+upperPixels
+        texts = texts.filter(BoundingPolys__y__lte = upperBound)
+
+        x = 9999999
+    # LEFT
+    elif(action.direction == action.LEFT):
+        start = poly['x1']-poly['xdif']*(percent/100)-pixels
+        texts = texts.filter(BoundingPolys__x__lte = start)
+
+        lowerBound = polyLower['y1']-polyLower['ydif']*(lowerPercent/100)-lowerPixels
+        texts = texts.filter(BoundingPolys__y__gte = lowerBound)
+
+        upperBound = polyUpper['y2']+polyUpper['ydif']*(upperPercent/100)+upperPixels
+        texts = texts.filter(BoundingPolys__y__lte = upperBound)
+
+        x = -9999999
+    # Up
+    elif(action.direction == action.UP):
+        start = poly['y1']-poly['ydif']*(percent/100)-pixels
+        texts = texts.filter(BoundingPolys__y__lte = start)
+
+        lowerBound = polyLower['x1']-polyLower['xdif']*(lowerPercent/100)-lowerPixels
+        texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+
+        upperBound = polyUpper['x2']+polyUpper['xdif']*(upperPercent/100)+upperPixels
+        texts = texts.filter(BoundingPolys__x__lte = upperBound)
+
+        y = -9999999
+    # Down
+    elif(action.direction == action.DOWN):
+        start = poly['y2']+poly['ydif']*(percent/100)+pixels
+        texts = texts.filter(BoundingPolys__y__gte = start)
+
+        lowerBound = polyLower['x1']-polyLower['xdif']*(lowerPercent/100)-lowerPixels
+        texts = texts.filter(BoundingPolys__x__gte = lowerBound)
+
+        upperBound = polyUpper['x2']+polyUpper['xdif']*(upperPercent/100)+upperPixels
+        texts = texts.filter(BoundingPolys__x__lte = upperBound)
+
+        y = 9999999
+    
+    # Ignore List
+    if ignoreList:
+        for ignore in ignoreList:
+            texts = texts.exclude(text=ignore)
+    
+    # Distinct
+    texts = texts.distinct()
+    #log.debug(f"x start: {start}")
+    #log.debug(f"lowerBound: {lowerBound}")
+    #log.debug(f"upperBound: {upperBound}")  
+
+    for t in texts:
+        if t != startText:
+            foundStr = strCorrections(t.text, action.remove_chars, True)
+            if foundStr == chkStr:
+                aTexts = [t]
+                result = Action(aTexts,foundStr,True,action)
+                log.debug("Search String - SUCCESS: %s", foundStr)
+                return result
+
+    log.debug("Search String - FAILED (%s): NULL", chkStr)
+    result = Action(None,foundStr,False,action)
+    return result
+
+
 
 def ValueAction(action, startAction, startActionLower, startActionUpper, page):
     if startAction.texts is None:
@@ -2505,6 +3047,9 @@ class Column:
         self.xmax = xmax
         self.ymin = ymin
         self.ymax = ymax
+    
+    def __str__(self):
+        return f"Column: {self.no}; X Range: {self.xmin}, {self.xmax}; Y Range: {self.ymin}, {self.ymax}"
 
 class Row:
     def __init__ (self, ymin, ymax):

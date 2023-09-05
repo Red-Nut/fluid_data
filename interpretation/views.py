@@ -1,15 +1,23 @@
+# Django imports
 from django.shortcuts import render, redirect, HttpResponse
 from django.http import JsonResponse
 from django.conf import settings
 from django.db.models import Q
 
+# This module imports.
+from .data_extraction_functions import ExtractPages, getDocumentText, ExtractData
+from .isotherm_output import CreateIsothermTemplate
+
+# Other module imports
+from data_extraction.models import *
+from file_manager import fileModule
+
 # Third party imports.
 import json
 
-from .data_extraction_functions import ExtractPages, getDocumentText, ExtractData
 
-from data_extraction.models import *
-from file_manager import fileModule
+
+
 
 # Logging
 import logging
@@ -38,8 +46,7 @@ def DataExtractionView(request, id):
     return render(request, "data/data_extraction.html", context)
 
 def ExtractTextFromDocumentView(request, did):
-    
-    result = ExtractTextFromDocument(did, 1, 2)
+    result = ExtractTextFromDocument(did, 1, 99)
 
     # Convert to Json and return the response.
     #return JsonResponse(result.description, safe=False)
@@ -50,7 +57,7 @@ def ExtractTextFromDocument(did, start, end):
     log.debug(f"Extracting Text from document: {document.document_name} ({document.id})")
 
     # Convert file to images
-    result = ExtractPages(document, start, end, True)
+    result = ExtractPages(document, start, end, False)
     if result.code == "00000":
         # Extract Text from images
         result = getDocumentText(document)
@@ -115,6 +122,10 @@ def RunPageTextAutomationByMethod(did, method_id):
         log.warning('Text Extraction Failed. Document: %s (%i), Method: %s (%i)', document.document_name, document.id, method.name, method.id)
 
     return redirect('document', did)
+
+def CreateIsothermTemplateView(request, well_id):
+    CreateIsothermTemplate(well_id)
+    return
 
 def MyFun(request):
 

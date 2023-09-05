@@ -410,7 +410,14 @@ class Unit(CreatedModifiedModel):
     imperial_conversion = models.FloatField()
 
     def __str__(self):
-	    return f"{self.name}"
+        return f"{self.name}"
+
+    @property
+    def get_units_with_brakets(self):
+        if self.name=='text':
+            return ""
+        else:
+            return f"({self.metric_units})"
 
 class ExtractedDataTypes(CreatedModifiedModel):
     name = models.CharField(max_length=100)
@@ -418,16 +425,77 @@ class ExtractedDataTypes(CreatedModifiedModel):
     value2 = models.CharField(max_length=100, null=True)
     value3 = models.CharField(max_length=100, null=True)
     value4 = models.CharField(max_length=100, null=True)
+    value5 = models.CharField(max_length=100, null=True)
+    value6 = models.CharField(max_length=100, null=True)
+    value7 = models.CharField(max_length=100, null=True)
+    value8 = models.CharField(max_length=100, null=True)
+    value9 = models.CharField(max_length=100, null=True)
+    value10 = models.CharField(max_length=100, null=True)
+    value11 = models.CharField(max_length=100, null=True)
+    value12 = models.CharField(max_length=100, null=True)
+    value13 = models.CharField(max_length=100, null=True)
+    value14 = models.CharField(max_length=100, null=True)
+    value15 = models.CharField(max_length=100, null=True)
+    value16 = models.CharField(max_length=100, null=True)
+    value17 = models.CharField(max_length=100, null=True)
+    value18 = models.CharField(max_length=100, null=True)
+    value19 = models.CharField(max_length=100, null=True)
+    value20 = models.CharField(max_length=100, null=True)
 
     def __str__(self):
-	    return f"{self.name}"
+        return f"{self.name}"
+    
+    @property
+    def columns(self):
+        if self.value20:
+            return 20
+        if self.value19:
+            return 19
+        if self.value18:
+            return 18
+        if self.value17:
+            return 17
+        if self.value16:
+            return 16
+        if self.value15:
+            return 15
+        if self.value14:
+            return 14
+        if self.value13:
+            return 13
+        if self.value12:
+            return 12
+        if self.value11:
+            return 11
+        if self.value10:
+            return 10
+        if self.value9:
+            return 9
+        if self.value8:
+            return 8
+        if self.value7:
+            return 7
+        if self.value6:
+            return 6
+        if self.value5:
+            return 5
+        if self.value4:
+            return 4
+        if self.value3:
+            return 3
+        if self.value2:
+            return 2
+        if self.value1:
+            return 1
+        return 0
 
 class ExtractionMethod(CreatedModifiedModel):
     name = models.CharField(max_length=100)
     data_type = models.ForeignKey(
         ExtractedDataTypes,
         null=False,
-        on_delete=models.RESTRICT
+        on_delete=models.RESTRICT,
+        related_name="methods"
     ) 
     company = models.ForeignKey(
         Company,
@@ -731,18 +799,19 @@ class Data(CreatedModifiedModel):
 
     value = models.DecimalField(
         max_digits=10, 
-        decimal_places=2,
+        decimal_places=4,
         null=True) 
     text = models.CharField(max_length=100, null=True)
     unit = models.ForeignKey(
         Unit,
         null=False,
-        on_delete=models.RESTRICT
+        on_delete=models.RESTRICT,
+        related_name="first_units"
     )
 
     value2 = models.DecimalField(
         max_digits=10, 
-        decimal_places=2,
+        decimal_places=4,
         null=True) 
     text2 = models.CharField(max_length=100, null=True)
     unit2 = models.ForeignKey(
@@ -754,7 +823,7 @@ class Data(CreatedModifiedModel):
 
     value3 = models.DecimalField(
         max_digits=10, 
-        decimal_places=2,
+        decimal_places=4,
         null=True) 
     text3 = models.CharField(max_length=100, null=True)
     unit3 = models.ForeignKey(
@@ -766,7 +835,7 @@ class Data(CreatedModifiedModel):
 
     value4 = models.DecimalField(
         max_digits=10, 
-        decimal_places=2,
+        decimal_places=4,
         null=True) 
     text4 = models.CharField(max_length=100, null=True)
     unit4 = models.ForeignKey(
@@ -774,6 +843,198 @@ class Data(CreatedModifiedModel):
         null=True,
         on_delete=models.RESTRICT,
         related_name="forth_units"
+    ) 
+
+    value5 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text5 = models.CharField(max_length=100, null=True)
+    unit5 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="fifth_units"
+    ) 
+
+    value6 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text6 = models.CharField(max_length=100, null=True)
+    unit6 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="sixth_units"
+    ) 
+
+    value7 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text7 = models.CharField(max_length=100, null=True)
+    unit7 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="seventh_units"
+    ) 
+
+    value8 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text8 = models.CharField(max_length=100, null=True)
+    unit8 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="eigth_units"
+    ) 
+
+    value9 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text9 = models.CharField(max_length=100, null=True)
+    unit9 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="ninth_units"
+    ) 
+
+    value10 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text10 = models.CharField(max_length=100, null=True)
+    unit10 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="tenth_units"
+    ) 
+
+    value11 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text11 = models.CharField(max_length=100, null=True)
+    unit11 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="eleventh_units"
+    ) 
+
+    value12 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text12 = models.CharField(max_length=100, null=True)
+    unit12 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="twelfth_units"
+    ) 
+
+    value13 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text13 = models.CharField(max_length=100, null=True)
+    unit13 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="thirteenth_units"
+    ) 
+
+    value14 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text14 = models.CharField(max_length=100, null=True)
+    unit14 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="fourteenth_units"
+    ) 
+
+    value15 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text15 = models.CharField(max_length=100, null=True)
+    unit15 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="fifthteenth_units"
+    ) 
+
+    value16 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text16 = models.CharField(max_length=100, null=True)
+    unit16 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="sixteenth_units"
+    ) 
+
+    value17 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text17 = models.CharField(max_length=100, null=True)
+    unit17 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="seventeenth_units"
+    ) 
+
+    value18 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text18 = models.CharField(max_length=100, null=True)
+    unit18 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="eighteenth_units"
+    ) 
+
+    value19 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text19 = models.CharField(max_length=100, null=True)
+    unit19 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="nineteenth_units"
+    ) 
+
+    value20 = models.DecimalField(
+        max_digits=10, 
+        decimal_places=4,
+        null=True) 
+    text20 = models.CharField(max_length=100, null=True)
+    unit20 = models.ForeignKey(
+        Unit,
+        null=True,
+        on_delete=models.RESTRICT,
+        related_name="twentieth_units"
     ) 
 
     def __str__(self):
@@ -788,67 +1049,181 @@ class Data(CreatedModifiedModel):
         return self.extraction_method.data_type.name
     
     class Meta:
-        unique_together=('page', 'extraction_method', 'value', 'text', 'unit', 'value2', 'text2', 'unit2', 'value3', 'text3', 'unit3', 'value4', 'text4', 'unit4',)
+        unique_together=('page', 'extraction_method', 'value', 'text', 'unit', 
+                         'value2', 'text2', 'unit2', 
+                         'value3', 'text3', 'unit3', 
+                         'value4', 'text4', 'unit4',
+                         )
     
+    def valueToDisplay(self, unit, value, text):
+        if value or text:
+            if unit:
+                if unit.name == "text":
+                    if text:
+                        return text
+                    else:
+                        return '-'
+                if value:
+                    try:
+                        value = unit.metric_conversion * float(value)
+                        return f"{value}"
+                    except:
+                        return 'Error'
+                else:
+                    return '-'
+            else:
+                return 'Error: Unit not specified.'
+        else:
+            return '-'
+        
+    def valueWithUnits(self, unit, value, text):
+        if value or text:
+            if unit:
+                if unit.name == "text":
+                    if text:
+                        return text
+                    else:
+                        return '-'
+                if value:
+                    try:
+                        value = unit.metric_conversion * float(value)
+                        return f"{value}{unit.metric_units}"
+                    except:
+                        return 'Error'
+                else:
+                    return '-'
+            else:
+                return 'Error: Unit not specified.'
+        else:
+            return '-'
+
     @property
     def get_value(self):
-        unit = self.unit
-        if unit.name == "text":
-            return self.text
-        
-        value = unit.metric_conversion * float(self.value)
-        return f"{value}{unit.metric_units}"
-
-    @property
-    def values(self):
-        if self.value4:
-            return 4
-        if self.value3:
-            return 3
-        if self.value2:
-            return 2
-        else:
-            1
-
+        return self.valueToDisplay(self.unit, self.value, self.text)
     @property
     def get_value1(self):
-        unit = self.unit
-        if unit.name == "text":
-            return self.text
-        
-        value = unit.metric_conversion * float(self.value)
-        return f"{value}{unit.metric_units}"
-
+        return self.valueToDisplay(self.unit, self.value, self.text)
     @property
     def get_value2(self):
-        unit = self.unit2
-        if unit:
-            if unit and self.value2:
-                if unit.name == "text":
-                    return self.text2
-                
-                value = unit.metric_conversion * float(self.value2)
-                return f"{value}{unit.metric_units}"
-
+        return self.valueToDisplay(self.unit2, self.value2, self.text2)
     @property
     def get_value3(self):
-        unit = self.unit3
-        if unit:
-            if unit.name == "text":
-                return self.text3
-            
-            value = unit.metric_conversion * float(self.value3)
-            return f"{value}{unit.metric_units}"
-        
+        return self.valueToDisplay(self.unit3, self.value3, self.text3)
     @property
     def get_value4(self):
-        unit = self.unit4
-        if unit:
-            if unit.name == "text":
-                return self.text4
-            
-            value = unit.metric_conversion * float(self.value4)
-            return f"{value}{unit.metric_units}"
+        return self.valueToDisplay(self.unit4, self.value4, self.text4)
+    @property
+    def get_value5(self):
+        return self.valueToDisplay(self.unit5, self.value5, self.text5)
+    @property
+    def get_value6(self):
+        return self.valueToDisplay(self.unit6, self.value6, self.text6)
+    @property
+    def get_value7(self):
+        return self.valueToDisplay(self.unit7, self.value7, self.text7)
+    @property
+    def get_value8(self):
+        return self.valueToDisplay(self.unit8, self.value8, self.text8)
+    @property
+    def get_value9(self):
+        return self.valueToDisplay(self.unit9, self.value9, self.text9)
+    @property
+    def get_value10(self):
+        return self.valueToDisplay(self.unit10, self.value10, self.text10)
+    @property
+    def get_value11(self):
+        return self.valueToDisplay(self.unit11, self.value11, self.text11)
+    @property
+    def get_value12(self):
+        return self.valueToDisplay(self.unit12, self.value12, self.text12)
+    @property
+    def get_value13(self):
+        return self.valueToDisplay(self.unit13, self.value13, self.text13)
+    @property
+    def get_value14(self):
+        return self.valueToDisplay(self.unit14, self.value14, self.text14)
+    @property
+    def get_value15(self):
+        return self.valueToDisplay(self.unit15, self.value15, self.text15)
+    @property
+    def get_value16(self):
+        return self.valueToDisplay(self.unit16, self.value16, self.text16)
+    @property
+    def get_value17(self):
+        return self.valueToDisplay(self.unit17, self.value17, self.text17)
+    @property
+    def get_value18(self):
+        return self.valueToDisplay(self.unit18, self.value18, self.text18)
+    @property
+    def get_value19(self):
+        return self.valueToDisplay(self.unit19, self.value19, self.text19)
+    @property
+    def get_value20(self):
+        return self.valueToDisplay(self.unit20, self.value20, self.text20)
+    
+    @property
+    def get_value_with_units(self):
+        return self.valueWithUnits(self.unit, self.value, self.text)
+    @property
+    def get_value1_with_units(self):
+        return self.valueWithUnits(self.unit, self.value, self.text)
+    @property
+    def get_value2_with_units(self):
+        return self.valueWithUnits(self.unit2, self.value2, self.text2)
+    @property
+    def get_value3_with_units(self):
+        return self.valueWithUnits(self.unit3, self.value3, self.text3)
+    @property
+    def get_value4_with_units(self):
+        return self.valueWithUnits(self.unit4, self.value4, self.text4)
+    @property
+    def get_value5_with_units(self):
+        return self.valueWithUnits(self.unit5, self.value5, self.text5)
+    @property
+    def get_value6_with_units(self):
+        return self.valueWithUnits(self.unit6, self.value6, self.text6)
+    @property
+    def get_value7_with_units(self):
+        return self.valueWithUnits(self.unit7, self.value7, self.text7)
+    @property
+    def get_value8_with_units(self):
+        return self.valueWithUnits(self.unit8, self.value8, self.text8)
+    @property
+    def get_value9_with_units(self):
+        return self.valueWithUnits(self.unit9, self.value9, self.text9)
+    @property
+    def get_value10_with_units(self):
+        return self.valueWithUnits(self.unit10, self.value10, self.text10)
+    @property
+    def get_value11_with_units(self):
+        return self.valueWithUnits(self.unit11, self.value11, self.text11)
+    @property
+    def get_value12_with_units(self):
+        return self.valueWithUnits(self.unit12, self.value12, self.text12)
+    @property
+    def get_value13_with_units(self):
+        return self.valueWithUnits(self.unit13, self.value13, self.text13)
+    @property
+    def get_value14_with_units(self):
+        return self.valueWithUnits(self.unit14, self.value14, self.text14)
+    @property
+    def get_value15_with_units(self):
+        return self.valueWithUnits(self.unit15, self.value15, self.text15)
+    @property
+    def get_value16_with_units(self):
+        return self.valueWithUnits(self.unit16, self.value16, self.text16)
+    @property
+    def get_value17_with_units(self):
+        return self.valueWithUnits(self.unit17, self.value17, self.text17)
+    @property
+    def get_value18_with_units(self):
+        return self.valueWithUnits(self.unit18, self.value18, self.text18)
+    @property
+    def get_value19_with_units(self):
+        return self.valueWithUnits(self.unit19, self.value19, self.text19)
+    @property
+    def get_value20_with_units(self):
+        return self.valueWithUnits(self.unit20, self.value20, self.text20)
 
 # ***************************** USER Extensions  ***************************** 
 
