@@ -69,7 +69,7 @@
         <!-- Data -->
         <div class="card p-2">
             <h2 class="card-title">Extracted Data</h2>
-            <div class="card-body">
+            <div class="card-body" style="max-height: 50vh; overflow-x:scroll; overflow-y:scroll;">
                 <table class="table">
                     {% for data in datas %}
                         {% with type=data.extraction_method.data_type %}
@@ -81,46 +81,50 @@
                                 </tr>
                                 <tr>
                                     <th>{{type.value1}}</th>
-                                    {% if type.value2 %}
-                                    <th>{{type.value2}}</th>
-                                    {% else %}
-                                    <th></th>
-                                    {% endif %}
-                                    {% if type.value3 %}
-                                    <th>{{type.value3}}</th>
-                                    {% else %}
-                                    <th></th>
-                                    {% endif %}
-                                    {% if type.value4 %}
-                                    <th>{{type.value4}}</th>
-                                    {% else %}
-                                    <th></th>
-                                    {% endif %}
+                                    {% if type.value2 %}<th>{{type.value2}}</th>{% endif %}
+                                    {% if type.value3 %}<th>{{type.value3}}</th>{% endif %}
+                                    {% if type.value4 %}<th>{{type.value4}}</th>{% endif %}
+                                    {% if type.value5 %}<th>{{type.value5}}</th>{% endif %}
+                                    {% if type.value6 %}<th>{{type.value6}}</th>{% endif %}
+                                    {% if type.value7 %}<th>{{type.value7}}</th>{% endif %}
+                                    {% if type.value8 %}<th>{{type.value8}}</th>{% endif %}
+                                    {% if type.value9 %}<th>{{type.value9}}</th>{% endif %}
+                                    {% if type.value10 %}<th>{{type.value10}}</th>{% endif %}
+                                    {% if type.value11 %}<th>{{type.value11}}</th>{% endif %}
+                                    {% if type.value12 %}<th>{{type.value12}}</th>{% endif %}
+                                    {% if type.value13 %}<th>{{type.value13}}</th>{% endif %}
+                                    {% if type.value14 %}<th>{{type.value14}}</th>{% endif %}
+                                    {% if type.value15 %}<th>{{type.value15}}</th>{% endif %}
+                                    {% if type.value16 %}<th>{{type.value16}}</th>{% endif %}
+                                    {% if type.value17 %}<th>{{type.value17}}</th>{% endif %}
+                                    {% if type.value18 %}<th>{{type.value18}}</th>{% endif %}
+                                    {% if type.value19 %}<th>{{type.value19}}</th>{% endif %}
+                                    {% if type.value20 %}<th>{{type.value20}}</th>{% endif %}
                                 </tr>
                             {% endif %}
                         {% endifchanged %}
                         {% if type.value1 %}
                             <tr>
-                                <td>
-                                    {% if data.get_value1 is not None %}
-                                    {{data.get_value1_with_units}}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if data.get_value2 is not None %}
-                                    {{data.get_value2_with_units}}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if data.get_value3 is not None %}
-                                    {{data.get_value3_with_units}}
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    {% if data.get_value4 is not None %}
-                                    {{data.get_value4_with_units}}
-                                    {% endif %}
-                                </td>
+                                <td style="white-space: nowrap;">{{data.get_value1_with_units}}</td>
+                                <td style="white-space: nowrap;">{% if type.value2 %}{{data.get_value2_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value3 %}{{data.get_value3_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value4 %}{{data.get_value4_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value5 %}{{data.get_value5_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value6 %}{{data.get_value6_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value7 %}{{data.get_value7_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value8 %}{{data.get_value8_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value9 %}{{data.get_value9_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value10 %}{{data.get_value10_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value11 %}{{data.get_value11_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value12 %}{{data.get_value12_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value13 %}{{data.get_value13_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value14 %}{{data.get_value14_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value15 %}{{data.get_value15_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value16 %}{{data.get_value16_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value17 %}{{data.get_value17_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value18 %}{{data.get_value18_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value19 %}{{data.get_value19_with_units}}{% endif %}</td>
+                                <td style="white-space: nowrap;">{% if type.value20 %}{{data.get_value20_with_units}}{% endif %}</td>
                             </tr>
                         {% else %}
                             <tr>
@@ -131,6 +135,13 @@
                     {% endfor %}
                 </table>
             </div>
+            <br>
+            {% if showIsothermTemplateButton %}
+            <a class="btn btn-primary" style="margin-right:auto;" href="{% url 'create_isotherm_template' well_id=well.id %}">Create Isotherm Template</a>
+            {% endif %}
+            {% if showIsothermDownloadButton %}
+            <a class="btn btn-primary" style="margin-right:auto;" href="{{isothermTemplateDocument.link}}" download="{{isothermTemplateDocument.document_name}}{{isothermTemplateDocument.ext}}" target="_blank">Download Isotherm Template</a>
+            {% endif %}
         </div>   
     </div> 
 </div>

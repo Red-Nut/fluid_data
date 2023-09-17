@@ -4,6 +4,9 @@ class Result:
         self.description = desc
         self.consolLog = log
 
+    def __str__(self):
+        return f"Error {self.code}: {self.consolLog}"
+
 def GenerateResult(list,id):
     myResult = list[id]
     return Result(myResult.code,myResult.description,myResult.consolLog)

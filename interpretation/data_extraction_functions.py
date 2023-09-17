@@ -12,6 +12,7 @@ from data_extraction.functions import IsNumber
 # Python imports
 from decimal import Decimal
 import re
+import math
 
 # Third party imports.
 import os
@@ -294,7 +295,10 @@ def ExtractPages(document, firstPage, lastPage, delete):
 
                     # save pages
                     for i, page in enumerate(pages):
-                        pageNo = i + firstPage
+                        if firstPage:
+                            pageNo = i + firstPage
+                        else:
+                            pageNo = i + 1
                         filePath = imagePath + 'page' + str(pageNo) + ".jpg"
                         page.save(filePath, 'JPEG')
 
@@ -378,7 +382,7 @@ def ExtractPages(document, firstPage, lastPage, delete):
                                 success = False              
 
                 if(success):
-                    if firstPage == 1 and i < lastPage:
+                    if (firstPage is None or firstPage == 1) and (lastPage is None or i < lastPage):
                         document.conversion_status = document.CONVERTED
                         document.save()        
 
@@ -476,6 +480,21 @@ def ExtractData(document,method):
     for page in pages:
         if page.page_no != 2:
             continue
+
+        # method 43:
+        if method.id == 43:
+            file = page.file
+            if file:
+                fileName = file.file_name + file.file_ext
+                filePath = file.file_location + file.file_name + file.file_ext
+                tempFolder = file.file_location
+
+                # Copy to temp folder
+                result = fileModule.copyToTemp(filePath, tempFolder, fileName)
+                if result.code != "00000":
+                    return result
+
+                filePath = file.path()
         log.debug("Page %i", page.page_no)
         texts = page.texts.all()
         for text in texts:
@@ -670,14 +689,20 @@ def ExtractData(document,method):
                 # Table Cells
                 elif action.type == action.TABLECELLVALUE or action.type == action.TABLECELLTEXT:
                     if columns and rows:
+
+                        # Select the column based on the 'start' variable
                         col = None
                         for column in columns:
                             if column.no == action.start:
                                 col = column
+                        
+                        # Iterate over each row        
                         if col:
                             for row in rows:
+                                #Get text/value for that row/col combination
                                 actionResult = TableCell(action, col.xmin, col.xmax, row.ymin, row.ymax, page)
                                 if actionResult.success:
+                                    # Save Value
                                     if action.type == action.TABLECELLVALUE:
                                         try:
                                             value = Decimal(actionResult.text)
@@ -687,12 +712,40 @@ def ExtractData(document,method):
                                             log.error(e)
                                             row.values.append(None)
                                             row.units.append(action.unit)
+                                    # Save Text
                                     else:
                                         row.values.append(actionResult.text)
                                         row.units.append(action.unit)
+
+                                        # Method 43
+                                        if method.id ==43 and col.no == 5:
+                                            useCompName = True
+
+                                            im = Image.open(filePath)
+                                            pix = im.load()
+                                            x = math.floor((col.xmin + col.xmax)/2)
+                                            y1 = math.floor(row.ymin)
+                                            y2 = math.ceil(row.ymax)
+                                            ydis = math.floor((row.ymax - row.ymin)*0.75)
+
+                                            for y in range((y1-ydis),y1):
+                                                print(f"above color: {pix[x,y]} at location {x}, {y}")
+                                                if pix[x,y][0] < 50 and pix[x,y][1] < 50 and pix[x,y][2] < 50:
+                                                    useCompName = False
+                                                    print("black pixel")
+                                            for y in range(y2,(y2+ydis)):
+                                                print(f"below color: {pix[x,y]} at location {x}, {y}")
+                                                if pix[x,y][0] < 50 and pix[x,y][1] < 50 and pix[x,y][2] < 50:
+                                                    useCompName = False
+                                                    print("black pixel")
+
+                                            im.close()
+
+                                            row.values.append(useCompName) # True uses Comp as name  
                                 else:
                                     row.values.append(None)
                                     row.units.append(action.unit)
+
                         else:
                             actionResult = Action(None, None, True,action)
                     else:                    
@@ -724,20 +777,77 @@ def ExtractData(document,method):
                 # Save Table
                 if actionResults[0].action.startUpper:
                     if method.id == 43:
+                        # ************************************************************************ ISOTHERM LABLES ************************************************************************
                         print("Method 43")
+                        prefix = None
+                        samples = []
                         for row in rows:
-                            fvalues = [None, None, None]
-                            ftexts = [None, None, None]
-                            funits = [None, None, None]
+                            ftexts = [None, None, None, None, None, None, None, None, None, None, None]
                             for i in range(len(row.values)):
-                                if row.units[i]:
-                                    if row.units[i].name == 'text':
-                                        ftexts[i] = row.values[i]                                
-                                    else:
-                                        fvalues[i] = row.values[i]
-                                funits[i] = row.units[i]
-                            print(ftexts)
-                            print(funits)
+                                ftexts[i] = row.values[i]
+
+                            # Get prefix
+                            if prefix is None and ftexts[0] is not None:
+                                arr = ftexts[0].split(" ")
+                                prefix = ""
+                                for i in range(len(arr)-1):
+                                    prefix += arr[i]
+
+                                prefix = prefix.upper()
+
+                            if ftexts[0] is None or ftexts[2]:
+                                sample = {
+                                    'sample' : None,
+                                    'comp' : ftexts[1].upper(),
+                                }
+                            else:
+                                arr = ftexts[0].split(" ")
+                                sid = arr[-1]
+                                if sid[-1] == 'D':
+                                    sid = sid[:-1]
+                                sample = {
+                                    'sample' : sid.upper(),
+                                    'comp' : ftexts[1].upper(),
+                                }
+                            samples.append(sample)
+
+                        if prefix:
+                            for s in samples:
+                                # Create Sample Name
+                                sample = s['sample']
+                                comp = s['comp']
+                                wellName = document.well.well_name.upper()
+
+                                if sample is None:
+                                    name = f"<{wellName}> - <{prefix}_{comp}>"
+                                else:
+                                    name = f"<{wellName}> - <{prefix}_{sample}>"
+
+                                # Find isotherm
+                                isotherms = Data.objects.filter(extraction_method__data_type__name='Isotherm', page__document=document)
+                                isotherm = None
+                                for iso in isotherms:
+                                    sampleName = iso.text
+                                    x = sampleName.lower().find('comp')
+                                    if x >= 0 and sampleName[x+4] == ' ':
+                                        y = sampleName.find(' ', x+5)
+                                        if sampleName.lower()[x:y] == comp.lower():
+                                            isotherm = iso
+
+                                if isotherm:
+                                    print(f"Original Name: {isotherm.text}")
+                                    isotherm.text = name
+                                    isotherm.save()
+                                    print(f"New Name: {isotherm.text}")
+
+
+                                
+
+
+
+                            
+                            
+                            
                     else:
                         for row in rows:
                             fvalues = [None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None]
@@ -3056,5 +3166,5 @@ class Row:
         self.ymin = ymin
         self.ymax = ymax
         self.values = []
-        self.texts = []
         self.units = []
+        self.method43 = []

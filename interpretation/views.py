@@ -124,10 +124,88 @@ def RunPageTextAutomationByMethod(did, method_id):
     return redirect('document', did)
 
 def CreateIsothermTemplateView(request, well_id):
-    CreateIsothermTemplate(well_id)
-    return
+    result = CreateIsothermTemplate(well_id)
+    if result['success']:
+        try:
+            #Upload file to AWS
+            well = Well.objects.get(id=well_id)
+            folder = 'well_data/' + well.well_name + '/'
+            fileModule.makeDirectory(folder, True)
+            folder = folder + 'isotherms/'
+            fileModule.makeDirectory(folder, True)
+            destination = f"{folder}{result['fileName']}{result['fileExt']}"
+            print(f"Destination: {destination}")
+            print(f"path: {result['filePath']}")
+            newResult = fileModule.uploadFileS3(result['filePath'],destination)
+            print(newResult)
+
+            # Add file to database
+            file = File.objects.create(
+                file_name = result['fileName'],
+                file_ext = result['fileExt'],
+                file_location = folder,
+                file_size = result['fileSize']
+            )
+
+            # Create Document object
+            document = Document.objects.create(
+                document_name = result['fileName'],
+                well = well,
+                report = None,
+                file = file,
+                url = None,
+                gov_id = None,
+                status = Document.DOWNLOADED,
+                converted = None,
+                conversion_status = Document.IGNORED
+            )
+
+        except Exception as e:
+            print(e)
+        
+        
+
+    return redirect('details', well_id)
 
 def MyFun(request):
+    #try:
+    # Scotia 44
+    # Isotherm
+    document = Document.objects.get(id=118481)
+    if document:
+        result = ExtractPages(document, None, None, False)
+        if result.code == "00000":
+            # Extract Text from images
+            result = getDocumentText(document)
+    # WCR
+    document = Document.objects.get(id=118470)
+    if document:
+        result = ExtractPages(document, None, None, False)
+        if result.code == "00000":
+            # Extract Text from images
+            result = getDocumentText(document)
+    #except:
+    #    print("failed Scotia 44")
+
+
+    try:
+        # Peat 47
+        # Isotherm
+        document = Document.objects.get(id=164552)
+        if document:
+            result = ExtractPages(document, None, None, False)
+            if result.code == "00000":
+                # Extract Text from images
+                result = getDocumentText(document)
+        # WCR
+        document = Document.objects.get(id=180805)
+        if document:
+            result = ExtractPages(document, None, None, False)
+            if result.code == "00000":
+                # Extract Text from images
+                result = getDocumentText(document)
+    except:
+        print("failed Peat 47")
 
     if False:
         # Peat 45
@@ -176,96 +254,96 @@ def MyFun(request):
                 # Extract Text from images
                 result = getDocumentText(document) 
 
-    try:
-        # Acrux 145
-        document = Document.objects.get(id=148761)
-        if document:
-            result = ExtractPages(document, 1, 8, False)
-            if result.code == "00000":
-                # Extract Text from images
+        try:
+            # Acrux 145
+            document = Document.objects.get(id=148761)
+            if document:
+                result = ExtractPages(document, 1, 8, False)
+                if result.code == "00000":
+                    # Extract Text from images
+                    result = getDocumentText(document) 
+        except:
+            print("failed Acrux 145")
+
+        try:
+            # Acrux 146
+            document = Document.objects.get(id=147747)
+            if document:
+                result = ExtractPages(document, 1, 7, False)
+                if result.code == "00000":
+                    # Extract Text from images
+                    result = getDocumentText(document) 
+        except:
+            print("failed Acrux 146")
+
+        try:
+            # Polaris 140
+            document = Document.objects.get(id=135737)
+            if document:
+                result = ExtractPages(document, 1, 9, False)
+                if result.code == "00000":
+                    # Extract Text from images
+                    result = getDocumentText(document) 
+        except:
+            print("failed Polaris 140")
+
+        try:
+            # Polaris 142
+            document = Document.objects.get(id=135629)
+            if document:
+                result = ExtractPages(document, 1, 8, False)
+                if result.code == "00000":
+                    # Extract Text from images
+                    result = getDocumentText(document) 
+        except:
+            print("failed Polaris 142")
+
+        try:
+            # Polaris 150
+            document = Document.objects.get(id=133081)
+            if document:
+                result = ExtractPages(document, 1, 8, False)
+                if result.code == "00000":
+                    # Extract Text from images
+                    result = getDocumentText(document) 
+        except:
+            print("failed Polaris 150")
+
+        try:
+            # Scotia 34
+            document = Document.objects.get(id=119136)
+            if document:
+                result = ExtractPages(document, 1, 13, False)
+                if result.code == "00000":
+                    # Extract Text from images
+                    result = getDocumentText(document) 
+        except:
+            print("failed Scotia 34")
+
+        try:
+            # Scotia 35
+            document = Document.objects.get(id=118470)
+            if document:
+                result = ExtractPages(document, 1, 13, False)
+                if result.code == "00000":
+                    # Extract Text from images
+                    result = getDocumentText(document) 
+        except:
+            print("failed Scotia 35")
+
+        try:
+            # Scotia 44
+            document = Document.objects.get(id=148936)
+            if document:
                 result = getDocumentText(document) 
-    except:
-        print("failed Acrux 145")
+        except:
+            print("failed Scotia 44")
 
-    try:
-        # Acrux 146
-        document = Document.objects.get(id=147747)
-        if document:
-            result = ExtractPages(document, 1, 7, False)
-            if result.code == "00000":
-                # Extract Text from images
+        try:
+            # Scotia 45
+            document = Document.objects.get(id=118470)
+            if document:
                 result = getDocumentText(document) 
-    except:
-        print("failed Acrux 146")
-
-    try:
-        # Polaris 140
-        document = Document.objects.get(id=135737)
-        if document:
-            result = ExtractPages(document, 1, 9, False)
-            if result.code == "00000":
-                # Extract Text from images
-                result = getDocumentText(document) 
-    except:
-        print("failed Polaris 140")
-
-    try:
-        # Polaris 142
-        document = Document.objects.get(id=135629)
-        if document:
-            result = ExtractPages(document, 1, 8, False)
-            if result.code == "00000":
-                # Extract Text from images
-                result = getDocumentText(document) 
-    except:
-        print("failed Polaris 142")
-
-    try:
-        # Polaris 150
-        document = Document.objects.get(id=133081)
-        if document:
-            result = ExtractPages(document, 1, 8, False)
-            if result.code == "00000":
-                # Extract Text from images
-                result = getDocumentText(document) 
-    except:
-        print("failed Polaris 150")
-
-    try:
-        # Scotia 34
-        document = Document.objects.get(id=119136)
-        if document:
-            result = ExtractPages(document, 1, 13, False)
-            if result.code == "00000":
-                # Extract Text from images
-                result = getDocumentText(document) 
-    except:
-        print("failed Scotia 34")
-
-    try:
-        # Scotia 35
-        document = Document.objects.get(id=118470)
-        if document:
-            result = ExtractPages(document, 1, 13, False)
-            if result.code == "00000":
-                # Extract Text from images
-                result = getDocumentText(document) 
-    except:
-        print("failed Scotia 35")
-
-    try:
-        # Scotia 44
-        document = Document.objects.get(id=148936)
-        if document:
-            result = getDocumentText(document) 
-    except:
-        print("failed Scotia 44")
-
-    try:
-        # Scotia 45
-        document = Document.objects.get(id=118470)
-        if document:
-            result = getDocumentText(document) 
-    except:
-        print("failed Scotia 45")
+        except:
+            print("failed Scotia 45")
 

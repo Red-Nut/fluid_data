@@ -129,16 +129,24 @@ def uploadFileS3(myPath, destination):
     s3_client=boto3.client('s3')
     bucket_name = settings.AWS_STORAGE_BUCKET_NAME
     directory_name = destination
+    #if directory_name[-1] == '/':
+    #    directory_name = directory_name[:-1]
+
     threshold = 1024*25
+
+    print(f"MyPath: {myPath}")
+    print(f"Directory_Name: {directory_name}")
     try:
         config = boto3.s3.transfer.TransferConfig(multipart_threshold=threshold, max_concurrency=1, multipart_chunksize=threshold, use_threads=True)
-        s3_client.upload_file(myPath, bucket_name, directory_name,Config=config)
+        response = s3_client.upload_file(myPath, bucket_name, directory_name,Config=config)
+        print("Response")
+        print(response)
         
         result = GenerateResult(resultList,0)
         return result
-    except:
+    except Exception as e:
         result = GenerateResult(resultList,9)
-        log.error(f"Error{result.code}: {result.consolLog}")
+        log.error(f"Error{result.code}: {result.consolLog}. {str(e)}")
         return result
 
 def deleteDirectory(path, S3):

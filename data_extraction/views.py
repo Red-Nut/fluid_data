@@ -674,9 +674,25 @@ def details(request, id):
 
 	datas = Data.objects.filter(page__document__well=well).order_by('extraction_method__data_type').all()
 
+	showIsothermTemplateButton = False
+	showIsothermDownloadButton = False
+	isothermTemplateDocument = None
+	
+	for data in datas.all():
+		if data.extraction_method.data_type.name == "Isotherm":
+			showIsothermTemplateButton = True
+	for document in well.documents.all():
+		if document.document_name == (well.well_name + " - isotherms"):
+			showIsothermTemplateButton = False
+			showIsothermDownloadButton = True
+			isothermTemplateDocument = document
+
 	context = {
 		"well" :  well,
 		"datas" : datas,
+		"showIsothermTemplateButton" : showIsothermTemplateButton,
+		"showIsothermDownloadButton" : showIsothermDownloadButton,
+		"isothermTemplateDocument" : isothermTemplateDocument,
 	}
 	log.debug("Loading well view")
 	return render(request, "data/details.html", context)
