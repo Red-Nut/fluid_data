@@ -478,8 +478,8 @@ def ExtractData(document,method):
     log.debug("Extracting Data from Document: %s (%i), using method: %s (%i)", document.document_name, document.id, method.name, method.id)
     
     for page in pages:
-        if page.page_no != 2:
-            continue
+        #if page.page_no != 2:
+        #    continue
 
         # method 43:
         if method.id == 43:
